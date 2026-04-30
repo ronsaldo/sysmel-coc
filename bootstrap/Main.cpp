@@ -29,7 +29,6 @@ evaluateCommandLineString(const std::string &cliString)
     sourceCode->name = "<cli>";
     sourceCode->text = cliString;
     return evaluateSourceCode(sourceCode);
-
 }
 
 int main(int argc, const char *argv[])
