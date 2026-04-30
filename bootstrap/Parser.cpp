@@ -287,6 +287,29 @@ sysmel_parser_parseLiteralString(sysmel_ParserState_t *state)
 }
 
 static ParseTreeNodePtr
+sysmel_parser_parseLiteralSymbol(sysmel_ParserState_t *state)
+{
+    auto token = sysmel_parserState_next(state);
+    assert(token->kind == SysmelTokenKind_Symbol);
+
+    auto tokenText = token->sourcePosition->getText();
+    std::string parsedString;
+    if(tokenText.size() >= 3 && tokenText[1] == '"')
+    {
+        parsedString = sysmel_parseCEscapedString(tokenText.substr(2, tokenText.size() - 3));
+    }
+    else
+    {
+        parsedString = tokenText.substr(1);
+    }
+
+    auto node = std::make_shared<ParseTreeLiteralSymbolNode> ();
+    node->sourcePosition = token->sourcePosition;
+    node->value = parsedString;
+    return node;
+}
+
+static ParseTreeNodePtr
 sysmel_parser_parseLiteral(sysmel_ParserState_t *state)
 {
     switch (sysmel_parserState_peekKind(state, 0))
@@ -299,8 +322,8 @@ sysmel_parser_parseLiteral(sysmel_ParserState_t *state)
         return sysmel_parser_parseLiteralCharacter(state);
     case SysmelTokenKind_String:
         return sysmel_parser_parseLiteralString(state);
-    //case SysmelTokenKind_Symbol:
-    //    return sysmel_parser_parseLiteralSymbol(state);
+    case SysmelTokenKind_Symbol:
+        return sysmel_parser_parseLiteralSymbol(state);
     case SysmelTokenKind_Error:
         return sysmel_parser_parseLexicalError(state);
     default:
