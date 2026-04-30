@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <string>
+#include <stdio.h>
 
 typedef std::shared_ptr<struct SourceCode> SourceCodePtr;
 typedef std::shared_ptr<struct SourcePosition> SourcePositionPtr;
@@ -27,6 +28,13 @@ struct SourcePosition
     std::string getText()
     {
         return sourceCode->text.substr(startIndex, endIndex - startIndex);
+    }
+
+    void printOn(FILE *out)
+    {
+        if(!sourceCode->directory.empty())
+            fprintf(out, "%s/", sourceCode->directory.c_str());
+        fprintf(out, "%s:%d.%d-%d-%d:", sourceCode->name.c_str(), startLine, startColumn, endLine, endColumn);
     }
 };
 

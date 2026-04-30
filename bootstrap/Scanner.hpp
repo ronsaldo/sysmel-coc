@@ -22,5 +22,6 @@ struct SysmelToken
 
 const char *SysmelTokenKind_toString(SysmelTokenKind_t kind);
 std::vector<SysmelTokenPtr> SysmelScanSourceCode(SourceCodePtr sourceCode);
+bool checkScannedTokensForErrors(const std::vector<SysmelTokenPtr> &scannedTokens);
 
 #endif //SYSMEL_SCANNER_HPP

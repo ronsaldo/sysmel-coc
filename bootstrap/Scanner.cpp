@@ -584,3 +584,19 @@ std::vector<SysmelTokenPtr> SysmelScanSourceCode(SourceCodePtr sourceCode)
     } while(scannedToken->kind != SysmelTokenKind_EndOfSource);
     return tokens;
 }
+
+bool checkScannedTokensForErrors(const std::vector<SysmelTokenPtr> &scannedTokens)
+{
+    bool hasErrors = false;
+    for (auto token : scannedTokens)
+    {
+        if(token->kind == SysmelTokenKind_Error)
+        {
+            token->sourcePosition->printOn(stderr);
+            fprintf(stderr, ": %s\n", token->errorMessage.c_str());
+            hasErrors = true;
+        }
+    }
+
+    return !hasErrors;
+}

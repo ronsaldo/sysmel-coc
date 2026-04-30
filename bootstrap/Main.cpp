@@ -13,17 +13,16 @@ printVersion()
     printf("sysmelb 0.1");
 }
 
-void
+bool
 evaluateSourceCode(const SourceCodePtr &sourceCode)
 {
     auto scannedTokens = SysmelScanSourceCode(sourceCode);
-    for(auto &token : scannedTokens)
-    {
-        printf("Token kind %s\n", SysmelTokenKind_toString(token->kind));
-    }
+    if(!checkScannedTokensForErrors(scannedTokens))
+        return false;
+    return true;
 }
 
-void
+bool
 evaluateCommandLineString(const std::string &cliString)
 {
     auto sourceCode = std::make_shared<SourceCode> ();
