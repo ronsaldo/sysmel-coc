@@ -25,6 +25,7 @@ struct ParseTreeNode : std::enable_shared_from_this<ParseTreeNode>
         return errors;
     }
 
+    virtual void dump(FILE *out) = 0;
 };
 
 struct ParseTreeParseErrorNode : ParseTreeNode
@@ -38,21 +39,44 @@ struct ParseTreeParseErrorNode : ParseTreeNode
         if(innerNode)
             innerNode->collectParseErrorNodesIn(out);
     }
+    
+    virtual void dump(FILE *out) override
+    {
+        fprintf(out, "ParseTreeParseErrorNode(%s", errorMessage.c_str());
+        if(innerNode)
+            innerNode->dump(out);
+        fprintf(out, ")");
+    }
 };
 
 struct ParseTreeLiteralIntegerNode : ParseTreeNode
 {
     int64_t value;
+    
+    virtual void dump(FILE *out) override
+    {
+        fprintf(out, "ParseTreeLiteralIntegerNode(%lld)", (long long int)value);
+    }
 };
 
 struct ParseTreeLiteralCharacterNode : ParseTreeNode
 {
     uint32_t value;
+
+    virtual void dump(FILE *out) override
+    {
+        fprintf(out, "ParseTreeLiteralCharacterNode(%u)", value);
+    }
 };
 
 struct ParseTreeLiteralFloatNode : ParseTreeNode
 {
     double value;
+
+    virtual void dump(FILE *out) override
+    {
+        fprintf(out, "ParseTreeLiteralFloatNode(%f)", value);
+    }
 };
 
 struct ParseTreeLiteralStringNode : ParseTreeNode
@@ -74,6 +98,18 @@ struct ParseTreeSequenceNode : ParseTreeNode
         for(auto &element : elements)
             element->collectParseErrorNodesIn(out);
     }
+
+    virtual void dump(FILE *out) override
+    {
+        fprintf(out, "ParseTreeSequenceNode(");
+        for(size_t i = 0; i < elements.size(); ++i)
+        {
+            if(i > 0)
+                fprintf(out, ", ");
+            elements[i]->dump(out);
+        }
+        fprintf(out, ")");
+    }
 };
 
 struct ParseTreeTupleNode : ParseTreeNode
@@ -84,6 +120,18 @@ struct ParseTreeTupleNode : ParseTreeNode
     {
         for(auto &element : elements)
             element->collectParseErrorNodesIn(out);
+    }
+
+    virtual void dump(FILE *out) override
+    {
+        fprintf(out, "ParseTreeTupleNode(");
+        for(size_t i = 0; i < elements.size(); ++i)
+        {
+            if(i > 0)
+                fprintf(out, ", ");
+            elements[i]->dump(out);
+        }
+        fprintf(out, ")");
     }
 };
 

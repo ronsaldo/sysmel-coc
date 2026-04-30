@@ -34,7 +34,8 @@ evaluateSourceCode(const SourceCodePtr &sourceCode)
     if(!parseTreeErrorNodes.empty())
         return false;
 
-
+    parseTree->dump(stdout);
+    fprintf(stdout, "\n");
     return true;
 }
 
