@@ -1,4 +1,5 @@
 #include "Scanner.hpp"
+#include "Parser.hpp"
 #include <stdio.h>
 
 void
@@ -16,9 +17,24 @@ printVersion()
 bool
 evaluateSourceCode(const SourceCodePtr &sourceCode)
 {
+    // Scan the source code.
     auto scannedTokens = SysmelScanSourceCode(sourceCode);
     if(!checkScannedTokensForErrors(scannedTokens))
         return false;
+
+    // Parse and check syntax errors.
+    auto parseTree = SysmelParseTokenSequence(scannedTokens);
+    auto parseTreeErrorNodes = parseTree->collectParseErrorNodes();
+    for(auto &errorNode : parseTreeErrorNodes)
+    {
+        errorNode->sourcePosition->printOn(stderr);
+        fprintf(stderr, "%s\n", errorNode->errorMessage.c_str());
+    }
+
+    if(!parseTreeErrorNodes.empty())
+        return false;
+
+
     return true;
 }
 

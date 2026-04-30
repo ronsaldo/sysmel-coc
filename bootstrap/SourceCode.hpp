@@ -25,6 +25,34 @@ struct SourcePosition
     int32_t startColumn = -1;
     int32_t endColumn = -1;
 
+    SourcePositionPtr to(const SourcePositionPtr &end) const
+    {
+        auto merged = std::make_shared<SourcePosition> ();
+        merged->sourceCode = sourceCode;
+        
+        merged->startIndex  = startIndex;
+        merged->startLine   = startLine;
+        merged->startColumn = startColumn;
+        merged->endIndex    = end->endIndex;
+        merged->endLine     = end->endLine;
+        merged->endColumn   = end->endColumn;
+        return merged;
+    }
+
+    SourcePositionPtr until(const SourcePositionPtr &end) const
+    {
+        auto merged = std::make_shared<SourcePosition> ();
+        merged->sourceCode = sourceCode;
+        
+        merged->startIndex  = startIndex;
+        merged->startLine   = startLine;
+        merged->startColumn = startColumn;
+        merged->endIndex    = end->startIndex;
+        merged->endLine     = end->startLine;
+        merged->endColumn   = end->startColumn;
+        return merged;
+    }
+
     std::string getText()
     {
         return sourceCode->text.substr(startIndex, endIndex - startIndex);
