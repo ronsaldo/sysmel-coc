@@ -65,7 +65,7 @@ struct ParseTreeLiteralCharacterNode : ParseTreeNode
 
     virtual void dump(FILE *out) override
     {
-        fprintf(out, "ParseTreeLiteralCharacterNode(%u)", value);
+        fprintf(out, "ParseTreeLiteralCharacterNode(%c)", value);
     }
 };
 
@@ -82,11 +82,21 @@ struct ParseTreeLiteralFloatNode : ParseTreeNode
 struct ParseTreeLiteralStringNode : ParseTreeNode
 {
     std::string value;
+
+    virtual void dump(FILE *out) override
+    {
+        fprintf(out, "ParseTreeLiteralStringNode(\"%s\")", value.c_str());
+    }
 };
 
 struct ParseTreeLiteralSymbolNode : ParseTreeNode
 {
     std::string value;
+    
+    virtual void dump(FILE *out) override
+    {
+        fprintf(out, "ParseTreeLiteralSymbolNode(\"%s\")", value.c_str());
+    }
 };
 
 struct ParseTreeSequenceNode : ParseTreeNode

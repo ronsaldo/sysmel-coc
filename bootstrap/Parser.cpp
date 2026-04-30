@@ -211,6 +211,81 @@ sysmel_parser_parseLexicalError(sysmel_ParserState_t *state)
     return errorNode;
 }
 
+static std::string
+sysmel_parseCEscapedString(const std::string &string)
+{
+    std::string result;
+    
+    for (size_t i = 0; i < string.size(); ++i)
+    {
+        char c = string[i];
+        if (c == '\\')
+        {
+            char c1 = string[++i];
+            switch (c1)
+            {
+            case 'n':
+                result.push_back('\n');
+                break;
+            case 'r':
+                result.push_back('\r');
+                break;
+            case 't':
+                result.push_back('\t');
+                break;
+            default:
+                result.push_back(c1);
+                break;
+            }
+        }
+        else
+        {
+            result.push_back(c);
+        }
+    }
+
+    return result;
+}
+
+static ParseTreeNodePtr
+sysmel_parser_parseLiteralCharacter(sysmel_ParserState_t *state)
+{
+    auto token = sysmel_parserState_next(state);
+    assert(token->kind == SysmelTokenKind_Character);
+
+    auto tokenText = token->sourcePosition->getText();
+    auto parsedString = sysmel_parseCEscapedString(tokenText.substr(1, tokenText.size() - 2));
+    if(parsedString.empty())
+    {
+        auto errorNode = std::make_shared<ParseTreeParseErrorNode> ();
+        errorNode->sourcePosition = token->sourcePosition;
+        errorNode->errorMessage = "Character literal cannot be empty.";
+        return errorNode;
+    }
+
+    // TODO: Decode the UTF-8 character.
+
+    auto node = std::make_shared<ParseTreeLiteralCharacterNode> ();
+    node->sourcePosition = token->sourcePosition;
+    node->value = parsedString[0];
+    return node;
+}
+
+static ParseTreeNodePtr
+sysmel_parser_parseLiteralString(sysmel_ParserState_t *state)
+{
+    auto token = sysmel_parserState_next(state);
+    assert(token->kind == SysmelTokenKind_String);
+
+    auto tokenText = token->sourcePosition->getText();
+    auto parsedString = sysmel_parseCEscapedString(tokenText.substr(1, tokenText.size() - 2));
+
+    auto node = std::make_shared<ParseTreeLiteralStringNode> ();
+    node->sourcePosition = token->sourcePosition;
+    node->value = parsedString;
+    return node;
+}
+
 static ParseTreeNodePtr
 sysmel_parser_parseLiteral(sysmel_ParserState_t *state)
 {
@@ -220,12 +295,12 @@ sysmel_parser_parseLiteral(sysmel_ParserState_t *state)
         return sysmel_parser_parseLiteralInteger(state);
     case SysmelTokenKind_Float:
         return sysmel_parser_parseLiteralFloat(state);
-    /*case SysmelTokenKind_Character:
+    case SysmelTokenKind_Character:
         return sysmel_parser_parseLiteralCharacter(state);
     case SysmelTokenKind_String:
         return sysmel_parser_parseLiteralString(state);
-    case SysmelTokenKind_Symbol:
-        return sysmel_parser_parseLiteralSymbol(state);*/
+    //case SysmelTokenKind_Symbol:
+    //    return sysmel_parser_parseLiteralSymbol(state);
     case SysmelTokenKind_Error:
         return sysmel_parser_parseLexicalError(state);
     default:

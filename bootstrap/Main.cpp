@@ -28,7 +28,7 @@ evaluateSourceCode(const SourceCodePtr &sourceCode)
     for(auto &errorNode : parseTreeErrorNodes)
     {
         errorNode->sourcePosition->printOn(stderr);
-        fprintf(stderr, "%s\n", errorNode->errorMessage.c_str());
+        fprintf(stderr, " %s\n", errorNode->errorMessage.c_str());
     }
 
     if(!parseTreeErrorNodes.empty())
