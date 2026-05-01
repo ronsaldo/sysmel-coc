@@ -37,6 +37,12 @@ struct ParseTreeNode : std::enable_shared_from_this<ParseTreeNode>
         dump(out);
         return out.str();
     }
+
+    virtual void splitMessageCascadeFirstMessage(ParseTreeNodePtr *outReceiver, ParseTreeNodePtr *outFirstMessage)
+    {
+        *outReceiver = shared_from_this();
+        *outFirstMessage = nullptr;
+    }
 };
 
 struct ParseTreeParseErrorNode : ParseTreeNode
@@ -375,6 +381,34 @@ struct ParseTreeFunctionApplicationNode : ParseTreeNode
     }
 };
 
+struct ParseTreeCascadedMessageNode : ParseTreeNode
+{
+    ParseTreeNodePtr selector;
+    std::vector<ParseTreeNodePtr> arguments;
+
+    virtual void collectParseErrorNodesIn(std::vector<ParseTreeParseErrorNodePtr> &out) override
+    {
+        selector->collectParseErrorNodesIn(out);
+        for(auto &arg : arguments)
+            arg->collectParseErrorNodesIn(out);
+    }
+
+    virtual void dump(std::ostream &out) override
+    {
+        out << "ParseTreeCascadedMessageNode(";
+        selector->dump(out);
+
+        out << ", [";
+        for(size_t i = 0; i < arguments.size(); ++i)
+        {
+            if(i > 0)
+                out << ", ";
+            arguments[i]->dump(out);
+        }
+        out << "])";
+    }
+};
+
 struct ParseTreeMessageSendNode : ParseTreeNode
 {
     ParseTreeNodePtr receiver;
@@ -402,6 +436,45 @@ struct ParseTreeMessageSendNode : ParseTreeNode
             if(i > 0)
                 out << ", ";
             arguments[i]->dump(out);
+        }
+        out << "])";
+    }
+
+    virtual void splitMessageCascadeFirstMessage(ParseTreeNodePtr *outReceiver, ParseTreeNodePtr *outFirstMessage)
+    {
+        auto cascadedMessage = std::make_shared<ParseTreeCascadedMessageNode> ();
+        cascadedMessage->sourcePosition = sourcePosition;
+        cascadedMessage->selector = selector;
+        cascadedMessage->arguments = arguments;
+
+        *outReceiver = receiver;
+        *outFirstMessage = cascadedMessage;
+    }
+};
+
+struct ParseTreeMessageCascadeNode : ParseTreeNode
+{
+    ParseTreeNodePtr receiver;
+    std::vector<ParseTreeNodePtr> messages;
+
+    virtual void collectParseErrorNodesIn(std::vector<ParseTreeParseErrorNodePtr> &out) override
+    {
+        receiver->collectParseErrorNodesIn(out);
+        for(auto &message : messages)
+            message->collectParseErrorNodesIn(out);
+    }
+
+    virtual void dump(std::ostream &out) override
+    {
+        out << "ParseTreeMessageCascadeNode(";
+        receiver->dump(out);
+
+        out << ", [";
+        for(size_t i = 0; i < messages.size(); ++i)
+        {
+            if(i > 0)
+                out << ", ";
+            messages[i]->dump(out);
         }
         out << "])";
     }
