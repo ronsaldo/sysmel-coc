@@ -5,6 +5,7 @@
 #include "Value.hpp"
 #include <stdint.h>
 #include <vector>
+#include <assert.h>
 
 typedef std::shared_ptr<struct ParseTreeNode> ParseTreeNodePtr;
 typedef std::shared_ptr<struct ParseTreeParseErrorNode> ParseTreeParseErrorNodePtr;
@@ -377,7 +378,9 @@ struct ParseTreeDictionaryNode : ParseTreeNode
 struct ParseTreeBinaryExpressionSequenceNode : ParseTreeNode
 {
     std::vector<ParseTreeNodePtr> elements;
-
+    
+    virtual ValuePtr analyzeAndEvaluateInContext(const EvaluationContextPtr &context) override;
+    
     virtual void collectParseErrorNodesIn(std::vector<ParseTreeParseErrorNodePtr> &out) override
     {
         for(auto &arg : elements)
