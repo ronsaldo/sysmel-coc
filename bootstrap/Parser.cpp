@@ -10,6 +10,7 @@ typedef struct sysmel_ParserState_s
 }sysmel_ParserState_t;
 
 static SourcePositionPtr sysmel_parserState_currentSourcePosition(sysmel_ParserState_t *state);
+static ParseTreeNodePtr sysmel_parser_parseSequenceUntilEndOrDelimiter(sysmel_ParserState_t *state, SysmelTokenKind_t delimiter);
 
 static bool
 sysmel_parserState_atEnd(sysmel_ParserState_t *state)
@@ -331,10 +332,86 @@ sysmel_parser_parseLiteral(sysmel_ParserState_t *state)
     }
 }
 
+static bool
+sysmel_parser_isBinaryExpressionOperator(SysmelTokenKind_t kind)
+{
+    switch (kind)
+    {
+    case SysmelTokenKind_Operator:
+    case SysmelTokenKind_LessThan:
+    case SysmelTokenKind_GreaterThan:
+    case SysmelTokenKind_Bar:
+        return true;
+    default:
+        return false;
+    }
+}
+
+static ParseTreeNodePtr
+sysmel_parser_parseParenthesis(sysmel_ParserState_t *state)
+{
+    size_t startPosition = state->position;
+    assert(sysmel_parserState_peekKind(state, 0) == SysmelTokenKind_LeftParent);
+    sysmel_parserState_advance(state);
+
+    if (sysmel_parser_isBinaryExpressionOperator(sysmel_parserState_peekKind(state, 0)) && sysmel_parserState_peekKind(state, 1) == SysmelTokenKind_RightParent)
+    {
+        auto token = sysmel_parserState_next(state);
+        sysmel_parserState_advance(state);
+
+        auto symbol = token->sourcePosition->getText();
+
+        auto node = std::make_shared<ParseTreeIdentifierReferenceNode> ();
+        node->sourcePosition = token->sourcePosition;
+        node->value = symbol;
+        return node;
+    }
+
+    if (sysmel_parserState_peekKind(state, 0) == SysmelTokenKind_RightParent)
+    {
+        sysmel_parserState_advance(state);
+        auto node = std::make_shared<ParseTreeTupleNode> ();
+        node->sourcePosition = sysmel_parserState_sourcePositionFrom(state, startPosition);
+        return node;
+    }
+
+    auto expression = sysmel_parser_parseSequenceUntilEndOrDelimiter(state, SysmelTokenKind_RightParent);
+    expression = sysmel_parserState_expectAddingErrorToNode(state, SysmelTokenKind_RightParent, expression);
+    return expression;
+}
+
+static ParseTreeNodePtr
+sysmel_parser_parseIdentifier(sysmel_ParserState_t *state)
+{
+    auto token = sysmel_parserState_next(state);
+    assert(token->kind == SysmelTokenKind_Identifier);
+
+    auto symbol = token->sourcePosition->getText();
+
+    auto node = std::make_shared<ParseTreeIdentifierReferenceNode> ();
+    node->sourcePosition = token->sourcePosition;
+    node->value = symbol;
+    return node;
+}
+
+static ParseTreeNodePtr
+sysmel_parser_parseTerm(sysmel_ParserState_t *state)
+{
+    switch (sysmel_parserState_peekKind(state, 0))
+    {
+    case SysmelTokenKind_Identifier:
+        return sysmel_parser_parseIdentifier(state);
+    case SysmelTokenKind_LeftParent:
+        return sysmel_parser_parseParenthesis(state);
+    default:
+        return sysmel_parser_parseLiteral(state);
+    }
+}
+
 static ParseTreeNodePtr
 sysmel_parser_parseAssignmentExpression(sysmel_ParserState_t *state)
 {
-    return sysmel_parser_parseLiteral(state);
+    return sysmel_parser_parseTerm(state);
 }
 
 static ParseTreeNodePtr

@@ -99,6 +99,16 @@ struct ParseTreeLiteralSymbolNode : ParseTreeNode
     }
 };
 
+struct ParseTreeIdentifierReferenceNode : ParseTreeNode
+{
+    std::string value;
+    
+    virtual void dump(FILE *out) override
+    {
+        fprintf(out, "ParseTreeIdentifierReferenceNode(%s)", value.c_str());
+    }
+};
+
 struct ParseTreeSequenceNode : ParseTreeNode
 {
     std::vector<ParseTreeNodePtr> elements;
