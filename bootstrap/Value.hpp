@@ -5,19 +5,22 @@
 #include <ostream>
 #include <sstream>
 #include <unordered_map>
+#include <functional>
 
 typedef std::shared_ptr<struct Value> ValuePtr;
 typedef std::shared_ptr<struct Type> TypePtr;
 typedef std::shared_ptr<struct ParseTreeNode> ParseTreeNodePtr;
 typedef std::shared_ptr<struct ParseTreeIdentifierReferenceNode> ParseTreeIdentifierReferenceNodePtr;
+typedef std::shared_ptr<struct ParseTreeFunctionApplicationNode> ParseTreeFunctionApplicationNodePtr;
 typedef std::shared_ptr<struct NominalType> NominalTypePtr;
 typedef std::shared_ptr<struct UniverseType> UniverseTypePtr;
 typedef std::shared_ptr<struct TupleType> TupleTypePtr;
 typedef std::shared_ptr<struct AssociationType> AssociationTypePtr;
 typedef std::shared_ptr<struct Package> PackagePtr;
+typedef std::shared_ptr<struct MacroContext> MacroContextPtr;
 typedef std::shared_ptr<struct Environment> EnvironmentPtr;
 typedef std::shared_ptr<struct LexicalEnvironment> LexicalEnvironmentPtr;
-typedef std::shared_ptr<struct CoreTypes> CoreTypesPtr;
+typedef std::shared_ptr<struct CoreTypeAndMacros> CoreTypesPtr;
 typedef std::shared_ptr<struct EvaluationContext> EvaluationContextPtr;
 
 struct Value : std::enable_shared_from_this<Value>
@@ -34,6 +37,8 @@ struct Value : std::enable_shared_from_this<Value>
         (void)context;
         return shared_from_this();
     }
+
+    virtual ValuePtr analyzeAndEvaluateFunctionApplicationNodeInContext(const ParseTreeFunctionApplicationNodePtr &applicationNode, const EvaluationContextPtr &context);
 
     virtual TypePtr getTypeInContext(const EvaluationContextPtr &context) = 0;
     virtual bool isType() const
@@ -340,9 +345,40 @@ struct LexicalEnvironment : Environment
     }
 };
 
-struct CoreTypes : Value
+struct MacroContext : Value
 {
-    CoreTypes();
+    SourcePositionPtr sourcePosition;
+
+    virtual void dump(std::ostream &out) override
+    {
+        out << "MacroContext()";
+    }
+
+    virtual TypePtr getTypeInContext(const EvaluationContextPtr &context) override;
+};
+
+struct PrimitiveMacro : Value
+{
+    template<typename FT>
+    PrimitiveMacro(size_t initArgumentCount, FT &&initFunction)
+        : argumentCount(initArgumentCount), function(initFunction) {}
+
+    virtual ValuePtr analyzeAndEvaluateFunctionApplicationNodeInContext(const ParseTreeFunctionApplicationNodePtr &applicationNode, const EvaluationContextPtr &context);
+
+    virtual void dump(std::ostream &out) override
+    {
+        out << "PrimitiveMacro()";
+    }
+
+    virtual TypePtr getTypeInContext(const EvaluationContextPtr &context) override;
+
+    size_t argumentCount = 0;
+    std::function<ParseTreeNodePtr (const MacroContextPtr &context, const std::vector<ParseTreeNodePtr> arguments)> function;
+};
+
+struct CoreTypeAndMacros : Value
+{
+    CoreTypeAndMacros();
 
     virtual TypePtr getTypeInContext(const EvaluationContextPtr &context) override
     {
@@ -354,7 +390,7 @@ struct CoreTypes : Value
 
     virtual void dump(std::ostream &out) override
     {
-        out << "CoreTypes()";
+        out << "CoreTypeAndMacros()";
     }
 
     size_t pointerSize;
@@ -374,6 +410,9 @@ struct CoreTypes : Value
     NominalTypePtr evaluationContextType;
     NominalTypePtr environmentType;
     NominalTypePtr packageType;
+
+    NominalTypePtr primitiveMacroType;
+    NominalTypePtr macroContextType;
 
     UniverseTypePtr propType;
     UniverseTypePtr typeType;

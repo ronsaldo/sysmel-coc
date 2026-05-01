@@ -65,7 +65,7 @@ int main(int argc, const char *argv[])
     corePackage = std::make_shared<Package> ();
     corePackage->name = "SysmelCore";
 
-    coreTypes = std::make_shared<CoreTypes> ();
+    coreTypes = std::make_shared<CoreTypeAndMacros> ();
     coreTypes->registerInPackage(corePackage);
 
     for(int i = 1; i < argc; ++i)

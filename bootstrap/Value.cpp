@@ -2,6 +2,14 @@
 #include "ParseTree.hpp"
 #include <sstream>
 
+ValuePtr Value::analyzeAndEvaluateFunctionApplicationNodeInContext(const ParseTreeFunctionApplicationNodePtr &applicationNode, const EvaluationContextPtr &context)
+{
+    (void)context;
+    applicationNode->sourcePosition->printOn(stderr);
+    fprintf(stderr, ": Cannot apply to non-functional value.\n");
+    abort();
+}
+
 TypePtr
 Type::getTypeInContext(const EvaluationContextPtr &context)
 {
@@ -64,7 +72,36 @@ Environment::getTypeInContext(const EvaluationContextPtr &context)
     return context->coreTypes->environmentType;
 }
 
-CoreTypes::CoreTypes()
+TypePtr
+MacroContext::getTypeInContext(const EvaluationContextPtr &context)
+{
+    return context->coreTypes->macroContextType;
+}
+
+ValuePtr
+PrimitiveMacro::analyzeAndEvaluateFunctionApplicationNodeInContext(const ParseTreeFunctionApplicationNodePtr &applicationNode, const EvaluationContextPtr &context)
+{
+    if(argumentCount != applicationNode->arguments.size())
+    {
+        applicationNode->sourcePosition->printOn(stderr);
+        fprintf(stderr, ": Macro expects %d arguments instead of %d.\n", int(argumentCount), int(applicationNode->arguments.size()));
+        abort();
+    }
+
+    auto macroContext = std::make_shared<MacroContext> ();
+    macroContext->sourcePosition = applicationNode->sourcePosition;
+
+    auto macroResult = function(macroContext, applicationNode->arguments);
+    return context->visitExpression(macroResult);
+}
+
+TypePtr
+PrimitiveMacro::getTypeInContext(const EvaluationContextPtr &context)
+{
+    return context->coreTypes->primitiveMacroType;
+}
+
+CoreTypeAndMacros::CoreTypeAndMacros()
 {
     size_t pointerSize = sizeof(void*);
     size_t pointerAlignment = sizeof(void*);
@@ -79,8 +116,11 @@ CoreTypes::CoreTypes()
     undefinedType = std::make_shared<NominalType> ("UndefinedObject", 0, 1);
 
     parseTreeNodeType     = std::make_shared<NominalType> ("ParseTreeNode", pointerSize, pointerAlignment);;
-    coreTypesType         = std::make_shared<NominalType> ("CoreTypes", pointerSize, pointerAlignment);;
+    coreTypesType         = std::make_shared<NominalType> ("CoreTypeAndMacros", pointerSize, pointerAlignment);;
     evaluationContextType = std::make_shared<NominalType> ("EvaluationContext", pointerSize, pointerAlignment);;
+
+    primitiveMacroType = std::make_shared<NominalType> ("PrimitiveMacro", pointerSize, pointerAlignment);;
+    macroContextType = std::make_shared<NominalType> ("MacroContext", pointerSize, pointerAlignment);;
 
     propType = std::make_shared<UniverseType> ("Prop", 0);
     typeType = std::make_shared<UniverseType> ("Type", 1);
@@ -102,7 +142,7 @@ CoreTypes::CoreTypes()
 
 }
 
-void CoreTypes::registerInPackage(PackagePtr package)
+void CoreTypeAndMacros::registerInPackage(PackagePtr package)
 {
     package->setSymbolBinding("Integer", integerType);
     package->setSymbolBinding("Character", characterType);
@@ -115,8 +155,11 @@ void CoreTypes::registerInPackage(PackagePtr package)
     package->setSymbolBinding("UndefinedObject", undefinedType);
 
     package->setSymbolBinding("ParseTreeNode", parseTreeNodeType);
-    package->setSymbolBinding("CoreTypes", coreTypesType);
+    package->setSymbolBinding("CoreTypeAndMacros", coreTypesType);
     package->setSymbolBinding("EvaluationContext", evaluationContextType);
+
+    package->setSymbolBinding("PrimitiveMacro", primitiveMacroType);
+    package->setSymbolBinding("MacroContext", macroContextType);
 
     package->setSymbolBinding("Prop", propType);
     package->setSymbolBinding("Type", typeType);
@@ -125,6 +168,15 @@ void CoreTypes::registerInPackage(PackagePtr package)
     package->setSymbolBinding("false", falseValue);
     package->setSymbolBinding("true", trueValue);
     package->setSymbolBinding("nil", nilValue);
+
+    package->setSymbolBinding("if:then:else:", std::make_shared<PrimitiveMacro> (3, [](const MacroContextPtr &context, const std::vector<ParseTreeNodePtr> &arguments) {
+        auto ifThenElse = std::make_shared<ParseTreeIfExpressionNode> ();
+        ifThenElse->sourcePosition = context->sourcePosition;
+        ifThenElse->condition = arguments[0];
+        ifThenElse->trueExpression = arguments[1];
+        ifThenElse->falseExpression = arguments[2];
+        return ifThenElse;
+    }));
 }
 
 ValuePtr EvaluationContext::visitExpression(const ParseTreeNodePtr &parseNode)
@@ -136,3 +188,4 @@ ValuePtr EvaluationContext::visitDecayedExpression(const ParseTreeNodePtr &parse
 {
     return visitExpression(parseNode);
 }
+

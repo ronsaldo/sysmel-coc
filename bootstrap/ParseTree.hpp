@@ -168,7 +168,7 @@ struct ParseTreeIdentifierReferenceNode : ParseTreeNode
         if(!binding)
         {
             sourcePosition->printOn(stderr);
-            fprintf(stderr, ": Binding for symbol #%s is not supported.\n", value.c_str());
+            fprintf(stderr, ": Binding for symbol #%s is not available.\n", value.c_str());
             abort();
         }
 
@@ -520,6 +520,12 @@ struct ParseTreeFunctionApplicationNode : ParseTreeNode
 {
     ParseTreeNodePtr functional;
     std::vector<ParseTreeNodePtr> arguments;
+
+    virtual ValuePtr analyzeAndEvaluateInContext(const EvaluationContextPtr &context) override
+    {
+        auto functionalValue = context->visitDecayedExpression(functional);
+        return functionalValue->analyzeAndEvaluateFunctionApplicationNodeInContext(std::static_pointer_cast<ParseTreeFunctionApplicationNode> (shared_from_this()), context);
+    }
 
     virtual void collectParseErrorNodesIn(std::vector<ParseTreeParseErrorNodePtr> &out) override
     {
