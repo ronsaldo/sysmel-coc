@@ -2,6 +2,8 @@
 #include "Parser.hpp"
 #include <stdio.h>
 
+static CoreTypesPtr coreTypes;
+static PackagePtr corePackage;
 void
 printHelp()
 {
@@ -34,7 +36,15 @@ evaluateSourceCode(const SourceCodePtr &sourceCode)
     if(!parseTreeErrorNodes.empty())
         return false;
 
-    printf("%s\n", parseTree->dumpAsString().c_str());
+    //printf("%s\n", parseTree->dumpAsString().c_str());
+
+    auto evaluationContext = std::make_shared<EvaluationContext> ();
+    evaluationContext->coreTypes = coreTypes;
+    evaluationContext->package = corePackage;
+
+    auto value = parseTree->analyzeAndEvaluateInContext(evaluationContext);
+    printf("%s\n", value->dumpAsString().c_str());
+
     return true;
 }
 
@@ -49,6 +59,12 @@ evaluateCommandLineString(const std::string &cliString)
 
 int main(int argc, const char *argv[])
 {
+    corePackage = std::make_shared<Package> ();
+    corePackage->name = "SysmelCore";
+
+    coreTypes = std::make_shared<CoreTypes> ();
+    coreTypes->registerInPackage(corePackage);
+
     for(int i = 1; i < argc; ++i)
     {
         std::string arg = argv[i];

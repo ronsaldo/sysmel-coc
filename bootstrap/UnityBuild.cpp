@@ -2,3 +2,4 @@
 #include "Parser.cpp"
 #include "ParseTree.cpp"
 #include "Scanner.cpp"
+#include "Value.cpp"

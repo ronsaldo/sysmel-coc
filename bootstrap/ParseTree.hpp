@@ -2,11 +2,9 @@
 #define SYSMEL_PARSE_TREE_HPP
 
 #include "SourceCode.hpp"
-#include <memory>
+#include "Value.hpp"
 #include <stdint.h>
 #include <vector>
-#include <ostream>
-#include <sstream>
 
 typedef std::shared_ptr<struct ParseTreeNode> ParseTreeNodePtr;
 typedef std::shared_ptr<struct ParseTreeParseErrorNode> ParseTreeParseErrorNodePtr;
@@ -14,7 +12,7 @@ typedef std::shared_ptr<struct ParseTreeArgumentDefinitionNode> ParseTreeArgumen
 typedef std::shared_ptr<struct ParseTreeFunctionTypeNode> ParseTreeFunctionTypeNodePtr;
 typedef std::shared_ptr<struct ParseTreeFunctionNode> ParseTreeFunctionNodePtr;
 
-struct ParseTreeNode : std::enable_shared_from_this<ParseTreeNode>
+struct ParseTreeNode : Value
 {
     SourcePositionPtr sourcePosition;
     
@@ -30,17 +28,9 @@ struct ParseTreeNode : std::enable_shared_from_this<ParseTreeNode>
         return errors;
     }
 
-    virtual void dump(std::ostream &out) = 0;
-    std::string dumpAsString()
-    {
-        std::ostringstream out;
-        dump(out);
-        return out.str();
-    }
-
     virtual void splitMessageCascadeFirstMessage(ParseTreeNodePtr *outReceiver, ParseTreeNodePtr *outFirstMessage)
     {
-        *outReceiver = shared_from_this();
+        *outReceiver = std::static_pointer_cast<ParseTreeNode> (shared_from_this());
         *outFirstMessage = nullptr;
     }
 };
@@ -74,6 +64,17 @@ struct ParseTreeLiteralIntegerNode : ParseTreeNode
     {
         out << "ParseTreeLiteralIntegerNode(" << value << ")";
     }
+
+    virtual ValuePtr analyzeAndEvaluateInContext(const EvaluationContextPtr &context)
+    {
+        (void)context;
+        auto evaluatedValue = std::make_shared<IntegerValue> ();
+        evaluatedValue->type = context->coreTypes->integerType;
+        evaluatedValue->value = value;
+        
+        return evaluatedValue;
+    }
+
 };
 
 struct ParseTreeLiteralCharacterNode : ParseTreeNode
@@ -130,6 +131,14 @@ struct ParseTreeSequenceNode : ParseTreeNode
 {
     std::vector<ParseTreeNodePtr> pragmas;
     std::vector<ParseTreeNodePtr> elements;
+
+    virtual ValuePtr analyzeAndEvaluateInContext(const EvaluationContextPtr &context)
+    {
+        ValuePtr result = context->coreTypes->voidValue;
+        for(const auto &element : elements)
+            result = element->analyzeAndEvaluateInContext(context);
+        return result;
+    }
 
     virtual void collectParseErrorNodesIn(std::vector<ParseTreeParseErrorNodePtr> &out) override
     {
@@ -606,6 +615,77 @@ struct ParseTreeSpliceNode : ParseTreeNode
     {
         out << "ParseTreeSpliceNode(";
         expression->dump(out);
+        out << ")";
+    }
+};
+
+struct ParseTreeIfExpressionNode : ParseTreeNode
+{
+    ParseTreeNodePtr condition;
+    ParseTreeNodePtr trueExpression;
+    ParseTreeNodePtr falseExpression;
+
+    virtual void collectParseErrorNodesIn(std::vector<ParseTreeParseErrorNodePtr> &out) override
+    {
+        condition->collectParseErrorNodesIn(out);
+        if(trueExpression)
+            trueExpression->collectParseErrorNodesIn(out);
+        if(falseExpression)
+            falseExpression->collectParseErrorNodesIn(out);
+    }
+
+    virtual void dump(std::ostream &out) override
+    {
+        out << "ParseTreeIfExpressionNode(";
+        condition->dump(out);
+        if(trueExpression)
+        {
+            out << ", ";
+            trueExpression->dump(out);
+        }
+        
+        if(falseExpression)
+        {
+            out << ", ";
+            falseExpression->dump(out);
+        }
+
+        out << ")";
+    }
+};
+
+struct ParseTreeWhileExpressionNode : ParseTreeNode
+{
+    ParseTreeNodePtr condition;
+    ParseTreeNodePtr bodyExpresssion;
+    ParseTreeNodePtr continueExpression;
+
+    virtual void collectParseErrorNodesIn(std::vector<ParseTreeParseErrorNodePtr> &out) override
+    {
+        if(condition)
+            condition->collectParseErrorNodesIn(out);
+        if(bodyExpresssion)
+            bodyExpresssion->collectParseErrorNodesIn(out);
+        if(continueExpression)
+            continueExpression->collectParseErrorNodesIn(out);
+    }
+
+    virtual void dump(std::ostream &out) override
+    {
+        out << "ParseTreeIfExpressionNode(";
+        condition->dump(out);
+        if(bodyExpresssion)
+        {
+            out << ", ";
+            bodyExpresssion->dump(out);
+        }
+        
+        if(continueExpression)
+        {
+            out << ", ";
+            continueExpression->dump(out);
+        }
+
         out << ")";
     }
 };
