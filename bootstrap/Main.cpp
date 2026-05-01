@@ -41,6 +41,9 @@ evaluateSourceCode(const SourceCodePtr &sourceCode)
     auto evaluationContext = std::make_shared<EvaluationContext> ();
     evaluationContext->coreTypes = coreTypes;
     evaluationContext->package = corePackage;
+    evaluationContext->lexicalEnvironment = std::make_shared<LexicalEnvironment> (
+        std::make_shared<PackageEnvironment> (std::make_shared<EmptyEnvironment> (), corePackage)
+    );
 
     auto value = parseTree->analyzeAndEvaluateInContext(evaluationContext);
     printf("%s\n", value->dumpAsString().c_str());

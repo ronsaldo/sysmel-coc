@@ -1,4 +1,5 @@
 #include "Value.hpp"
+#include "ParseTree.hpp"
 
 CoreTypes::CoreTypes()
 {
@@ -46,4 +47,9 @@ void CoreTypes::registerInPackage(PackagePtr package)
     package->setSymbolBinding("false", falseValue);
     package->setSymbolBinding("true", trueValue);
     package->setSymbolBinding("nil", nilValue);
+}
+
+ValuePtr EvaluationContext::visitParseNode(const ParseTreeNodePtr &parseNode)
+{
+    return parseNode->analyzeAndEvaluateInContext(std::static_pointer_cast<EvaluationContext> (shared_from_this()));
 }

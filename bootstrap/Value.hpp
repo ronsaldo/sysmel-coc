@@ -8,6 +8,8 @@
 
 typedef std::shared_ptr<struct Value> ValuePtr;
 typedef std::shared_ptr<struct Type> TypePtr;
+typedef std::shared_ptr<struct ParseTreeNode> ParseTreeNodePtr;
+typedef std::shared_ptr<struct ParseTreeIdentifierReferenceNode> ParseTreeIdentifierReferenceNodePtr;
 typedef std::shared_ptr<struct NominalType> NominalTypePtr;
 typedef std::shared_ptr<struct Package> PackagePtr;
 typedef std::shared_ptr<struct Environment> EnvironmentPtr;
@@ -19,6 +21,13 @@ struct Value : std::enable_shared_from_this<Value>
 {
     virtual ValuePtr analyzeAndEvaluateInContext(const EvaluationContextPtr &context)
     {
+        (void)context;
+        return shared_from_this();
+    }
+
+    virtual ValuePtr analyzeAndEvaluateIdentifierReferenceNodeInContext(const ParseTreeIdentifierReferenceNodePtr &identifierNode, const EvaluationContextPtr &context)
+    {
+        (void)identifierNode;
         (void)context;
         return shared_from_this();
     }
@@ -85,6 +94,16 @@ struct IntegerValue : PrimitiveValue
     }
 };
 
+struct CharacterValue : PrimitiveValue
+{
+    uint32_t value;
+
+    virtual void dump(std::ostream &out) override
+    {
+        out << "CharacterValue(" << value << ")";
+    }
+};
+
 struct FloatValue : PrimitiveValue
 {
     double value;
@@ -100,6 +119,26 @@ struct NilValue : PrimitiveValue
     virtual void dump(std::ostream &out) override
     {
         out << "NilValue()";
+    }
+};
+
+struct StringValue : PrimitiveValue
+{
+    std::string value;
+
+    virtual void dump(std::ostream &out) override
+    {
+        out << "StringValue(" << value << ")";
+    }
+};
+
+struct SymbolValue : PrimitiveValue
+{
+    std::string value;
+
+    virtual void dump(std::ostream &out) override
+    {
+        out << "SymbolValue(" << value << ")";
     }
 };
 
@@ -121,26 +160,57 @@ struct Package : Value
 
 struct Environment : Value
 {
+    virtual ValuePtr lookupSymbolRecursively(const std::string &symbol) = 0;
+
     virtual void dump(std::ostream &out) override
     {
         out << "Environment()";
     }
 };
 
-struct EmptyEnvironment : Value
+struct EmptyEnvironment : Environment
 {
+    virtual ValuePtr lookupSymbolRecursively(const std::string &symbol) override
+    {
+        (void)symbol;
+        return nullptr;
+    }
 };
 
-struct PackageEnvironment : Value
+struct PackageEnvironment : Environment
 {
     EnvironmentPtr parent;
     PackagePtr package;
+
+    PackageEnvironment(const EnvironmentPtr &initParent, const PackagePtr &initPackage)
+        : parent(initParent), package(initPackage) {}
+
+    virtual ValuePtr lookupSymbolRecursively(const std::string &symbol) override
+    {
+        auto it = package->packageSymbolTable.find(symbol);
+        if(it != package->packageSymbolTable.end())
+            return it->second;
+
+        return parent->lookupSymbolRecursively(symbol);
+    }
 };
 
-struct LexicalEnvironment : Value
+struct LexicalEnvironment : Environment
 {
+    LexicalEnvironment(const EnvironmentPtr &initParent)
+        : parent(initParent) {}
+
     EnvironmentPtr parent;
     std::unordered_map<std::string, ValuePtr> symbolTable;
+
+    virtual ValuePtr lookupSymbolRecursively(const std::string &symbol) override
+    {
+        auto it = symbolTable.find(symbol);
+        if(it != symbolTable.end())
+            return it->second;
+
+        return parent->lookupSymbolRecursively(symbol);
+    }
 };
 
 struct CoreTypes : Value
@@ -174,6 +244,8 @@ struct CoreTypes : Value
 
 struct EvaluationContext : Value
 {
+    ValuePtr visitParseNode(const ParseTreeNodePtr &parseNode);
+
     virtual void dump(std::ostream &out) override
     {
         out << "EvaluationContext()";

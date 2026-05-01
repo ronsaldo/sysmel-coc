@@ -15,6 +15,13 @@ typedef std::shared_ptr<struct ParseTreeFunctionNode> ParseTreeFunctionNodePtr;
 struct ParseTreeNode : Value
 {
     SourcePositionPtr sourcePosition;
+
+    virtual ValuePtr analyzeAndEvaluateInContext(const EvaluationContextPtr &context)
+    {
+        (void)context;
+        fprintf(stderr, "analyzeAndEvaluateInContext not implemented in %s\n", dumpAsString().c_str());
+        abort();
+    }
     
     virtual void collectParseErrorNodesIn(std::vector<ParseTreeParseErrorNodePtr> &out)
     {
@@ -59,27 +66,32 @@ struct ParseTreeParseErrorNode : ParseTreeNode
 struct ParseTreeLiteralIntegerNode : ParseTreeNode
 {
     int64_t value;
-    
+
+    virtual ValuePtr analyzeAndEvaluateInContext(const EvaluationContextPtr &context) override
+    {
+        auto evaluatedValue = std::make_shared<IntegerValue> ();
+        evaluatedValue->type = context->coreTypes->integerType;
+        evaluatedValue->value = value;
+        return evaluatedValue;
+    }
+
     virtual void dump(std::ostream &out) override
     {
         out << "ParseTreeLiteralIntegerNode(" << value << ")";
     }
-
-    virtual ValuePtr analyzeAndEvaluateInContext(const EvaluationContextPtr &context)
-    {
-        (void)context;
-        auto evaluatedValue = std::make_shared<IntegerValue> ();
-        evaluatedValue->type = context->coreTypes->integerType;
-        evaluatedValue->value = value;
-        
-        return evaluatedValue;
-    }
-
 };
 
 struct ParseTreeLiteralCharacterNode : ParseTreeNode
 {
     uint32_t value;
+
+    virtual ValuePtr analyzeAndEvaluateInContext(const EvaluationContextPtr &context) override
+    {
+        auto evaluatedValue = std::make_shared<CharacterValue> ();
+        evaluatedValue->type = context->coreTypes->characterType;
+        evaluatedValue->value = value;
+        return evaluatedValue;
+    }
 
     virtual void dump(std::ostream &out) override
     {
@@ -91,6 +103,14 @@ struct ParseTreeLiteralFloatNode : ParseTreeNode
 {
     double value;
 
+    virtual ValuePtr analyzeAndEvaluateInContext(const EvaluationContextPtr &context) override
+    {
+        auto evaluatedValue = std::make_shared<FloatValue> ();
+        evaluatedValue->type = context->coreTypes->floatType;
+        evaluatedValue->value = value;
+        return evaluatedValue;
+    }
+
     virtual void dump(std::ostream &out) override
     {
         out << "ParseTreeLiteralFloatNode(" << value << ")";
@@ -100,6 +120,14 @@ struct ParseTreeLiteralFloatNode : ParseTreeNode
 struct ParseTreeLiteralStringNode : ParseTreeNode
 {
     std::string value;
+
+    virtual ValuePtr analyzeAndEvaluateInContext(const EvaluationContextPtr &context) override
+    {
+        auto evaluatedValue = std::make_shared<StringValue> ();
+        evaluatedValue->type = context->coreTypes->stringType;
+        evaluatedValue->value = value;
+        return evaluatedValue;
+    }
 
     virtual void dump(std::ostream &out) override
     {
@@ -111,6 +139,14 @@ struct ParseTreeLiteralSymbolNode : ParseTreeNode
 {
     std::string value;
     
+    virtual ValuePtr analyzeAndEvaluateInContext(const EvaluationContextPtr &context) override
+    {
+        auto evaluatedValue = std::make_shared<SymbolValue> ();
+        evaluatedValue->type = context->coreTypes->symbolType;
+        evaluatedValue->value = value;
+        return evaluatedValue;
+    }
+
     virtual void dump(std::ostream &out) override
     {
         out << "ParseTreeLiteralSymbolNode(\"" << value << "\")";
@@ -121,6 +157,19 @@ struct ParseTreeIdentifierReferenceNode : ParseTreeNode
 {
     std::string value;
     
+    virtual ValuePtr analyzeAndEvaluateInContext(const EvaluationContextPtr &context) override
+    {
+        auto binding = context->lexicalEnvironment->lookupSymbolRecursively(value);
+        if(!binding)
+        {
+            sourcePosition->printOn(stderr);
+            fprintf(stderr, ": Binding for symbol #%s is not supported.\n", value.c_str());
+            abort();
+        }
+
+        return binding->analyzeAndEvaluateIdentifierReferenceNodeInContext(std::static_pointer_cast<ParseTreeIdentifierReferenceNode> (shared_from_this()), context);
+    }
+
     virtual void dump(std::ostream &out) override
     {
         out << "ParseTreeIdentifierReferenceNode(" << value << ")";
@@ -136,7 +185,7 @@ struct ParseTreeSequenceNode : ParseTreeNode
     {
         ValuePtr result = context->coreTypes->voidValue;
         for(const auto &element : elements)
-            result = element->analyzeAndEvaluateInContext(context);
+            result = context->visitParseNode(element);
         return result;
     }
 
@@ -672,7 +721,7 @@ struct ParseTreeWhileExpressionNode : ParseTreeNode
 
     virtual void dump(std::ostream &out) override
     {
-        out << "ParseTreeIfExpressionNode(";
+        out << "ParseTreeWhileExpressionNode(";
         condition->dump(out);
         if(bodyExpresssion)
         {
