@@ -74,8 +74,7 @@ struct ParseTreeLiteralIntegerNode : ParseTreeNode
 
     virtual ValuePtr analyzeAndEvaluateInContext(const EvaluationContextPtr &context) override
     {
-        auto evaluatedValue = std::make_shared<IntegerValue> ();
-        evaluatedValue->type = context->coreTypes->integerType;
+        auto evaluatedValue = std::make_shared<IntegerValue> (context->coreTypes->integerType);
         evaluatedValue->value = value;
         return evaluatedValue;
     }
@@ -92,8 +91,7 @@ struct ParseTreeLiteralCharacterNode : ParseTreeNode
 
     virtual ValuePtr analyzeAndEvaluateInContext(const EvaluationContextPtr &context) override
     {
-        auto evaluatedValue = std::make_shared<CharacterValue> ();
-        evaluatedValue->type = context->coreTypes->characterType;
+        auto evaluatedValue = std::make_shared<CharacterValue> (context->coreTypes->characterType);
         evaluatedValue->value = value;
         return evaluatedValue;
     }
@@ -110,8 +108,7 @@ struct ParseTreeLiteralFloatNode : ParseTreeNode
 
     virtual ValuePtr analyzeAndEvaluateInContext(const EvaluationContextPtr &context) override
     {
-        auto evaluatedValue = std::make_shared<FloatValue> ();
-        evaluatedValue->type = context->coreTypes->floatType;
+        auto evaluatedValue = std::make_shared<FloatValue> (context->coreTypes->floatType);
         evaluatedValue->value = value;
         return evaluatedValue;
     }
@@ -128,8 +125,7 @@ struct ParseTreeLiteralStringNode : ParseTreeNode
 
     virtual ValuePtr analyzeAndEvaluateInContext(const EvaluationContextPtr &context) override
     {
-        auto evaluatedValue = std::make_shared<StringValue> ();
-        evaluatedValue->type = context->coreTypes->stringType;
+        auto evaluatedValue = std::make_shared<StringValue> (context->coreTypes->stringType);
         evaluatedValue->value = value;
         return evaluatedValue;
     }
@@ -146,8 +142,7 @@ struct ParseTreeLiteralSymbolNode : ParseTreeNode
     
     virtual ValuePtr analyzeAndEvaluateInContext(const EvaluationContextPtr &context) override
     {
-        auto evaluatedValue = std::make_shared<SymbolValue> ();
-        evaluatedValue->type = context->coreTypes->symbolType;
+        auto evaluatedValue = std::make_shared<SymbolValue> (context->coreTypes->symbolType);
         evaluatedValue->value = value;
         return evaluatedValue;
     }
@@ -741,6 +736,95 @@ struct ParseTreeSpliceNode : ParseTreeNode
     {
         out << "ParseTreeSpliceNode(";
         expression->dump(out);
+        out << ")";
+    }
+};
+
+struct ParseTreeVariableDefinitionNode : ParseTreeNode
+{
+    ParseTreeNodePtr nameExpression;
+    ParseTreeNodePtr typeExpression;
+    ParseTreeNodePtr initialValue;
+    bool isMutable = false;
+
+    virtual ValuePtr analyzeAndEvaluateInContext(const EvaluationContextPtr &context) override
+    {
+        auto name = context->visitOptionalSymbolNode(nameExpression);
+        TypePtr typeValue;
+        if(typeExpression)
+            typeValue = context->visitNodeExpectingType(typeExpression);
+
+        ValuePtr initial;
+        if(initialValue)
+            initial = context->visitNodeWithExpectedType(initialValue, typeValue);
+
+        if(!initial)
+        {
+            if (!typeValue)
+            {
+                sourcePosition->printOn(stderr);
+                fprintf(stderr, ": At least a type or an initial value must be specified.\n");
+                abort();
+            }
+
+            initial = typeValue->getOrCreateDefaultValue();
+        }
+
+        if(isMutable)
+        {
+            fprintf(stderr, "TODO: mutable ParseTreeVariableDefinitionNode::analyzeAndEvaluateInContext\n");
+            abort();
+        }
+        else
+        {
+            if(!name.empty())
+            {
+                if(context->lexicalEnvironment->hasSymbolBinding(name))
+                {
+                    sourcePosition->printOn(stderr);
+                    fprintf(stderr, ": symbol %s is already bound.\n", name.c_str());
+                    abort();
+
+                }
+
+                context->lexicalEnvironment->setSymbolBinding(name, initial);
+            }
+
+            return initial;
+        }
+    }
+
+    virtual void collectParseErrorNodesIn(std::vector<ParseTreeParseErrorNodePtr> &out) override
+    {
+        if(nameExpression)
+            nameExpression->collectParseErrorNodesIn(out);
+        if(typeExpression)
+            typeExpression->collectParseErrorNodesIn(out);
+        if(initialValue)
+            initialValue->collectParseErrorNodesIn(out);
+    }
+
+    virtual void dump(std::ostream &out) override
+    {
+        out << "ParseTreeVariableDefinitionNode(";
+        if(nameExpression)
+            nameExpression->dump(out);
+
+        if(typeExpression)
+        {
+            out << ", ";
+            typeExpression->dump(out);
+        }
+        
+        if(initialValue)
+        {
+            out << ", ";
+            initialValue->dump(out);
+        }
+
+        if(isMutable)
+            out << "mutable";
+
         out << ")";
     }
 };

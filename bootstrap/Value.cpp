@@ -16,6 +16,16 @@ Type::getTypeInContext(const EvaluationContextPtr &context)
     return context->coreTypes->propType;
 }
 
+bool Type::isSatisfiedByValue(const ValuePtr &value, const EvaluationContextPtr &context) const
+{
+    return isSatisfiedByType(value->getTypeInContext(context));
+}
+
+bool Type::isSatisfiedByType(const TypePtr &otherType) const
+{
+    return this == otherType.get();
+}
+
 TypePtr
 UniverseType::getTypeInContext(const EvaluationContextPtr &context)
 {
@@ -107,11 +117,22 @@ CoreTypeAndMacros::CoreTypeAndMacros()
     size_t pointerAlignment = sizeof(void*);
     
     integerType   = std::make_shared<NominalType> ("Integer", 8, 8);
+    integerType->defaultValue = std::make_shared<IntegerValue> (integerType);
+
     characterType = std::make_shared<NominalType> ("Character", 8, 8);
+    characterType->defaultValue = std::make_shared<CharacterValue> (characterType);
+
     floatType     = std::make_shared<NominalType> ("Float", 8, 8);
+    floatType->defaultValue = std::make_shared<FloatValue> (floatType);
+
     booleanType   = std::make_shared<NominalType> ("Boolean", 8, 8);
+
     stringType    = std::make_shared<NominalType> ("String", pointerSize, pointerAlignment);
+    stringType->defaultValue = std::make_shared<StringValue> (stringType);
+
     symbolType    = std::make_shared<NominalType> ("Symbol", pointerSize, pointerAlignment);
+    symbolType->defaultValue = std::make_shared<SymbolValue> (symbolType);
+
     voidType      = std::make_shared<NominalType> ("Void", 0, 1);
     undefinedType = std::make_shared<NominalType> ("UndefinedObject", 0, 1);
 
@@ -126,19 +147,22 @@ CoreTypeAndMacros::CoreTypeAndMacros()
     typeType = std::make_shared<UniverseType> ("Type", 1);
     propType->type = typeType;
 
-    voidValue = std::make_shared<VoidValue> ();
+    voidValue = std::make_shared<VoidValue> (voidType);
     voidValue->type = voidType;
+    voidType->defaultValue = voidValue;
 
-    falseValue = std::make_shared<BooleanValue> ();
+    falseValue = std::make_shared<BooleanValue> (booleanType);
     falseValue->type = booleanType;
     falseValue->value = false;
+    booleanType->defaultValue = falseValue;
 
-    trueValue = std::make_shared<BooleanValue> ();
+    trueValue = std::make_shared<BooleanValue> (booleanType);
     trueValue->type = booleanType;
     trueValue->value = true;
 
-    nilValue = std::make_shared<NilValue> ();
+    nilValue = std::make_shared<NilValue> (undefinedType);
     nilValue->type = undefinedType;
+    undefinedType->defaultValue = nilValue;
 
 }
 
@@ -169,6 +193,22 @@ void CoreTypeAndMacros::registerInPackage(PackagePtr package)
     package->setSymbolBinding("true", trueValue);
     package->setSymbolBinding("nil", nilValue);
 
+    package->setSymbolBinding("let:with:", std::make_shared<PrimitiveMacro> (2, [](const MacroContextPtr &context, const std::vector<ParseTreeNodePtr> &arguments) {
+        auto letWith = std::make_shared<ParseTreeVariableDefinitionNode> ();
+        letWith->sourcePosition = context->sourcePosition;
+        letWith->nameExpression = arguments[0];
+        letWith->initialValue = arguments[1];
+        return letWith;
+    }));
+    package->setSymbolBinding("let:mutableWith:", std::make_shared<PrimitiveMacro> (2, [](const MacroContextPtr &context, const std::vector<ParseTreeNodePtr> &arguments) {
+        auto letWith = std::make_shared<ParseTreeVariableDefinitionNode> ();
+        letWith->sourcePosition = context->sourcePosition;
+        letWith->nameExpression = arguments[0];
+        letWith->initialValue = arguments[1];
+        letWith->isMutable = true;
+        return letWith;
+    }));
+
     package->setSymbolBinding("if:then:else:", std::make_shared<PrimitiveMacro> (3, [](const MacroContextPtr &context, const std::vector<ParseTreeNodePtr> &arguments) {
         auto ifThenElse = std::make_shared<ParseTreeIfExpressionNode> ();
         ifThenElse->sourcePosition = context->sourcePosition;
@@ -176,6 +216,28 @@ void CoreTypeAndMacros::registerInPackage(PackagePtr package)
         ifThenElse->trueExpression = arguments[1];
         ifThenElse->falseExpression = arguments[2];
         return ifThenElse;
+    }));
+    package->setSymbolBinding("if:then:", std::make_shared<PrimitiveMacro> (2, [](const MacroContextPtr &context, const std::vector<ParseTreeNodePtr> &arguments) {
+        auto ifThen = std::make_shared<ParseTreeIfExpressionNode> ();
+        ifThen->sourcePosition = context->sourcePosition;
+        ifThen->condition = arguments[0];
+        ifThen->trueExpression = arguments[1];
+        return ifThen;
+    }));
+    package->setSymbolBinding("while:do:", std::make_shared<PrimitiveMacro> (2, [](const MacroContextPtr &context, const std::vector<ParseTreeNodePtr> &arguments) {
+        auto whileDo = std::make_shared<ParseTreeWhileExpressionNode> ();
+        whileDo->sourcePosition = context->sourcePosition;
+        whileDo->condition = arguments[0];
+        whileDo->bodyExpresssion = arguments[1];
+        return whileDo;
+    }));
+    package->setSymbolBinding("while:do:continueWith:", std::make_shared<PrimitiveMacro> (3, [](const MacroContextPtr &context, const std::vector<ParseTreeNodePtr> &arguments) {
+        auto whileDo = std::make_shared<ParseTreeWhileExpressionNode> ();
+        whileDo->sourcePosition = context->sourcePosition;
+        whileDo->condition = arguments[0];
+        whileDo->bodyExpresssion = arguments[1];
+        whileDo->continueExpression = arguments[2];
+        return whileDo;
     }));
 }
 
@@ -189,3 +251,47 @@ ValuePtr EvaluationContext::visitDecayedExpression(const ParseTreeNodePtr &parse
     return visitExpression(parseNode);
 }
 
+std::string
+EvaluationContext::visitOptionalSymbolNode(const ParseTreeNodePtr &parseNode)
+{
+    if(!parseNode)
+        return std::string();
+
+    auto symbolValue = visitDecayedExpression(parseNode);
+    if(!symbolValue->isSymbolValue())
+    {
+        parseNode->sourcePosition->printOn(stderr);
+        fprintf(stderr, ": Expected a symbol value.\n");
+        abort();
+    }
+
+    return std::static_pointer_cast<SymbolValue> (symbolValue)->value;
+}
+
+TypePtr
+EvaluationContext::visitNodeExpectingType(const ParseTreeNodePtr &parseNode)
+{
+    auto decayedValue = visitDecayedExpression(parseNode);
+    if(!decayedValue->isType())
+    {
+        parseNode->sourcePosition->printOn(stderr);
+        fprintf(stderr, ": Expected a type expression.\n");
+        abort();
+    }
+
+    return std::static_pointer_cast<Type> (decayedValue);
+}
+
+ValuePtr
+EvaluationContext::visitNodeWithExpectedType(const ParseTreeNodePtr &parseNode, const TypePtr &expectedType)
+{
+    auto value = visitDecayedExpression(parseNode);
+    if(expectedType && !expectedType->isSatisfiedByValue(value, std::static_pointer_cast<EvaluationContext> (shared_from_this())))
+    {
+        parseNode->sourcePosition->printOn(stderr);
+        fprintf(stderr, ": Expected an expression with type '%s'.\n", expectedType->dumpAsString().c_str());
+        abort();
+    }
+
+    return value;
+}

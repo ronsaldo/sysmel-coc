@@ -41,7 +41,18 @@ struct Value : std::enable_shared_from_this<Value>
     virtual ValuePtr analyzeAndEvaluateFunctionApplicationNodeInContext(const ParseTreeFunctionApplicationNodePtr &applicationNode, const EvaluationContextPtr &context);
 
     virtual TypePtr getTypeInContext(const EvaluationContextPtr &context) = 0;
+
     virtual bool isType() const
+    {
+        return false;
+    }
+
+    virtual bool isBooleanValue() const
+    {
+        return false;
+    }
+
+    virtual bool isSymbolValue() const
     {
         return false;
     }
@@ -58,7 +69,16 @@ struct Value : std::enable_shared_from_this<Value>
 
 struct Type : Value
 {
+    virtual ValuePtr getOrCreateDefaultValue()
+    {
+        fprintf(stderr, "Type %s does not have a default value.", dumpAsString().c_str());
+        abort();
+    }
+
     virtual TypePtr getTypeInContext(const EvaluationContextPtr &context) override;
+
+    virtual bool isSatisfiedByValue(const ValuePtr &value, const EvaluationContextPtr &context) const;
+    virtual bool isSatisfiedByType(const TypePtr &otherType) const;
 
     virtual bool isType() const override
     {
@@ -75,6 +95,13 @@ struct NominalType : Type
     {
         out << name;
     }
+
+    virtual ValuePtr getOrCreateDefaultValue()
+    {
+        return defaultValue;
+    }
+
+    ValuePtr defaultValue;
 
     std::string name;
     size_t valueSize;
@@ -136,6 +163,9 @@ struct AssociationType : Type
 
 struct PrimitiveValue : Value
 {
+    PrimitiveValue(const TypePtr initType)
+        : type(initType) {}
+
     virtual TypePtr getTypeInContext(const EvaluationContextPtr &context) override
     {
         (void)context;
@@ -147,6 +177,9 @@ struct PrimitiveValue : Value
 
 struct VoidValue : PrimitiveValue
 {
+    VoidValue(const TypePtr initType)
+        : PrimitiveValue(initType) {}
+
     virtual void dump(std::ostream &out) override
     {
         out << "void";
@@ -155,7 +188,15 @@ struct VoidValue : PrimitiveValue
 
 struct BooleanValue : PrimitiveValue
 {
+    BooleanValue(const TypePtr initType)
+        : PrimitiveValue(initType) {}
+
     bool value = false;
+    
+    virtual bool isBooleanValue() const
+    {
+        return true;
+    }
 
     virtual void dump(std::ostream &out) override
     {
@@ -165,7 +206,10 @@ struct BooleanValue : PrimitiveValue
 
 struct IntegerValue : PrimitiveValue
 {
-    int64_t value;
+    IntegerValue(const TypePtr initType)
+        : PrimitiveValue(initType) {}
+
+    int64_t value = 0;
 
     virtual void dump(std::ostream &out) override
     {
@@ -175,7 +219,10 @@ struct IntegerValue : PrimitiveValue
 
 struct CharacterValue : PrimitiveValue
 {
-    uint32_t value;
+    CharacterValue(const TypePtr initType)
+        : PrimitiveValue(initType) {}
+
+    uint32_t value = 0;
 
     virtual void dump(std::ostream &out) override
     {
@@ -185,7 +232,10 @@ struct CharacterValue : PrimitiveValue
 
 struct FloatValue : PrimitiveValue
 {
-    double value;
+    FloatValue(const TypePtr initType)
+        : PrimitiveValue(initType) {}
+
+    double value = 0.0;
 
     virtual void dump(std::ostream &out) override
     {
@@ -195,6 +245,9 @@ struct FloatValue : PrimitiveValue
 
 struct NilValue : PrimitiveValue
 {
+    NilValue(const TypePtr initType)
+        : PrimitiveValue(initType) {}
+
     virtual void dump(std::ostream &out) override
     {
         out << "NilValue()";
@@ -203,6 +256,9 @@ struct NilValue : PrimitiveValue
 
 struct StringValue : PrimitiveValue
 {
+    StringValue(const TypePtr initType)
+        : PrimitiveValue(initType) {}
+
     std::string value;
 
     virtual void dump(std::ostream &out) override
@@ -213,7 +269,15 @@ struct StringValue : PrimitiveValue
 
 struct SymbolValue : PrimitiveValue
 {
+    SymbolValue(const TypePtr initType)
+        : PrimitiveValue(initType) {}
+
     std::string value;
+
+    virtual bool isSymbolValue() const
+    {
+        return true;
+    }
 
     virtual void dump(std::ostream &out) override
     {
@@ -335,6 +399,16 @@ struct LexicalEnvironment : Environment
     EnvironmentPtr parent;
     std::unordered_map<std::string, ValuePtr> symbolTable;
 
+    bool hasSymbolBinding(std::string symbol) const
+    {
+        return symbolTable.find(symbol) != symbolTable.end();
+    }
+
+    void setSymbolBinding(std::string symbol, ValuePtr binding)
+    {
+        symbolTable[symbol] = binding;
+    }
+
     virtual ValuePtr lookupSymbolRecursively(const std::string &symbol) override
     {
         auto it = symbolTable.find(symbol);
@@ -427,6 +501,10 @@ struct EvaluationContext : Value
 {
     ValuePtr visitExpression(const ParseTreeNodePtr &parseNode);
     ValuePtr visitDecayedExpression(const ParseTreeNodePtr &parseNode);
+
+    std::string visitOptionalSymbolNode(const ParseTreeNodePtr &parseNode);
+    TypePtr visitNodeExpectingType(const ParseTreeNodePtr &parseNode);
+    ValuePtr visitNodeWithExpectedType(const ParseTreeNodePtr &parseNode, const TypePtr &expectedType);
 
     virtual TypePtr getTypeInContext(const EvaluationContextPtr &context) override
     {
