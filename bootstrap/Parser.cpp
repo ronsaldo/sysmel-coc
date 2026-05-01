@@ -754,9 +754,46 @@ sysmel_parser_parseKeywordApplication(sysmel_ParserState_t *state)
 }
 
 static ParseTreeNodePtr
+sysmel_parser_parseKeywordMessageSend(sysmel_ParserState_t *state)
+{
+    size_t startPosition = state->position;
+    auto receiver = sysmel_parser_parseAssociationExpression(state);
+    if(sysmel_parserState_peekKind(state, 0) != SysmelTokenKind_Keyword)
+        return receiver;
+
+    std::string selector;
+    std::vector<ParseTreeNodePtr> arguments;
+
+    while(sysmel_parserState_peekKind(state, 0) == SysmelTokenKind_Keyword)
+    {
+        auto keywordToken = sysmel_parserState_next(state);
+
+        auto tokenText = keywordToken->sourcePosition->getText();
+        selector += tokenText;
+        
+        auto argument = sysmel_parser_parseAssociationExpression(state);
+        arguments.push_back(argument);
+    }
+
+    // Selector
+    auto selectorNode = std::make_shared<ParseTreeLiteralSymbolNode> ();
+    selectorNode->sourcePosition = sysmel_parserState_sourcePositionFrom(state, startPosition);
+    selectorNode->value = selector;
+
+    // Message send
+    auto sendNode = std::make_shared<ParseTreeMessageSendNode> ();
+    sendNode->sourcePosition = sysmel_parserState_sourcePositionFrom(state, startPosition);
+    sendNode->receiver = receiver;
+    sendNode->selector = selectorNode;
+    sendNode->arguments.swap(arguments);
+
+    return sendNode;
+}
+
+static ParseTreeNodePtr
 sysmel_parser_parseMessageCascade(sysmel_ParserState_t *state)
 {
-    return sysmel_parser_parseAssociationExpression(state);
+    return sysmel_parser_parseKeywordMessageSend(state);
 }
 
 static ParseTreeNodePtr
