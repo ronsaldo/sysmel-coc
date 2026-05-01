@@ -421,11 +421,12 @@ sysmel_parser_parseBlockArgument(sysmel_ParserState_t *state)
     return argument;
 }
 
-static ParseTreeFunctionNodePtr
-sysmel_parser_parseBlockHeader(sysmel_ParserState_t *state)
+
+static ParseTreeFunctionTypeNodePtr
+sysmel_parser_parseBlockType(sysmel_ParserState_t *state)
 {
     size_t startPosition = state->position;
-    bool shouldEmitHeader = false;
+    bool shouldEmitType = false;
     std::vector<ParseTreeNodePtr> argumentDefinitions;
     ParseTreeNodePtr resultTypeExpression = nullptr;
 
@@ -433,7 +434,7 @@ sysmel_parser_parseBlockHeader(sysmel_ParserState_t *state)
     {
         auto argumentDefinition = sysmel_parser_parseBlockArgument(state);
         argumentDefinitions.push_back(argumentDefinition);
-        shouldEmitHeader = true;
+        shouldEmitType = true;
 
     }
 
@@ -441,25 +442,22 @@ sysmel_parser_parseBlockHeader(sysmel_ParserState_t *state)
     if(sysmel_parserState_peekKind(state, 0) == SysmelTokenKind_ColonColon)
     {
         sysmel_parserState_advance(state);
-        shouldEmitHeader = true;
+        shouldEmitType = true;
         resultTypeExpression = sysmel_parser_parseUnaryPrefixExpression(state);
     }
 
     // Separating bar
     if(sysmel_parserState_peekKind(state, 0) == SysmelTokenKind_Bar)
-    {
-        sysmel_parserState_advance(state);
-        shouldEmitHeader = true;
-    }
+        shouldEmitType = true;
 
-    if(!shouldEmitHeader)
+    if(!shouldEmitType)
         return nullptr;
 
-    auto header = std::make_shared<ParseTreeFunctionNode> ();
-    header->sourcePosition = sysmel_parserState_sourcePositionFrom(state, startPosition);
-    header->argumentDefinitions.swap(argumentDefinitions);
-    header->resultTypeExpression = resultTypeExpression;
-    return header;
+    auto functionType = std::make_shared<ParseTreeFunctionTypeNode> ();
+    functionType->sourcePosition = sysmel_parserState_sourcePositionFrom(state, startPosition);
+    functionType->argumentDefinitions.swap(argumentDefinitions);
+    functionType->resultTypeExpression = resultTypeExpression;
+    return functionType;
 }
 
 static ParseTreeNodePtr
@@ -469,18 +467,39 @@ sysmel_parser_parseBlock(sysmel_ParserState_t *state)
     assert(sysmel_parserState_peekKind(state, 0) == SysmelTokenKind_LeftCurlyBracket);
     sysmel_parserState_advance(state);
 
-    auto blockHeader = sysmel_parser_parseBlockHeader(state);
- 
-    auto bodySequence = sysmel_parser_parseSequenceUntilEndOrDelimiter(state, SysmelTokenKind_RightCurlyBracket);
-    bodySequence = sysmel_parserState_expectAddingErrorToNode(state, SysmelTokenKind_RightCurlyBracket, bodySequence);
+    auto blockType = sysmel_parser_parseBlockType(state);
 
-    if(blockHeader)
+    // Separating bar
+    bool shouldEmitFunction = false;
+    if(sysmel_parserState_peekKind(state, 0) == SysmelTokenKind_Bar)
     {
-        blockHeader->body = bodySequence;
-        return blockHeader;
+        sysmel_parserState_advance(state);
+        shouldEmitFunction = true;
+    }
+ 
+    if(blockType)
+    {
+        if(shouldEmitFunction)
+        {
+            auto bodySequence = sysmel_parser_parseSequenceUntilEndOrDelimiter(state, SysmelTokenKind_RightCurlyBracket);
+            bodySequence = sysmel_parserState_expectAddingErrorToNode(state, SysmelTokenKind_RightCurlyBracket, bodySequence);
+
+            auto function = std::make_shared<ParseTreeFunctionNode> ();
+            function->sourcePosition = sysmel_parserState_sourcePositionFrom(state, startPosition);
+            function->functionType = blockType;
+            function->body = bodySequence;
+            return function;
+        }
+        else
+        {
+            return sysmel_parserState_expectAddingErrorToNode(state, SysmelTokenKind_RightCurlyBracket, blockType);
+        }
     }
     else
     {
+        auto bodySequence = sysmel_parser_parseSequenceUntilEndOrDelimiter(state, SysmelTokenKind_RightCurlyBracket);
+        bodySequence = sysmel_parserState_expectAddingErrorToNode(state, SysmelTokenKind_RightCurlyBracket, bodySequence);
+
         auto lexicalBlock = std::make_shared<ParseTreeLexicalBlockNode> ();;
         lexicalBlock->sourcePosition = sysmel_parserState_sourcePositionFrom(state, startPosition);
         lexicalBlock->body = bodySequence;

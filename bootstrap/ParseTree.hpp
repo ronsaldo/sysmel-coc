@@ -11,6 +11,7 @@
 typedef std::shared_ptr<struct ParseTreeNode> ParseTreeNodePtr;
 typedef std::shared_ptr<struct ParseTreeParseErrorNode> ParseTreeParseErrorNodePtr;
 typedef std::shared_ptr<struct ParseTreeArgumentDefinitionNode> ParseTreeArgumentDefinitionNodePtr;
+typedef std::shared_ptr<struct ParseTreeFunctionTypeNode> ParseTreeFunctionTypeNodePtr;
 typedef std::shared_ptr<struct ParseTreeFunctionNode> ParseTreeFunctionNodePtr;
 
 struct ParseTreeNode : std::enable_shared_from_this<ParseTreeNode>
@@ -256,44 +257,23 @@ struct ParseTreeArgumentDefinitionNode : ParseTreeNode
     }
 };
 
-struct ParseTreeFunctionNode : ParseTreeNode
+struct ParseTreeFunctionTypeNode : ParseTreeNode
 {
-    ParseTreeNodePtr nameExpression;
     std::vector<ParseTreeNodePtr> argumentDefinitions;
     ParseTreeNodePtr resultTypeExpression;
-    ParseTreeNodePtr body;
-    bool isPublic = false;
-    bool isMacro = false;
-    bool isCompileTime = false;
-    bool isTemplate = false;
 
     virtual void collectParseErrorNodesIn(std::vector<ParseTreeParseErrorNodePtr> &out) override
     {
-        if(nameExpression)
-            nameExpression->collectParseErrorNodesIn(out);
-
         if(resultTypeExpression)
             resultTypeExpression->collectParseErrorNodesIn(out);
 
         for(auto &arg : argumentDefinitions)
             arg->collectParseErrorNodesIn(out);
-
-        if(body)
-            body->collectParseErrorNodesIn(out);
     }
 
     virtual void dump(std::ostream &out) override
     {
-        out << "ParseTreeFunctionNode(";
-        if(nameExpression)
-        {
-            nameExpression->dump(out);
-            out << ", [";
-        }
-        else
-        {
-            out << "[";
-        }
+        out << "ParseTreeFunctionTypeNode([";
 
         for(size_t i = 0; i < argumentDefinitions.size(); ++i)
         {
@@ -308,6 +288,42 @@ struct ParseTreeFunctionNode : ParseTreeNode
             out << ", ";
             resultTypeExpression->dump(out);
         }
+
+        out << ")";
+    }
+};
+
+struct ParseTreeFunctionNode : ParseTreeNode
+{
+    ParseTreeNodePtr nameExpression;
+    ParseTreeFunctionTypeNodePtr functionType;
+    ParseTreeNodePtr body;
+    bool isPublic = false;
+    bool isMacro = false;
+    bool isCompileTime = false;
+    bool isTemplate = false;
+
+    virtual void collectParseErrorNodesIn(std::vector<ParseTreeParseErrorNodePtr> &out) override
+    {
+        if(nameExpression)
+            nameExpression->collectParseErrorNodesIn(out);
+
+        functionType->collectParseErrorNodesIn(out);
+
+        if(body)
+            body->collectParseErrorNodesIn(out);
+    }
+
+    virtual void dump(std::ostream &out) override
+    {
+        out << "ParseTreeFunctionNode(";
+        if(nameExpression)
+        {
+            nameExpression->dump(out);
+            out << ", ";
+        }
+        
+        functionType->dump(out);
         
         if(body)
         {
