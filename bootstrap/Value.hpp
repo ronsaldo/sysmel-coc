@@ -11,6 +11,8 @@ typedef std::shared_ptr<struct Type> TypePtr;
 typedef std::shared_ptr<struct ParseTreeNode> ParseTreeNodePtr;
 typedef std::shared_ptr<struct ParseTreeIdentifierReferenceNode> ParseTreeIdentifierReferenceNodePtr;
 typedef std::shared_ptr<struct NominalType> NominalTypePtr;
+typedef std::shared_ptr<struct UniverseType> UniverseTypePtr;
+typedef std::shared_ptr<struct TupleType> TupleTypePtr;
 typedef std::shared_ptr<struct Package> PackagePtr;
 typedef std::shared_ptr<struct Environment> EnvironmentPtr;
 typedef std::shared_ptr<struct LexicalEnvironment> LexicalEnvironmentPtr;
@@ -32,6 +34,12 @@ struct Value : std::enable_shared_from_this<Value>
         return shared_from_this();
     }
 
+    virtual TypePtr getTypeInContext(const EvaluationContextPtr &context) = 0;
+    virtual bool isType() const
+    {
+        return false;
+    }
+
     virtual void dump(std::ostream &out) = 0;
 
     std::string dumpAsString()
@@ -44,6 +52,12 @@ struct Value : std::enable_shared_from_this<Value>
 
 struct Type : Value
 {
+    virtual TypePtr getTypeInContext(const EvaluationContextPtr &context) override;
+
+    virtual bool isType() const override
+    {
+        return true;
+    }
 };
 
 struct NominalType : Type
@@ -61,8 +75,50 @@ struct NominalType : Type
     size_t valueAlignment;
 };
 
+struct UniverseType : Type
+{
+    UniverseType(const std::string &initName, size_t initLevel)
+        : name(initName), level(initLevel) {}
+    
+    virtual TypePtr getTypeInContext(const EvaluationContextPtr &context) override;
+
+    virtual void dump(std::ostream &out) override
+    {
+        out << name;
+    }
+
+    std::string name;
+    size_t level;
+    UniverseTypePtr type;
+};
+
+struct TupleType : Type
+{
+    virtual TypePtr getTypeInContext(const EvaluationContextPtr &context) override;
+
+    virtual void dump(std::ostream &out) override
+    {
+        out << "TupleType(";
+        for(size_t i = 0; i < elements.size(); ++i)
+        {
+            if(i > 0)
+                out << ", ";
+            elements[i]->dump(out);
+        }
+        out << ")";
+    }
+
+    std::vector<TypePtr> elements;
+};
+
 struct PrimitiveValue : Value
 {
+    virtual TypePtr getTypeInContext(const EvaluationContextPtr &context) override
+    {
+        (void)context;
+        return type;
+    }
+
     TypePtr type;
 };
 
@@ -142,10 +198,38 @@ struct SymbolValue : PrimitiveValue
     }
 };
 
+struct TupleValue : Value
+{
+    std::vector<ValuePtr> elements;
+    TypePtr type;
+
+    virtual void dump(std::ostream &out) override
+    {
+        out << "TupleValue(";
+        for(size_t i = 0; i < elements.size(); ++i)
+        {
+            if(i > 0)
+                out << ", ";
+            elements[i]->dump(out);
+        }
+        out << ")";
+    }
+
+    virtual TypePtr getTypeInContext(const EvaluationContextPtr &context) override
+    {
+        (void)context;
+        return type;
+    }
+};
+
 struct Package : Value
 {
     std::string name;
     std::unordered_map<std::string, ValuePtr> packageSymbolTable;
+
+    virtual TypePtr getTypeInContext(const EvaluationContextPtr &context) override;
+
+    TupleTypePtr getOrCreateTupleType(const std::vector<TypePtr> &elements);
 
     void setSymbolBinding(std::string symbol, ValuePtr binding)
     {
@@ -160,6 +244,8 @@ struct Package : Value
 
 struct Environment : Value
 {
+    virtual TypePtr getTypeInContext(const EvaluationContextPtr &context) override;
+
     virtual ValuePtr lookupSymbolRecursively(const std::string &symbol) = 0;
 
     virtual void dump(std::ostream &out) override
@@ -217,6 +303,12 @@ struct CoreTypes : Value
 {
     CoreTypes();
 
+    virtual TypePtr getTypeInContext(const EvaluationContextPtr &context) override
+    {
+        (void)context;
+        return coreTypesType;
+    }
+
     void registerInPackage(PackagePtr package);
 
     virtual void dump(std::ostream &out) override
@@ -236,6 +328,15 @@ struct CoreTypes : Value
     NominalTypePtr voidType;
     NominalTypePtr undefinedType;
 
+    NominalTypePtr parseTreeNodeType;
+    NominalTypePtr coreTypesType;
+    NominalTypePtr evaluationContextType;
+    NominalTypePtr environmentType;
+    NominalTypePtr packageType;
+
+    UniverseTypePtr propType;
+    UniverseTypePtr typeType;
+
     std::shared_ptr<VoidValue> voidValue;
     std::shared_ptr<BooleanValue> falseValue;
     std::shared_ptr<BooleanValue> trueValue;
@@ -244,7 +345,13 @@ struct CoreTypes : Value
 
 struct EvaluationContext : Value
 {
-    ValuePtr visitParseNode(const ParseTreeNodePtr &parseNode);
+    ValuePtr visitExpression(const ParseTreeNodePtr &parseNode);
+    ValuePtr visitDecayedExpression(const ParseTreeNodePtr &parseNode);
+
+    virtual TypePtr getTypeInContext(const EvaluationContextPtr &context) override
+    {
+        return context->coreTypes->evaluationContextType;
+    }
 
     virtual void dump(std::ostream &out) override
     {

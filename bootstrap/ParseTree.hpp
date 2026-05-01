@@ -27,12 +27,17 @@ struct ParseTreeNode : Value
     {
         (void)out;
     }
-    
+
     std::vector<ParseTreeParseErrorNodePtr> collectParseErrorNodes()
     {
         std::vector<ParseTreeParseErrorNodePtr> errors;
         collectParseErrorNodesIn(errors);
         return errors;
+    }
+
+    virtual TypePtr getTypeInContext(const EvaluationContextPtr &context) override
+    {
+        return context->coreTypes->parseTreeNodeType;
     }
 
     virtual void splitMessageCascadeFirstMessage(ParseTreeNodePtr *outReceiver, ParseTreeNodePtr *outFirstMessage)
@@ -181,11 +186,11 @@ struct ParseTreeSequenceNode : ParseTreeNode
     std::vector<ParseTreeNodePtr> pragmas;
     std::vector<ParseTreeNodePtr> elements;
 
-    virtual ValuePtr analyzeAndEvaluateInContext(const EvaluationContextPtr &context)
+    virtual ValuePtr analyzeAndEvaluateInContext(const EvaluationContextPtr &context) override
     {
         ValuePtr result = context->coreTypes->voidValue;
         for(const auto &element : elements)
-            result = context->visitParseNode(element);
+            result = context->visitExpression(element);
         return result;
     }
 
@@ -221,6 +226,45 @@ struct ParseTreeSequenceNode : ParseTreeNode
 struct ParseTreeTupleNode : ParseTreeNode
 {
     std::vector<ParseTreeNodePtr> elements;
+
+    virtual ValuePtr analyzeAndEvaluateInContext(const EvaluationContextPtr &context) override
+    {
+        std::vector<ValuePtr> tupleValues;
+        std::vector<TypePtr> tupleTypes;
+        bool hasOnlyTypes = true;
+
+        for(const auto &element : elements)
+        {
+            auto elementValue = context->visitDecayedExpression(element);
+            tupleValues.push_back(elementValue);
+
+            if(!elementValue->isType())
+                hasOnlyTypes = false;
+            
+            auto elementType = elementValue->getTypeInContext(context);
+            tupleTypes.push_back(elementType);
+        }
+
+        if(hasOnlyTypes && !tupleValues.empty())
+        {
+            std::vector<TypePtr> tupleValuesAsTypes;
+            for(const auto &element : tupleValues)
+                tupleValuesAsTypes.push_back(std::static_pointer_cast<Type> (element));
+
+            auto tupleType = context->package->getOrCreateTupleType(tupleValuesAsTypes);
+            return tupleType;
+        }
+        else
+        {
+            auto tupleType = context->package->getOrCreateTupleType(tupleTypes);
+
+            auto tuple = std::make_shared<TupleValue> ();
+            tuple->elements.swap(tupleValues);
+            tuple->type = tupleType;
+            return tuple;
+        }
+        
+    }
 
     virtual void collectParseErrorNodesIn(std::vector<ParseTreeParseErrorNodePtr> &out) override
     {
