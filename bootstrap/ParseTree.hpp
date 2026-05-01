@@ -835,6 +835,22 @@ struct ParseTreeIfExpressionNode : ParseTreeNode
     ParseTreeNodePtr trueExpression;
     ParseTreeNodePtr falseExpression;
 
+    virtual ValuePtr analyzeAndEvaluateInContext(const EvaluationContextPtr &context) override
+    {
+        if(context->visitBooleanCondition(condition))
+        {
+            if(trueExpression)
+                return context->visitExpression(trueExpression);
+        }
+        else
+        {
+            if(falseExpression)
+                return context->visitExpression(falseExpression);
+        }
+
+        return context->coreTypes->voidValue;
+    }
+
     virtual void collectParseErrorNodesIn(std::vector<ParseTreeParseErrorNodePtr> &out) override
     {
         condition->collectParseErrorNodesIn(out);

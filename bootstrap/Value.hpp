@@ -503,6 +503,8 @@ struct EvaluationContext : Value
     ValuePtr visitDecayedExpression(const ParseTreeNodePtr &parseNode);
 
     std::string visitOptionalSymbolNode(const ParseTreeNodePtr &parseNode);
+    bool visitBooleanCondition(const ParseTreeNodePtr &parseNode);
+
     TypePtr visitNodeExpectingType(const ParseTreeNodePtr &parseNode);
     ValuePtr visitNodeWithExpectedType(const ParseTreeNodePtr &parseNode, const TypePtr &expectedType);
 

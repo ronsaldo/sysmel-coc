@@ -268,6 +268,20 @@ EvaluationContext::visitOptionalSymbolNode(const ParseTreeNodePtr &parseNode)
     return std::static_pointer_cast<SymbolValue> (symbolValue)->value;
 }
 
+bool
+EvaluationContext::visitBooleanCondition(const ParseTreeNodePtr &parseNode)
+{
+    auto booleanValue = visitDecayedExpression(parseNode);
+    if(!booleanValue->isBooleanValue())
+    {
+        parseNode->sourcePosition->printOn(stderr);
+        fprintf(stderr, ": Expected a boolean value.\n");
+        abort();
+    }
+
+    return std::static_pointer_cast<BooleanValue> (booleanValue)->value;
+}
+
 TypePtr
 EvaluationContext::visitNodeExpectingType(const ParseTreeNodePtr &parseNode)
 {
