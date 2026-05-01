@@ -216,6 +216,29 @@ struct ParseTreeAssociationNode : ParseTreeNode
     }
 };
 
+struct ParseTreeDictionaryNode : ParseTreeNode
+{
+    std::vector<ParseTreeNodePtr> elements;
+
+    virtual void collectParseErrorNodesIn(std::vector<ParseTreeParseErrorNodePtr> &out) override
+    {
+        for(auto &element : elements)
+            element->collectParseErrorNodesIn(out);
+    }
+
+    virtual void dump(std::ostream &out) override
+    {
+        out << "ParseTreeDictionaryNode(";
+        for(size_t i = 0; i < elements.size(); ++i)
+        {
+            if(i > 0)
+                out << ", ";
+            elements[i]->dump(out);
+        }
+        out << ")";
+    }
+};
+
 struct ParseTreeBinaryExpressionSequenceNode : ParseTreeNode
 {
     std::vector<ParseTreeNodePtr> elements;
