@@ -239,6 +239,21 @@ void CoreTypeAndMacros::registerInPackage(PackagePtr package)
         whileDo->continueExpression = arguments[2];
         return whileDo;
     }));
+    package->setSymbolBinding("do:while:", std::make_shared<PrimitiveMacro> (2, [](const MacroContextPtr &context, const std::vector<ParseTreeNodePtr> &arguments) {
+        auto whileDo = std::make_shared<ParseTreeWhileExpressionNode> ();
+        whileDo->sourcePosition = context->sourcePosition;
+        whileDo->bodyExpresssion = arguments[0];
+        whileDo->condition = arguments[1];
+        return whileDo;
+    }));
+    package->setSymbolBinding("do:continueWith:while:", std::make_shared<PrimitiveMacro> (3, [](const MacroContextPtr &context, const std::vector<ParseTreeNodePtr> &arguments) {
+        auto whileDo = std::make_shared<ParseTreeWhileExpressionNode> ();
+        whileDo->sourcePosition = context->sourcePosition;
+        whileDo->bodyExpresssion = arguments[0];
+        whileDo->continueExpression = arguments[1];
+        whileDo->condition = arguments[2];
+        return whileDo;
+    }));
 }
 
 ValuePtr EvaluationContext::visitExpression(const ParseTreeNodePtr &parseNode)

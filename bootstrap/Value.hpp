@@ -518,6 +518,15 @@ struct EvaluationContext : Value
         out << "EvaluationContext()";
     }
 
+    EvaluationContextPtr clone()
+    {
+        auto cloned = std::make_shared<EvaluationContext> ();
+        cloned->package = package;
+        cloned->coreTypes = coreTypes;
+        cloned->lexicalEnvironment = lexicalEnvironment;
+        return cloned;
+    }
+
     PackagePtr package;
     CoreTypesPtr coreTypes;
     LexicalEnvironmentPtr lexicalEnvironment;

@@ -503,6 +503,14 @@ struct ParseTreeLexicalBlockNode : ParseTreeNode
 {
     ParseTreeNodePtr body;
     
+    virtual ValuePtr analyzeAndEvaluateInContext(const EvaluationContextPtr &context) override
+    {
+        auto bodyEnvironment = std::make_shared<LexicalEnvironment> (context->lexicalEnvironment);
+        auto bodyContext = context->clone();
+        bodyContext->lexicalEnvironment = bodyEnvironment;
+        return bodyContext->visitExpression(body);
+    }
+
     virtual void dump(std::ostream &out) override
     {
         out << "ParseTreeLexicalBlockNode(";
@@ -886,6 +894,19 @@ struct ParseTreeWhileExpressionNode : ParseTreeNode
     ParseTreeNodePtr bodyExpresssion;
     ParseTreeNodePtr continueExpression;
 
+    virtual ValuePtr analyzeAndEvaluateInContext(const EvaluationContextPtr &context) override
+    {
+        while(!condition || context->visitBooleanCondition(condition))
+        {
+            if(bodyExpresssion)
+                return context->visitExpression(bodyExpresssion);
+            if(continueExpression)
+                return context->visitExpression(continueExpression);
+        }
+        
+        return context->coreTypes->voidValue;
+    }
+
     virtual void collectParseErrorNodesIn(std::vector<ParseTreeParseErrorNodePtr> &out) override
     {
         if(condition)
@@ -916,4 +937,53 @@ struct ParseTreeWhileExpressionNode : ParseTreeNode
     }
 };
 
+struct ParseTreeDoWhileExpressionNode : ParseTreeNode
+{
+    ParseTreeNodePtr bodyExpresssion;
+    ParseTreeNodePtr continueExpression;
+    ParseTreeNodePtr condition;
+
+    virtual ValuePtr analyzeAndEvaluateInContext(const EvaluationContextPtr &context) override
+    {
+        do 
+        {
+            if(bodyExpresssion)
+                return context->visitExpression(bodyExpresssion);
+            if(continueExpression)
+                return context->visitExpression(continueExpression);
+        } while(!condition || context->visitBooleanCondition(condition));
+
+        return context->coreTypes->voidValue;
+    }
+
+    virtual void collectParseErrorNodesIn(std::vector<ParseTreeParseErrorNodePtr> &out) override
+    {
+        if(bodyExpresssion)
+            bodyExpresssion->collectParseErrorNodesIn(out);
+        if(continueExpression)
+            continueExpression->collectParseErrorNodesIn(out);
+        if(condition)
+            condition->collectParseErrorNodesIn(out);
+    }
+
+    virtual void dump(std::ostream &out) override
+    {
+        out << "ParseTreeDoWhileExpressionNode(";
+        if(bodyExpresssion)
+        {
+            bodyExpresssion->dump(out);
+        }
+        
+        if(continueExpression)
+        {
+            out << ", ";
+            continueExpression->dump(out);
+        }
+
+        out << ", ";
+        condition->dump(out);
+
+        out << ")";
+    }
+};
 #endif //SYSMEL_PARSE_TREE_HPP
