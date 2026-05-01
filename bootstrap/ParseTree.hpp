@@ -155,4 +155,25 @@ struct ParseTreeTupleNode : ParseTreeNode
     }
 };
 
+struct ParseTreeAssignmentNode : ParseTreeNode
+{
+    ParseTreeNodePtr store;
+    ParseTreeNodePtr value;
+
+    virtual void collectParseErrorNodesIn(std::vector<ParseTreeParseErrorNodePtr> &out) override
+    {
+        store->collectParseErrorNodesIn(out);
+        value->collectParseErrorNodesIn(out);
+    }
+
+    virtual void dump(FILE *out) override
+    {
+        fprintf(out, "ParseTreeAssignmentNode(");
+        store->dump(out);
+        fprintf(out, ", ");
+        value->dump(out);
+        fprintf(out, ")");
+    }
+};
+
 #endif //SYSMEL_PARSE_TREE_HPP

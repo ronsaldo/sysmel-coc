@@ -409,9 +409,37 @@ sysmel_parser_parseTerm(sysmel_ParserState_t *state)
 }
 
 static ParseTreeNodePtr
-sysmel_parser_parseAssignmentExpression(sysmel_ParserState_t *state)
+sysmel_parser_parseChainExpression(sysmel_ParserState_t *state)
 {
     return sysmel_parser_parseTerm(state);
+}
+
+static ParseTreeNodePtr
+sysmel_parser_parseLowPrecedenceExpression(sysmel_ParserState_t *state)
+{
+    return sysmel_parser_parseChainExpression(state);
+}
+
+static ParseTreeNodePtr
+sysmel_parser_parseAssignmentExpression(sysmel_ParserState_t *state)
+{
+    size_t startPosition = state->position;
+    auto assignedStore = sysmel_parser_parseLowPrecedenceExpression(state);
+    if (sysmel_parserState_peekKind(state, 0) == SysmelTokenKind_Assignment)
+    {
+        sysmel_parserState_advance(state);
+        auto assignedValue = sysmel_parser_parseAssignmentExpression(state);
+
+        auto node = std::make_shared<ParseTreeAssignmentNode> ();
+        node->sourcePosition = sysmel_parserState_sourcePositionFrom(state, startPosition);
+        node->store = assignedStore;
+        node->value = assignedValue;
+        return node;
+    }
+    else
+    {
+        return assignedStore;
+    }
 }
 
 static ParseTreeNodePtr
