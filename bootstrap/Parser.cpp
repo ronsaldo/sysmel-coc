@@ -397,6 +397,98 @@ sysmel_parser_parseIdentifier(sysmel_ParserState_t *state)
 }
 
 static ParseTreeNodePtr
+sysmel_parser_parseBlockArgument(sysmel_ParserState_t *state)
+{
+    size_t startPosition = state->position;
+    assert(sysmel_parserState_peekKind(state, 0) == SysmelTokenKind_Colon);
+    sysmel_parserState_advance(state);
+
+    ParseTreeNodePtr typeExpression = NULL;
+    if(sysmel_parserState_peekKind(state, 0) == SysmelTokenKind_LeftParent)
+        typeExpression = sysmel_parser_parseParenthesis(state);
+
+    std::string name;
+    if(sysmel_parserState_peekKind(state, 0) == SysmelTokenKind_Identifier)
+    {
+        auto token = sysmel_parserState_next(state);
+        name = token->sourcePosition->getText();
+    }
+
+    auto argument = std::make_shared<ParseTreeArgumentDefinitionNode> ();
+    argument->sourcePosition = sysmel_parserState_sourcePositionFrom(state, startPosition);
+    argument->typeExpression = typeExpression;
+    argument->name = name;
+    return argument;
+}
+
+static ParseTreeFunctionNodePtr
+sysmel_parser_parseBlockHeader(sysmel_ParserState_t *state)
+{
+    size_t startPosition = state->position;
+    bool shouldEmitHeader = false;
+    std::vector<ParseTreeNodePtr> argumentDefinitions;
+    ParseTreeNodePtr resultTypeExpression = nullptr;
+
+    while(sysmel_parserState_peekKind(state, 0) == SysmelTokenKind_Colon)
+    {
+        auto argumentDefinition = sysmel_parser_parseBlockArgument(state);
+        argumentDefinitions.push_back(argumentDefinition);
+        shouldEmitHeader = true;
+
+    }
+
+    // Result type
+    if(sysmel_parserState_peekKind(state, 0) == SysmelTokenKind_ColonColon)
+    {
+        sysmel_parserState_advance(state);
+        shouldEmitHeader = true;
+        resultTypeExpression = sysmel_parser_parseUnaryPrefixExpression(state);
+    }
+
+    // Separating bar
+    if(sysmel_parserState_peekKind(state, 0) == SysmelTokenKind_Bar)
+    {
+        sysmel_parserState_advance(state);
+        shouldEmitHeader = true;
+    }
+
+    if(!shouldEmitHeader)
+        return nullptr;
+
+    auto header = std::make_shared<ParseTreeFunctionNode> ();
+    header->sourcePosition = sysmel_parserState_sourcePositionFrom(state, startPosition);
+    header->argumentDefinitions.swap(argumentDefinitions);
+    header->resultTypeExpression = resultTypeExpression;
+    return header;
+}
+
+static ParseTreeNodePtr
+sysmel_parser_parseBlock(sysmel_ParserState_t *state)
+{
+    size_t startPosition = state->position;
+    assert(sysmel_parserState_peekKind(state, 0) == SysmelTokenKind_LeftCurlyBracket);
+    sysmel_parserState_advance(state);
+
+    auto blockHeader = sysmel_parser_parseBlockHeader(state);
+ 
+    auto bodySequence = sysmel_parser_parseSequenceUntilEndOrDelimiter(state, SysmelTokenKind_RightCurlyBracket);
+    bodySequence = sysmel_parserState_expectAddingErrorToNode(state, SysmelTokenKind_RightCurlyBracket, bodySequence);
+
+    if(blockHeader)
+    {
+        blockHeader->body = bodySequence;
+        return blockHeader;
+    }
+    else
+    {
+        auto lexicalBlock = std::make_shared<ParseTreeLexicalBlockNode> ();;
+        lexicalBlock->sourcePosition = sysmel_parserState_sourcePositionFrom(state, startPosition);
+        lexicalBlock->body = bodySequence;
+        return lexicalBlock;
+    }
+}
+
+static ParseTreeNodePtr
 sysmel_parser_parseTerm(sysmel_ParserState_t *state)
 {
     switch (sysmel_parserState_peekKind(state, 0))
@@ -405,6 +497,8 @@ sysmel_parser_parseTerm(sysmel_ParserState_t *state)
         return sysmel_parser_parseIdentifier(state);
     case SysmelTokenKind_LeftParent:
         return sysmel_parser_parseParenthesis(state);
+    case SysmelTokenKind_LeftCurlyBracket:
+        return sysmel_parser_parseBlock(state);
     default:
         return sysmel_parser_parseLiteral(state);
     }
