@@ -311,6 +311,33 @@ struct ParseTreeAssociationNode : ParseTreeNode
     ParseTreeNodePtr key;
     ParseTreeNodePtr value;
 
+    virtual ValuePtr analyzeAndEvaluateInContext(const EvaluationContextPtr &context) override
+    {
+        ValuePtr keyValue = context->visitDecayedExpression(key);
+        ValuePtr valueValue = context->coreTypes->nilValue;
+        if(value)
+            valueValue = context->visitDecayedExpression(value);
+
+        bool hasOnlyTypes = keyValue->isType() && valueValue->isType();
+        if(hasOnlyTypes)
+        {
+            auto keyType = std::static_pointer_cast<Type> (keyValue);
+            auto valueType = std::static_pointer_cast<Type> (valueValue);
+            return context->package->getOrCreateAssociationType(keyType, valueType);
+        }
+        else
+        {
+            auto keyType = keyValue->getTypeInContext(context);
+            auto valueType = valueValue->getTypeInContext(context);
+            
+            auto associationType = context->package->getOrCreateAssociationType(keyType, valueType);
+            auto association = std::make_shared<AssociationValue> ();
+            association->key = keyValue;
+            association->value = valueValue;
+            return association;
+        }
+    }
+
     virtual void collectParseErrorNodesIn(std::vector<ParseTreeParseErrorNodePtr> &out) override
     {
         key->collectParseErrorNodesIn(out);

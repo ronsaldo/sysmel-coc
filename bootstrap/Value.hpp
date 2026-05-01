@@ -13,6 +13,7 @@ typedef std::shared_ptr<struct ParseTreeIdentifierReferenceNode> ParseTreeIdenti
 typedef std::shared_ptr<struct NominalType> NominalTypePtr;
 typedef std::shared_ptr<struct UniverseType> UniverseTypePtr;
 typedef std::shared_ptr<struct TupleType> TupleTypePtr;
+typedef std::shared_ptr<struct AssociationType> AssociationTypePtr;
 typedef std::shared_ptr<struct Package> PackagePtr;
 typedef std::shared_ptr<struct Environment> EnvironmentPtr;
 typedef std::shared_ptr<struct LexicalEnvironment> LexicalEnvironmentPtr;
@@ -109,6 +110,23 @@ struct TupleType : Type
     }
 
     std::vector<TypePtr> elements;
+};
+
+struct AssociationType : Type
+{
+    virtual TypePtr getTypeInContext(const EvaluationContextPtr &context) override;
+
+    virtual void dump(std::ostream &out) override
+    {
+        out << "AssociationType(";
+        keyType->dump(out);
+        out << ", ";
+        valueType->dump(out);
+        out << ")";
+    }
+
+    TypePtr keyType;
+    TypePtr valueType;
 };
 
 struct PrimitiveValue : Value
@@ -222,6 +240,28 @@ struct TupleValue : Value
     }
 };
 
+struct AssociationValue : Value
+{
+    ValuePtr key;
+    ValuePtr value;
+    TypePtr type;
+
+    virtual void dump(std::ostream &out) override
+    {
+        out << "AssociationValue(";
+        key->dump(out);
+        out << ", ";
+        value->dump(out);
+        out << ")";
+    }
+
+    virtual TypePtr getTypeInContext(const EvaluationContextPtr &context) override
+    {
+        (void)context;
+        return type;
+    }
+};
+
 struct Package : Value
 {
     std::string name;
@@ -230,6 +270,7 @@ struct Package : Value
     virtual TypePtr getTypeInContext(const EvaluationContextPtr &context) override;
 
     TupleTypePtr getOrCreateTupleType(const std::vector<TypePtr> &elements);
+    AssociationTypePtr getOrCreateAssociationType(const TypePtr &keyType, const TypePtr &valueType);
 
     void setSymbolBinding(std::string symbol, ValuePtr binding)
     {

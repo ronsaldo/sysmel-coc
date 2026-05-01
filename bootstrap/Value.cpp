@@ -24,6 +24,14 @@ UniverseType::getTypeInContext(const EvaluationContextPtr &context)
 TypePtr
 TupleType::getTypeInContext(const EvaluationContextPtr &context)
 {
+    // TODO: Use the max universe.
+    return context->coreTypes->propType;
+}
+
+TypePtr
+AssociationType::getTypeInContext(const EvaluationContextPtr &context)
+{
+    // TODO: Use the max universe.
     return context->coreTypes->propType;
 }
 
@@ -39,6 +47,15 @@ Package::getOrCreateTupleType(const std::vector<TypePtr> &elements)
     auto tupleType = std::make_shared<TupleType> ();
     tupleType->elements = elements;
     return tupleType;
+}
+
+AssociationTypePtr
+Package::getOrCreateAssociationType(const TypePtr &keyType, const TypePtr &valueType)
+{
+    auto associationType = std::make_shared<AssociationType> ();
+    associationType->keyType = keyType;
+    associationType->valueType = valueType;
+    return associationType;
 }
 
 TypePtr
