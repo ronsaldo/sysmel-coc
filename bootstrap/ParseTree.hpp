@@ -128,24 +128,35 @@ struct ParseTreeIdentifierReferenceNode : ParseTreeNode
 
 struct ParseTreeSequenceNode : ParseTreeNode
 {
+    std::vector<ParseTreeNodePtr> pragmas;
     std::vector<ParseTreeNodePtr> elements;
 
     virtual void collectParseErrorNodesIn(std::vector<ParseTreeParseErrorNodePtr> &out) override
     {
+        for(auto &pragma : pragmas)
+            pragma->collectParseErrorNodesIn(out);
         for(auto &element : elements)
             element->collectParseErrorNodesIn(out);
     }
 
     virtual void dump(std::ostream &out) override
     {
-        out << "ParseTreeSequenceNode(";
+        out << "ParseTreeSequenceNode([";
+        for(size_t i = 0; i < pragmas.size(); ++i)
+        {
+            if(i > 0)
+                out << ", ";
+            pragmas[i]->dump(out);
+        }
+        out << "], [";
+     
         for(size_t i = 0; i < elements.size(); ++i)
         {
             if(i > 0)
                 out << ", ";
             elements[i]->dump(out);
         }
-        out << ")";
+        out << "])";
     }
 };
 
@@ -392,6 +403,34 @@ struct ParseTreeFunctionApplicationNode : ParseTreeNode
     {
         out << "ParseTreeFunctionApplicationNode(";
         functional->dump(out);
+
+        out << ", [";
+        for(size_t i = 0; i < arguments.size(); ++i)
+        {
+            if(i > 0)
+                out << ", ";
+            arguments[i]->dump(out);
+        }
+        out << "])";
+    }
+};
+
+struct ParseTreePragmaNode : ParseTreeNode
+{
+    ParseTreeNodePtr selector;
+    std::vector<ParseTreeNodePtr> arguments;
+
+    virtual void collectParseErrorNodesIn(std::vector<ParseTreeParseErrorNodePtr> &out) override
+    {
+        selector->collectParseErrorNodesIn(out);
+        for(auto &arg : arguments)
+            arg->collectParseErrorNodesIn(out);
+    }
+
+    virtual void dump(std::ostream &out) override
+    {
+        out << "ParseTreePragmaNode(";
+        selector->dump(out);
 
         out << ", [";
         for(size_t i = 0; i < arguments.size(); ++i)

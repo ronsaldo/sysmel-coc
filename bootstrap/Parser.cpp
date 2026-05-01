@@ -1119,17 +1119,89 @@ sysmel_parser_parseExpressionListUntilEndOrDelimiter(sysmel_ParserState_t *state
     return elements;
 }
 
+static ParseTreeNodePtr sysmel_parser_parsePragma(sysmel_ParserState_t *state)
+{
+    size_t startPosition = state->position;
+    assert(sysmel_parserState_peekKind(state, 0) == SysmelTokenKind_LessThan);
+    sysmel_parserState_advance(state);
+
+    if (sysmel_parserState_peekKind(state, 0) == SysmelTokenKind_Identifier)
+    {
+        auto token = sysmel_parserState_next(state);
+       
+        auto symbol = token->sourcePosition->getText();
+
+        auto selectorNode = std::make_shared<ParseTreeLiteralSymbolNode>();
+        selectorNode->sourcePosition = token->sourcePosition;
+        selectorNode->value = symbol;
+
+        auto pragmaNode = std::make_shared<ParseTreePragmaNode> ();
+        pragmaNode->sourcePosition = token->sourcePosition;
+        pragmaNode->selector = selectorNode;
+        return sysmel_parserState_expectAddingErrorToNode(state, SysmelTokenKind_GreaterThan, pragmaNode);
+    }
+    else if (sysmel_parserState_peekKind(state, 0) == SysmelTokenKind_Keyword)
+    {
+        std::string selector;
+        std::vector<ParseTreeNodePtr> arguments;
+
+        while(sysmel_parserState_peekKind(state, 0) == SysmelTokenKind_Keyword)
+        {
+            auto keywordToken = sysmel_parserState_next(state);
+            auto tokenText = keywordToken->sourcePosition->getText();
+
+            selector += tokenText;
+
+            auto argument = sysmel_parser_parseUnaryPrefixExpression(state);
+            arguments.push_back(argument);
+        }
+
+        // Selector
+        auto selectorNode = std::make_shared<ParseTreeLiteralSymbolNode> ();
+        selectorNode->sourcePosition = sysmel_parserState_sourcePositionFrom(state, startPosition);
+        selectorNode->value = selector;
+
+        // Pragma
+        auto pragmaNode = std::make_shared<ParseTreePragmaNode> ();
+        pragmaNode->sourcePosition = sysmel_parserState_sourcePositionFrom(state, startPosition);
+        pragmaNode->selector = selectorNode;
+        pragmaNode->arguments.swap(arguments);
+        return sysmel_parserState_expectAddingErrorToNode(state, SysmelTokenKind_GreaterThan, pragmaNode);
+    }
+    else
+    {
+        auto errorNode = std::make_shared<ParseTreeParseErrorNode> ();
+        errorNode->sourcePosition = sysmel_parserState_currentSourcePosition(state);
+        errorNode->errorMessage = "Expected a pragma message send.";
+        return sysmel_parserState_expectAddingErrorToNode(state, SysmelTokenKind_GreaterThan, errorNode);
+    }
+}
+
+static std::vector<ParseTreeNodePtr> sysmel_parser_parsePragmaList(sysmel_ParserState_t *state)
+{
+    std::vector<ParseTreeNodePtr> pragmas;
+    while (sysmel_parserState_peekKind(state, 0) == SysmelTokenKind_LessThan)
+    {
+        auto pragma = sysmel_parser_parsePragma(state);
+        pragmas.push_back(pragma);
+    }
+    
+    return pragmas;
+}
+
 static ParseTreeNodePtr
 sysmel_parser_parseSequenceUntilEndOrDelimiter(sysmel_ParserState_t *state, SysmelTokenKind_t delimiter)
 {
     size_t startingPosition = state->position;
+    auto pragmas = sysmel_parser_parsePragmaList(state);
     auto expressions = sysmel_parser_parseExpressionListUntilEndOrDelimiter(state, delimiter);
     if(expressions.size() == 1)
         return expressions[0];
 
     auto sequence = std::make_shared<ParseTreeSequenceNode> ();
     sequence->sourcePosition = sysmel_parserState_sourcePositionFrom(state, startingPosition);
-    sequence->elements = expressions;
+    sequence->pragmas.swap(pragmas);
+    sequence->elements.swap(expressions);
     return sequence;
 }
 
