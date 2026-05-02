@@ -8,11 +8,19 @@ typedef std::shared_ptr<struct HIRValue> HIRValuePtr;
 typedef std::shared_ptr<struct HIRTypeExpression> HIRTypeExpressionPtr;
 typedef std::shared_ptr<struct HIRNominalType> HIRNominalTypePtr;
 typedef std::shared_ptr<struct HIRDynamicType> HIRDynamicTypePtr;
+typedef std::shared_ptr<struct HIRUniverseType> HIRUniverseTypePtr;
 
 typedef std::shared_ptr<struct HIRDerivedType> HIRDerivedTypePtr;
 typedef std::shared_ptr<struct HIRPointerLikeType> HIRPointerLikeTypePtr;
 typedef std::shared_ptr<struct HIRPointerType> HIRPointerTypePtr;
 typedef std::shared_ptr<struct HIRReferenceType> HIRReferenceTypePtr;
+typedef std::shared_ptr<struct HIRMutableValueBoxType> HIRMutableValueBoxTypePtr;
+
+typedef std::shared_ptr<struct HIRAssociationType> HIRAssociationTypePtr;
+typedef std::shared_ptr<struct HIRTupleType> HIRTupleTypePtr;
+
+typedef std::shared_ptr<struct HIRSimpleFunctionType> HIRSimpleFunctionTypePtr;
+typedef std::shared_ptr<struct HIRDependentFunctionType> HIRDependentFunctionTypePtr;
 
 typedef std::shared_ptr<struct HIRConstant> HIRConstantPtr;
 typedef std::shared_ptr<struct HIRConstantLiteralValue> HIRConstantLiteralValuePtr;
@@ -118,27 +126,6 @@ struct HIRMutableValueBoxType : HIRDerivedType
     }
 };
 
-struct HIRSimpleFunctionType : HIRTypeExpression
-{
-    std::vector<HIRTypeExpressionPtr> argumentTypes;
-    HIRTypeExpressionPtr resultType;
-    SimpleFunctionTypePtr simpleFunctionType;
-
-    virtual void dump(std::ostream &out) override
-    {
-        out << "HIRSimpleFunctionType([";
-        for(size_t i = 0; i < argumentTypes.size(); ++i)
-        {
-            if(i > 0)
-                out << ", ";
-            argumentTypes[i]->dump(out);
-        }
-        out << "], ";
-        resultType->dump(out);
-        out << ")";
-    }
-};
-
 struct HIRTupleType : HIRTypeExpression
 {
     std::vector<HIRTypeExpressionPtr> elements;
@@ -173,6 +160,34 @@ struct HIRAssociationType : HIRTypeExpression
     }
 };
 
+struct HIRSimpleFunctionType : HIRTypeExpression
+{
+    std::vector<HIRTypeExpressionPtr> argumentTypes;
+    HIRTypeExpressionPtr resultType;
+    SimpleFunctionTypePtr simpleFunctionType;
+
+    virtual void dump(std::ostream &out) override
+    {
+        out << "HIRSimpleFunctionType([";
+        for(size_t i = 0; i < argumentTypes.size(); ++i)
+        {
+            if(i > 0)
+                out << ", ";
+            argumentTypes[i]->dump(out);
+        }
+        out << "], ";
+        resultType->dump(out);
+        out << ")";
+    }
+};
+
+struct HIRDependentFunctionType : HIRTypeExpression
+{
+    std::vector<HIRArgumentPtr> arguments;
+    HIRTypeExpressionPtr resultType;
+
+    virtual void dump(std::ostream &out) override;
+};
 
 struct HIRConstant : HIRValue
 {
@@ -193,7 +208,7 @@ struct HIRConstantLiteralValue : HIRConstant
 
 struct HIRFunction : HIRConstant
 {
-    std::vector<HIRArgumentPtr> arguments;
+    HIRDependentFunctionTypePtr dependentFunctionType;
     std::vector<HIRCapturePtr> captures;
     HIRBasicBlockPtr firstBasicBlock;
     HIRBasicBlockPtr lastBasicBlock;

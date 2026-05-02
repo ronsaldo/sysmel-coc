@@ -5,7 +5,22 @@ TypePtr HIRValue::getTypeInContext(const EvaluationContextPtr &context)
     return context->coreTypes->hirValueType;
 }
 
-void HIRFunction::addBasicBlock(const HIRBasicBlockPtr &basicBlock)
+void HIRDependentFunctionType::dump(std::ostream &out)
+{
+    out << "HIRDependentFunctionType([";
+    for(size_t i = 0; i < arguments.size(); ++i)
+    {
+        if(i > 0)
+            out << ", ";
+        arguments[i]->dump(out);
+    }
+    out << "], ";
+    resultType->dump(out);
+    out << ")";
+}
+
+void
+HIRFunction::addBasicBlock(const HIRBasicBlockPtr &basicBlock)
 {
     if(lastBasicBlock)
     {
@@ -19,7 +34,8 @@ void HIRFunction::addBasicBlock(const HIRBasicBlockPtr &basicBlock)
     }
 }
 
-void HIRBasicBlock::addInstruction(const HIRInstructionPtr &instruction)
+void
+HIRBasicBlock::addInstruction(const HIRInstructionPtr &instruction)
 {
     if(lastInstruction)
     {
