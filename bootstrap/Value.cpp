@@ -169,8 +169,33 @@ DependentFunctionType::asHIRTypeWithContext(const BuildContextPtr &context)
 {
     if(!hirTypeCache)
     {
-        printf("TODO: DependentFunctionType::asHIRTypeWithContext\n");
-        abort();
+        auto dependentFunctionType = std::make_shared<HIRDependentFunctionType> ();
+        hirTypeCache = dependentFunctionType;
+
+        // Argument types
+        dependentFunctionType->arguments.reserve(arguments.size());
+        for(auto &argument : arguments)
+        {
+            auto hirArgument = std::make_shared<HIRArgument> ();
+            hirArgument->name = argument->name;
+            dependentFunctionType->arguments.push_back(hirArgument);
+            if(!argument->typeExpression->isType())
+            {
+                fprintf(stdout, "Expected an argument type.\n");
+                abort();
+            }
+
+            hirArgument->type = std::static_pointer_cast<Type> (argument->typeExpression)->asHIRTypeWithContext(context);
+        }
+
+        // Result type
+        if(!resultTypeExpression->isType())
+        {
+            fprintf(stdout, "Expected a type for the dependent function type result type.\n");
+            abort();
+        }
+
+        dependentFunctionType->resultType = std::static_pointer_cast<Type> (resultTypeExpression)->asHIRTypeWithContext(context);
     }
 
     return hirTypeCache;
@@ -317,12 +342,19 @@ TypePtr SimpleFunctionType::getTypeInContext(const EvaluationContextPtr &context
 void
 FunctionValue::ensureAnalysis()
 {
-    if(isAnalyzed)
+    if(hirFunction)
         return;
     if(isTemplate)
         return;
 
-    isAnalyzed = true;
+    auto buildContext = BuildContext::fromEvaluationContext(definitionContext);
+    auto hirDependentFunctionType = dependentFunctionType->asHIRTypeWithContext(buildContext);
+    
+    hirFunction = std::make_shared<HIRFunction> ();
+    hirFunction->name = name;
+    hirFunction->dependentFunctionType = std::static_pointer_cast<HIRDependentFunctionType> (hirDependentFunctionType);
+
+    printf("Analyzed HIR function: %s\n", hirFunction->dumpAsString().c_str());
 }
 
 ValuePtr

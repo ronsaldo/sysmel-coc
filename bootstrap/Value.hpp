@@ -13,6 +13,7 @@ typedef std::shared_ptr<struct Type> TypePtr;
 
 typedef std::shared_ptr<struct HIRValue> HIRValuePtr;
 typedef std::shared_ptr<struct HIRTypeExpression> HIRTypeExpressionPtr;
+typedef std::shared_ptr<struct HIRFunction> HIRFunctionPtr;
 typedef std::shared_ptr<struct HIRBuilder> HIRBuilderPtr;
 
 typedef std::shared_ptr<struct ParseTreeNode> ParseTreeNodePtr;
@@ -569,8 +570,10 @@ struct FunctionValue : Value
     bool isMacro = false;
     bool isCompileTime = false;
     bool isTemplate = false;
-    bool isAnalyzed = false;
+    std::string name;
     std::string primitiveName;
+
+    HIRFunctionPtr hirFunction;
 
     virtual ValuePtr analyzeAndEvaluateFunctionApplicationNodeInContext(const ParseTreeFunctionApplicationNodePtr &applicationNode, const EvaluationContextPtr &context) override;
     virtual void ensureAnalysis() override;
@@ -991,6 +994,15 @@ struct BuildContext : Value
         context->coreTypes = coreTypes;
         context->lexicalEnvironment = lexicalEnvironment;
         return context;
+    }
+
+    static BuildContextPtr fromEvaluationContext(const EvaluationContextPtr &evalContext)
+    {
+        auto buildContext = std::make_shared<BuildContext> ();
+        buildContext->package = evalContext->package;
+        buildContext->coreTypes = evalContext->coreTypes;
+        buildContext->lexicalEnvironment = evalContext->lexicalEnvironment;
+        return buildContext;
     }
 
     BuildContextPtr clone() const

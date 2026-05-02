@@ -208,12 +208,14 @@ struct HIRConstantLiteralValue : HIRConstant
 
 struct HIRFunction : HIRConstant
 {
+    std::string name;
     HIRDependentFunctionTypePtr dependentFunctionType;
     std::vector<HIRCapturePtr> captures;
     HIRBasicBlockPtr firstBasicBlock;
     HIRBasicBlockPtr lastBasicBlock;
 
     void addBasicBlock(const HIRBasicBlockPtr &basicBlock);
+    virtual void dump(std::ostream &out) override;
 };
 
 struct HIRFunctionClosure : HIRConstant
@@ -228,10 +230,24 @@ struct HIRFunctionLocalValue : HIRValue
 
 struct HIRArgument : HIRFunctionLocalValue
 {
+    HIRTypeExpressionPtr type;
+
+    virtual void dump(std::ostream &out) override
+    {
+        out << index << " := argument " << name << " :: ";
+        type->dump(out);
+    }
 };
 
 struct HIRCapture : HIRFunctionLocalValue
 {
+    HIRTypeExpressionPtr type;
+
+    virtual void dump(std::ostream &out) override
+    {
+        out << index << " := capture " << name << " :: ";
+        type->dump(out);
+    }
 };
 
 struct HIRBasicBlock : HIRFunctionLocalValue
@@ -242,6 +258,8 @@ struct HIRBasicBlock : HIRFunctionLocalValue
     HIRInstructionPtr lastInstruction;
 
     void addInstruction(const HIRInstructionPtr &instruction);
+   
+    virtual void dump(std::ostream &out) override;
 };
 
 struct HIRInstruction : HIRFunctionLocalValue

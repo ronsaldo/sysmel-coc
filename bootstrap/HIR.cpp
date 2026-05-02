@@ -34,6 +34,22 @@ HIRFunction::addBasicBlock(const HIRBasicBlockPtr &basicBlock)
     }
 }
 
+void HIRFunction::dump(std::ostream &out)
+{
+    out << "HIRFunction(\n  " << name;
+    dependentFunctionType->dump(out);
+
+    out << "\n";
+    auto basicBlock = firstBasicBlock;
+    while (basicBlock)
+    {
+        basicBlock->dump(out);
+        basicBlock = basicBlock->nextBasicBlock;
+    }
+    
+    out << ")";
+}
+    
 void
 HIRBasicBlock::addInstruction(const HIRInstructionPtr &instruction)
 {
@@ -46,5 +62,18 @@ HIRBasicBlock::addInstruction(const HIRInstructionPtr &instruction)
     else
     {
         firstInstruction = lastInstruction = instruction;
+    }
+}
+
+void
+HIRBasicBlock::dump(std::ostream &out)
+{
+    out << "@" << index << "<" << name << ">:\n";
+    auto instruction = firstInstruction;
+    while(instruction)
+    {
+        out << "  ";
+        instruction->dump(out);
+        instruction = instruction->nextInstruction;
     }
 }
