@@ -24,7 +24,23 @@ ParseTreeBinaryExpressionSequenceNode::analyzeAndEvaluateInContext(const Evaluat
     return context->visitExpression(previous);
 }
 
-ValuePtr ParseTreeLoadFileNode::analyzeAndEvaluateInContext(const EvaluationContextPtr &context)
+ValuePtr
+ParseTreeFunctionTypeNode::analyzeAndEvaluateInContext(const EvaluationContextPtr &context)
+{
+    printf("TODO: ParseTreeFunctionTypeNode\n");
+    abort();
+}
+
+ValuePtr
+ParseTreeFunctionNode::analyzeAndEvaluateInContext(const EvaluationContextPtr &context)
+{
+    auto functionTypeValue = context->visitExpression(functionType);
+    printf("TODO: ParseTreeFunctionNode\n");
+    abort();
+}
+
+ValuePtr
+ParseTreeLoadFileNode::analyzeAndEvaluateInContext(const EvaluationContextPtr &context)
 {
     auto fileNameValue = context->visitStringNode(fileName);
     

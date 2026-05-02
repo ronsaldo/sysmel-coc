@@ -468,6 +468,8 @@ struct ParseTreeFunctionTypeNode : ParseTreeNode
     ParseTreeNodePtr resultTypeExpression;
     ParseTreeNodePtr nameExpression;
 
+    virtual ValuePtr analyzeAndEvaluateInContext(const EvaluationContextPtr &context) override;
+
     ParseTreeFunctionTypeNodePtr copyWithSelfType(TypePtr selfType)
     {
         auto functionTypeWithSelf = std::make_shared<ParseTreeFunctionTypeNode> ();
@@ -527,6 +529,8 @@ struct ParseTreeFunctionNode : ParseTreeNode
     bool isMacro = false;
     bool isCompileTime = false;
     bool isTemplate = false;
+
+    virtual ValuePtr analyzeAndEvaluateInContext(const EvaluationContextPtr &context) override;
 
     ParseTreeFunctionNodePtr copyWithSelfType(TypePtr selfType)
     {

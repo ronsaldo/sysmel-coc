@@ -698,6 +698,7 @@ sysmel_parser_parseMethod(sysmel_ParserState_t *state)
     function->nameExpression = methodHeader->nameExpression;
     function->functionType = methodHeader;
     function->body = bodySequence;
+    function->isMethod = true;
     return function;
 }
 
