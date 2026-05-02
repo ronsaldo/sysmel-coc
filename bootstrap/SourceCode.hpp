@@ -69,7 +69,9 @@ struct SourcePosition
     }
 };
 
+bool sourceCode_printParseTree(const SourceCodePtr &sourceCode);
 bool sourceCode_evaluate(const SourceCodePtr &sourceCode, const CoreTypeAndMacrosPtr &coreTypes, const PackagePtr &package, bool printResult);
+
 SourceCodePtr sourceCode_createForFileNamed(const std::string &filename);
 
 #endif //SYSMEL_META_MODEL_H

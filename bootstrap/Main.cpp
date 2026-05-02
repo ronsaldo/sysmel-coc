@@ -18,6 +18,15 @@ printVersion()
 }
 
 bool
+printCommandLineParseTree(const std::string &cliString)
+{
+    auto sourceCode = std::make_shared<SourceCode> ();
+    sourceCode->name = "<cli>";
+    sourceCode->text = cliString;
+    return sourceCode_printParseTree(sourceCode);
+}
+
+bool
 evaluateCommandLineString(const std::string &cliString, bool printResult)
 {
     auto sourceCode = std::make_shared<SourceCode> ();
@@ -63,6 +72,11 @@ int main(int argc, const char *argv[])
             {
                 arg = argv[++i];
                 evaluateCommandLineString(arg, true);
+            }
+            else if(arg == "-print-parse-tree")
+            {
+                arg = argv[++i];
+                printCommandLineParseTree(arg);
             }
         }
         else

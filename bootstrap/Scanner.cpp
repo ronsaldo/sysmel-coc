@@ -526,6 +526,13 @@ sysmel_scanner_scanSingleToken(SysmelScannerState_t *state)
             return sysmel_scannerState_makeTokenStartingFrom(state, SysmelTokenKind_Splice, &initialState);
         }
         break;
+    case '!':
+        if (sysmel_scannerState_peek(state, 1) == '{')
+        {
+            sysmel_scannerState_advance(state, 2);
+            return sysmel_scannerState_makeTokenStartingFrom(state, SysmelTokenKind_MethodStart, &initialState);
+        }
+        break;
     case '|':
         sysmel_scannerState_advance(state, 1);
         if (sysmel_scanner_isOperatorCharacter(sysmel_scannerState_peek(state, 0)))
@@ -552,6 +559,8 @@ sysmel_scanner_scanSingleToken(SysmelScannerState_t *state)
                 return sysmel_scannerState_makeTokenStartingFrom(state, SysmelTokenKind_LessThan, &initialState);
             case '>':
                 return sysmel_scannerState_makeTokenStartingFrom(state, SysmelTokenKind_GreaterThan, &initialState);
+            case '!':
+                return sysmel_scannerState_makeTokenStartingFrom(state, SysmelTokenKind_Bang, &initialState);
             default:
                 // Generic character, do nothing.
                 break;

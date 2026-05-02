@@ -5,6 +5,31 @@
 #include <stdio.h>
 
 bool
+sourceCode_printParseTree(const SourceCodePtr &sourceCode)
+{
+    // Scan the source code.
+    auto scannedTokens = SysmelScanSourceCode(sourceCode);
+    if(!checkScannedTokensForErrors(scannedTokens))
+        return false;
+
+    // Parse and check syntax errors.
+    auto parseTree = SysmelParseTokenSequence(scannedTokens);
+    auto parseTreeErrorNodes = parseTree->collectParseErrorNodes();
+    for(auto &errorNode : parseTreeErrorNodes)
+    {
+        errorNode->sourcePosition->printOn(stderr);
+        fprintf(stderr, " %s\n", errorNode->errorMessage.c_str());
+    }
+
+    if(!parseTreeErrorNodes.empty())
+        return false;
+
+    printf("%s\n", parseTree->dumpAsString().c_str());
+    return true;
+}
+
+
+bool
 sourceCode_evaluate(const SourceCodePtr &sourceCode, const CoreTypeAndMacrosPtr &coreTypes, const PackagePtr &package, bool printResult)
 {
     // Scan the source code.

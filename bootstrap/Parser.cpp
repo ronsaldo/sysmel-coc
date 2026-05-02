@@ -344,6 +344,7 @@ sysmel_parser_isBinaryExpressionOperator(SysmelTokenKind_t kind)
     case SysmelTokenKind_Operator:
     case SysmelTokenKind_LessThan:
     case SysmelTokenKind_GreaterThan:
+    case SysmelTokenKind_Bang:
     case SysmelTokenKind_Bar:
         return true;
     default:
@@ -422,7 +423,6 @@ sysmel_parser_parseBlockArgument(sysmel_ParserState_t *state)
     argument->name = name;
     return argument;
 }
-
 
 static ParseTreeFunctionTypeNodePtr
 sysmel_parser_parseBlockType(sysmel_ParserState_t *state)
@@ -602,6 +602,97 @@ sysmel_parser_parseDictionary(sysmel_ParserState_t *state)
 }
 
 static ParseTreeNodePtr
+sysmel_parser_parseMethodArgument(sysmel_ParserState_t *state)
+{
+    ParseTreeNodePtr argumentTypeExpression;
+    if(sysmel_parserState_peekKind(state, 0) == SysmelTokenKind_LeftParent)
+        argumentTypeExpression = sysmel_parser_parseParenthesis(state);
+
+    auto token = sysmel_parserState_next(state);
+    auto argumentDefinition = std::make_shared<ParseTreeArgumentDefinitionNode> ();
+    argumentDefinition->sourcePosition = token->sourcePosition;
+    argumentDefinition->typeExpression = argumentTypeExpression;
+    argumentDefinition->name = token->sourcePosition->getText();
+    return argumentDefinition;
+}
+
+static ParseTreeFunctionTypeNodePtr
+sysmel_parser_parseMethodHeader(sysmel_ParserState_t *state)
+{
+    size_t startPosition = state->position;
+    std::vector<ParseTreeNodePtr> argumentDefinitions;
+    ParseTreeNodePtr resultTypeExpression = nullptr;
+    std::string selector;
+
+    if(sysmel_parserState_peekKind(state, 0) == SysmelTokenKind_Identifier)
+    {
+        auto token = sysmel_parserState_next(state);
+        selector = token->sourcePosition->getText();
+    }
+    else if(sysmel_parser_isBinaryExpressionOperator(sysmel_parserState_peekKind(state, 0)))
+    {
+        auto token = sysmel_parserState_next(state);
+        selector = token->sourcePosition->getText();
+
+        auto argument = sysmel_parser_parseMethodArgument(state);
+        argumentDefinitions.push_back(argument);
+    }
+    else if(sysmel_parserState_peekKind(state, 0) == SysmelTokenKind_Keyword)
+    {
+        while(sysmel_parserState_peekKind(state, 0) == SysmelTokenKind_Keyword)
+        {
+            auto token = sysmel_parserState_next(state);
+            selector += token->sourcePosition->getText();
+
+            auto argument = sysmel_parser_parseMethodArgument(state);
+            argumentDefinitions.push_back(argument);
+        }
+    }
+
+    // Result type
+    if(sysmel_parserState_peekKind(state, 0) == SysmelTokenKind_ColonColon)
+    {
+        sysmel_parserState_advance(state);
+        resultTypeExpression = sysmel_parser_parseUnaryPrefixExpression(state);
+    }
+
+    // Dot separator.
+    if(sysmel_parserState_peekKind(state, 0) == SysmelTokenKind_Dot)
+        sysmel_parserState_advance(state);
+
+    auto selectorLiteral = std::make_shared<ParseTreeLiteralSymbolNode> ();
+    selectorLiteral->sourcePosition = sysmel_parserState_sourcePositionFrom(state, startPosition);
+    selectorLiteral->value = selector;
+
+    auto functionType = std::make_shared<ParseTreeFunctionTypeNode> ();
+    functionType->sourcePosition = sysmel_parserState_sourcePositionFrom(state, startPosition);
+    functionType->argumentDefinitions.swap(argumentDefinitions);
+    functionType->resultTypeExpression = resultTypeExpression;
+    functionType->nameExpression = selectorLiteral;
+    return functionType;
+}
+
+static ParseTreeNodePtr
+sysmel_parser_parseMethod(sysmel_ParserState_t *state)
+{
+    size_t startPosition = state->position;
+    assert(sysmel_parserState_peekKind(state, 0) == SysmelTokenKind_MethodStart);
+    sysmel_parserState_advance(state);
+
+    auto methodHeader = sysmel_parser_parseMethodHeader(state);
+
+    auto bodySequence = sysmel_parser_parseSequenceUntilEndOrDelimiter(state, SysmelTokenKind_RightCurlyBracket);
+    bodySequence = sysmel_parserState_expectAddingErrorToNode(state, SysmelTokenKind_RightCurlyBracket, bodySequence);
+
+    auto function = std::make_shared<ParseTreeFunctionNode> ();
+    function->sourcePosition = sysmel_parserState_sourcePositionFrom(state, startPosition);
+    function->nameExpression = methodHeader->nameExpression;
+    function->functionType = methodHeader;
+    function->body = bodySequence;
+    return function;
+}
+
+static ParseTreeNodePtr
 sysmel_parser_parseTerm(sysmel_ParserState_t *state)
 {
     switch (sysmel_parserState_peekKind(state, 0))
@@ -614,6 +705,8 @@ sysmel_parser_parseTerm(sysmel_ParserState_t *state)
         return sysmel_parser_parseBlock(state);
     case SysmelTokenKind_DictionaryStart:
         return sysmel_parser_parseDictionary(state);
+    case SysmelTokenKind_MethodStart:
+        return sysmel_parser_parseMethod(state);
     default:
         return sysmel_parser_parseLiteral(state);
     }

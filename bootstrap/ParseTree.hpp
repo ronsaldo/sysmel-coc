@@ -435,6 +435,7 @@ struct ParseTreeFunctionTypeNode : ParseTreeNode
 {
     std::vector<ParseTreeNodePtr> argumentDefinitions;
     ParseTreeNodePtr resultTypeExpression;
+    ParseTreeNodePtr nameExpression;
 
     virtual void collectParseErrorNodesIn(std::vector<ParseTreeParseErrorNodePtr> &out) override
     {
@@ -447,7 +448,10 @@ struct ParseTreeFunctionTypeNode : ParseTreeNode
 
     virtual void dump(std::ostream &out) override
     {
-        out << "ParseTreeFunctionTypeNode([";
+        out << "ParseTreeFunctionTypeNode(";
+        if(nameExpression)
+            nameExpression->dump(out);
+        out << "[";
 
         for(size_t i = 0; i < argumentDefinitions.size(); ++i)
         {
