@@ -46,3 +46,10 @@ ValuePtr ParseTreeLoadFileNode::analyzeAndEvaluateInContext(const EvaluationCont
     sourceCode_evaluate(sourceCode, context->coreTypes, context->package, false);
     return context->coreTypes->voidValue;
 }
+
+ValuePtr
+ParseTreeAddMethodNode::analyzeAndEvaluateInContext(const EvaluationContextPtr &context)
+{
+    printf("TODO: ParseTreeAddMethodNode::analyzeAndEvaluateInContext\n");
+    abort();
+}

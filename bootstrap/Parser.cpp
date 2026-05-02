@@ -717,6 +717,7 @@ static bool sysmel_parser_isUnaryPostfixExpressionOperator(SysmelTokenKind_t kin
     {
     case SysmelTokenKind_Identifier:
     case SysmelTokenKind_LeftParent:
+    case SysmelTokenKind_MethodStart:
         return true;
     default: return false;
     }
@@ -768,6 +769,15 @@ sysmel_parser_parseUnaryPostfixExpression(sysmel_ParserState_t *state)
             applicationNode->arguments = arguments;
 
             receiver = applicationNode;
+        }
+        else if(token->kind == SysmelTokenKind_MethodStart)
+        {
+            auto method = sysmel_parser_parseMethod(state);
+            auto addMethod = std::make_shared<ParseTreeAddMethodNode> ();
+            addMethod->sourcePosition = sysmel_parserState_sourcePositionFrom(state, startPosition);
+            addMethod->owner = receiver;
+            addMethod->method = method;
+            receiver = addMethod;
         }
         else
         {

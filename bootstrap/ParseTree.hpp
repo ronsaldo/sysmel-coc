@@ -1038,4 +1038,28 @@ struct ParseTreeLoadFileNode : ParseTreeNode
         out << ")";
     }
 };
+
+
+struct ParseTreeAddMethodNode : ParseTreeNode
+{
+    ParseTreeNodePtr owner;
+    ParseTreeNodePtr method;
+
+    virtual ValuePtr analyzeAndEvaluateInContext(const EvaluationContextPtr &context) override;
+
+    virtual void collectParseErrorNodesIn(std::vector<ParseTreeParseErrorNodePtr> &out) override
+    {
+        owner->collectParseErrorNodesIn(out);
+        method->collectParseErrorNodesIn(out);
+    }
+
+    virtual void dump(std::ostream &out) override
+    {
+        out << "ParseTreeAddMethodNode(";
+        owner->dump(out);
+        out << ",";
+        method->dump(out);
+        out << ")";
+    }
+};
 #endif //SYSMEL_PARSE_TREE_HPP
