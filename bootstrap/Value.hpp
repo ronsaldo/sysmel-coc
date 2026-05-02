@@ -71,6 +71,11 @@ struct Value : std::enable_shared_from_this<Value>
     {
         return false;
     }
+    
+    virtual bool isDependentFunctionType() const
+    {
+        return false;
+    }
 
     virtual bool isBooleanValue() const
     {
@@ -282,6 +287,13 @@ struct DependentFunctionType : Type
 
     virtual TypePtr getTypeInContext(const EvaluationContextPtr &context) override;
 
+    TypePtr simplify();
+
+    virtual bool isDependentFunctionType() const override
+    {
+        return true;
+    }
+
     virtual void dump(std::ostream &out) override
     {
         out << "DependentFunctionType([";
@@ -297,6 +309,27 @@ struct DependentFunctionType : Type
     }
 };
 
+struct SimpleFunctionType : Type
+{
+    std::vector<TypePtr> argumentTypes;
+    TypePtr resultType;
+
+    virtual TypePtr getTypeInContext(const EvaluationContextPtr &context) override;
+
+    virtual void dump(std::ostream &out) override
+    {
+        out << "SimpleFunctionType([";
+        for(size_t i = 0; i < argumentTypes.size(); ++i)
+        {
+            if(i > 0)
+                out << ", ";
+            argumentTypes[i]->dump(out);
+        }
+        out << "], ";
+        resultType->dump(out);
+        out << ")";
+    }
+};
 
 struct TupleType : Type
 {
@@ -463,6 +496,28 @@ struct SymbolValue : PrimitiveValue
     virtual void dump(std::ostream &out) override
     {
         out << "SymbolValue(" << value << ")";
+    }
+};
+
+
+struct FunctionValue : Value
+{
+    DependentFunctionTypePtr dependentFunctionType;
+    TypePtr functionType;
+    ParseTreeNodePtr body;
+    EvaluationContextPtr definitionContext;
+
+    virtual TypePtr getTypeInContext(const EvaluationContextPtr &context) override
+    {
+        (void)context;
+        return functionType;
+    }
+
+    virtual void dump(std::ostream &out) override
+    {
+        out << "FunctionValue(";
+        functionType->dump(out);
+        out << ")";
     }
 };
 

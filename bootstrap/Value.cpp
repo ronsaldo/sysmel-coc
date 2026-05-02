@@ -85,6 +85,35 @@ DependentFunctionType::getTypeInContext(const EvaluationContextPtr &context)
     return context->coreTypes->propType;
 }
 
+TypePtr DependentFunctionType::simplify()
+{
+    if(!hasDependentArgs || !resultTypeExpression->isType())
+    {
+        std::vector<TypePtr> argumentTypes;
+        argumentTypes.reserve(arguments.size());
+        for(auto &arg : arguments)
+        {
+            if(!arg->typeExpression->isType())
+                return std::static_pointer_cast<DependentFunctionType> (shared_from_this());
+
+            argumentTypes.push_back(std::static_pointer_cast<Type> (arg->typeExpression));
+        }
+
+        auto simpleType = std::make_shared<SimpleFunctionType> ();
+        simpleType->argumentTypes.swap(argumentTypes);
+        simpleType->resultType = std::static_pointer_cast<Type> (resultTypeExpression);
+        return simpleType;
+    }
+
+    return std::static_pointer_cast<DependentFunctionType> (shared_from_this());
+}
+
+TypePtr SimpleFunctionType::getTypeInContext(const EvaluationContextPtr &context)
+{
+    // TODO: Use the max universe.
+    return context->coreTypes->propType;
+}
+
 TypePtr
 Package::getTypeInContext(const EvaluationContextPtr &context)
 {

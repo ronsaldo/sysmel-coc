@@ -77,8 +77,16 @@ ValuePtr
 ParseTreeFunctionNode::analyzeAndEvaluateInContext(const EvaluationContextPtr &context)
 {
     auto functionTypeValue = context->visitExpression(functionType);
-    printf("TODO: ParseTreeFunctionNode\n");
-    abort();
+    assert(functionTypeValue->isDependentFunctionType());
+
+    auto dependentFunctionType = std::static_pointer_cast<DependentFunctionType> (functionTypeValue);
+
+    auto functionValue = std::make_shared<FunctionValue> ();
+    functionValue->dependentFunctionType = dependentFunctionType;
+    functionValue->functionType = dependentFunctionType->simplify();
+    functionValue->body = body;
+    functionValue->definitionContext = context;
+    return functionValue;
 }
 
 ValuePtr
