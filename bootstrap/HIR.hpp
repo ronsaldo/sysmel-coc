@@ -5,4 +5,9 @@
 
 typedef std::shared_ptr<struct HIRValue> HIRValuePtr;
 
+struct HIRValue
+{
+
+};
+
 #endif //SYSMEL_HIR_HPP
