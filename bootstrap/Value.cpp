@@ -348,12 +348,22 @@ FunctionValue::ensureAnalysis()
         return;
 
     auto buildContext = BuildContext::fromEvaluationContext(definitionContext);
+    auto analysisEnvironment = std::make_shared<FunctionalAnalysisEnvironment> (buildContext->lexicalEnvironment);
     auto hirDependentFunctionType = dependentFunctionType->asHIRTypeWithContext(buildContext);
     
     hirFunction = std::make_shared<HIRFunction> ();
     hirFunction->name = name;
     hirFunction->dependentFunctionType = std::static_pointer_cast<HIRDependentFunctionType> (hirDependentFunctionType);
 
+    // Arguments
+    assert(dependentFunctionType->arguments.size() == hirFunction->dependentFunctionType->arguments.size());
+    for(size_t i = 0; i < dependentFunctionType->arguments.size(); ++i)
+    {
+        auto argumentDefinition = dependentFunctionType->arguments[i];
+        if(!argumentDefinition->name.empty())
+            analysisEnvironment->setSymbolBinding(argumentDefinition->name, hirFunction->dependentFunctionType->arguments[i]);
+    }
+    
     // Alloca block and builder
     auto allocaBlock = std::make_shared<HIRBasicBlock> ();
     allocaBlock->name = "alloca";
@@ -374,6 +384,15 @@ FunctionValue::ensureAnalysis()
     builder->basicBlock = entryBlock;
 
     // TODO: Build the body
+    auto bodyEnvironment = std::make_shared<LexicalEnvironment> (analysisEnvironment);
+    buildContext->lexicalEnvironment = bodyEnvironment;
+
+    auto result = buildContext->visitNodeWithExpectedType(body, hirFunction->dependentFunctionType->resultType);
+
+    if(!builder->isLastTerminator())
+    {
+        builder->returnValue(result, sourcePosition);
+    }
 
     // Finish the alloca block
     allocaBuilder->branch(entryBlock, sourcePosition);
@@ -793,4 +812,20 @@ EvaluationContext::visitNodeWithExpectedType(const ParseTreeNodePtr &parseNode, 
     }
 
     return value;
+}
+
+HIRValuePtr BuildContext::visitExpression(const ParseTreeNodePtr &parseNode)
+{
+    return parseNode->analyzeAndBuildWithContext(std::static_pointer_cast<BuildContext> (shared_from_this()));
+}
+
+HIRValuePtr BuildContext::visitDecayedExpression(const ParseTreeNodePtr &parseNode)
+{
+    return visitExpression(parseNode);
+}
+
+HIRValuePtr BuildContext::visitNodeWithExpectedType(const ParseTreeNodePtr &parseNode, const HIRTypeExpressionPtr &expectedType)
+{
+    (void)expectedType;
+    return visitExpression(parseNode);
 }

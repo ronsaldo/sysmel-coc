@@ -4,6 +4,12 @@ TypePtr HIRValue::getTypeInContext(const EvaluationContextPtr &context)
 {
     return context->coreTypes->hirValueType;
 }
+    
+HIRTypeExpressionPtr HIRTypeExpression::getHirType()
+{
+    assert(universeType);
+    return universeType;
+}
 
 void HIRDependentFunctionType::dump(std::ostream &out)
 {

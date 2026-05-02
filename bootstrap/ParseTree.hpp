@@ -24,6 +24,13 @@ struct ParseTreeNode : Value
         fprintf(stderr, "analyzeAndEvaluateInContext not implemented in %s\n", dumpAsString().c_str());
         abort();
     }
+
+    virtual HIRValuePtr analyzeAndBuildWithContext(const BuildContextPtr &context) override
+    {
+        (void)context;
+        fprintf(stderr, "analyzeAndBuildWithContext not implemented in %s\n", dumpAsString().c_str());
+        abort();
+    }
     
     virtual void collectParseErrorNodesIn(std::vector<ParseTreeParseErrorNodePtr> &out)
     {
@@ -187,6 +194,19 @@ struct ParseTreeIdentifierReferenceNode : ParseTreeNode
         }
 
         return binding->analyzeAndEvaluateIdentifierReferenceNodeInContext(std::static_pointer_cast<ParseTreeIdentifierReferenceNode> (shared_from_this()), context);
+    }
+
+    virtual HIRValuePtr analyzeAndBuildWithContext(const BuildContextPtr &context) override
+    {
+        auto binding = context->lexicalEnvironment->lookupSymbolRecursively(value);
+        if(!binding)
+        {
+            sourcePosition->printOn(stderr);
+            fprintf(stderr, ": Binding for symbol #%s is not available.\n", value.c_str());
+            abort();
+        }
+
+        return binding->analyzeAndBuildIdentifierReferenceNodeInContext(std::static_pointer_cast<ParseTreeIdentifierReferenceNode> (shared_from_this()), context);
     }
 
     virtual void dump(std::ostream &out) override

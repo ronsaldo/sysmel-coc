@@ -66,6 +66,12 @@ struct Value : std::enable_shared_from_this<Value>
         return shared_from_this();
     }
 
+    virtual HIRValuePtr analyzeAndBuildIdentifierReferenceNodeInContext(const ParseTreeIdentifierReferenceNodePtr &identifierNode, const BuildContextPtr &context)
+    {
+        (void)identifierNode;
+        return analyzeAndBuildWithContext(context);
+    }
+
     virtual ValuePtr analyzeAndEvaluateFunctionApplicationNodeInContext(const ParseTreeFunctionApplicationNodePtr &applicationNode, const EvaluationContextPtr &context);
     virtual ValuePtr analyzeAndEvaluateAssignmentNodeInContext(const ParseTreeAssignmentNodePtr &assignmentNode, const EvaluationContextPtr &context);
 
@@ -816,6 +822,13 @@ struct FunctionalActivationEnvironment : LexicalEnvironment
 
 };
 
+struct FunctionalAnalysisEnvironment: LexicalEnvironment
+{
+    FunctionalAnalysisEnvironment(const EnvironmentPtr &initParent)
+        : LexicalEnvironment(initParent) {}
+
+};
+
 struct FunctionalSignatureAnalysisEnvironment : LexicalEnvironment
 {
     FunctionalSignatureAnalysisEnvironment(const EnvironmentPtr &initParent)
@@ -977,6 +990,10 @@ struct EvaluationContext : Value
 
 struct BuildContext : Value
 {
+    HIRValuePtr visitExpression(const ParseTreeNodePtr &parseNode);
+    HIRValuePtr visitDecayedExpression(const ParseTreeNodePtr &parseNode);
+    HIRValuePtr visitNodeWithExpectedType(const ParseTreeNodePtr &parseNode, const HIRTypeExpressionPtr &expectedType);
+
     virtual TypePtr getTypeInContext(const EvaluationContextPtr &context) override
     {
         return context->coreTypes->buildContextType;

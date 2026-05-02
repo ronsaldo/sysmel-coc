@@ -2,6 +2,7 @@
 #define SYSMEL_HIR_HPP
 
 #include "Value.hpp"
+#include <assert.h>
 
 typedef std::shared_ptr<struct HIRValue> HIRValuePtr;
 
@@ -56,10 +57,14 @@ struct HIRValue : Value
     }
 
     virtual TypePtr getTypeInContext(const EvaluationContextPtr &context);
+    virtual HIRTypeExpressionPtr getHirType() = 0;
 };
 
 struct HIRTypeExpression : HIRValue
 {
+    HIRUniverseTypePtr universeType;
+    
+    virtual HIRTypeExpressionPtr getHirType() override;
 };
 
 struct HIRNominalType : HIRTypeExpression
@@ -210,6 +215,11 @@ struct HIRConstantLiteralValue : HIRConstant
     HIRTypeExpressionPtr type;
     ValuePtr value;
 
+    virtual HIRTypeExpressionPtr getHirType() override
+    {
+        return type;
+    }
+
     virtual void dump(std::ostream &out) override
     {
         out << "HIRConstantLiteralValue(";
@@ -225,6 +235,11 @@ struct HIRFunction : HIRConstant
     std::vector<HIRCapturePtr> captures;
     HIRBasicBlockPtr firstBasicBlock;
     HIRBasicBlockPtr lastBasicBlock;
+
+    virtual HIRTypeExpressionPtr getHirType() override
+    {
+        return dependentFunctionType;
+    }
 
     void addBasicBlock(const HIRBasicBlockPtr &basicBlock);
     virtual void dump(std::ostream &out) override;
@@ -254,6 +269,11 @@ struct HIRArgument : HIRFunctionLocalValue
 {
     HIRTypeExpressionPtr type;
 
+    virtual HIRTypeExpressionPtr getHirType() override
+    {
+        return type;
+    }
+
     virtual void dump(std::ostream &out) override
     {
         out << index << " := argument " << name << " :: ";
@@ -264,6 +284,11 @@ struct HIRArgument : HIRFunctionLocalValue
 struct HIRCapture : HIRFunctionLocalValue
 {
     HIRTypeExpressionPtr type;
+
+    virtual HIRTypeExpressionPtr getHirType() override
+    {
+        return type;
+    }
 
     virtual void dump(std::ostream &out) override
     {
@@ -278,6 +303,12 @@ struct HIRBasicBlock : HIRFunctionLocalValue
     HIRBasicBlockPtr nextBasicBlock;
     HIRInstructionPtr firstInstruction;
     HIRInstructionPtr lastInstruction;
+
+    virtual HIRTypeExpressionPtr getHirType() override
+    {
+        //TODO: add a type to the basic block
+        return nullptr;
+    }
 
     void addInstruction(const HIRInstructionPtr &instruction);
    
@@ -299,12 +330,18 @@ struct HIRBranchInstruction : HIRInstruction
 {
     HIRBasicBlockPtr destination;
 
-    virtual bool isTerminator() const
+    virtual HIRTypeExpressionPtr getHirType() override
+    {
+        //TODO: add a type to the basic block
+        return nullptr;
+    }
+
+    virtual bool isTerminator() const override
     {
         return true;
     }
 
-    virtual void dump(std::ostream &out)
+    virtual void dump(std::ostream &out) override
     {
         out << "branch " << destination->asString();
     }
@@ -314,40 +351,58 @@ struct HIRReturnInstruction : HIRInstruction
 {
     HIRValuePtr returnValue;
 
-    virtual bool isTerminator() const
+    virtual bool isTerminator() const override
     {
         return true;
     }
 
-    virtual void dump(std::ostream &out)
+    virtual void dump(std::ostream &out) override
     {
         out << "return " << returnValue->asString();
+    }
+
+    virtual HIRTypeExpressionPtr getHirType() override
+    {
+        //TODO: add a type to the basic block
+        return nullptr;
     }
 };
 
 struct HIRReturnVoidInstruction : HIRInstruction
 {
-    virtual bool isTerminator() const
+    virtual bool isTerminator() const override
     {
         return true;
     }
 
-    virtual void dump(std::ostream &out)
+    virtual void dump(std::ostream &out) override
     {
         out << "returnVoid";
+    }
+
+    virtual HIRTypeExpressionPtr getHirType() override
+    {
+        //TODO: add a type to the basic block
+        return nullptr;
     }
 };
 
 struct HIRUnreachableInstruction : HIRInstruction
 {
-    virtual bool isTerminator() const
+    virtual bool isTerminator() const override
     {
         return true;
     }
 
-    virtual void dump(std::ostream &out)
+    virtual void dump(std::ostream &out) override
     {
         out << "unreachable";
+    }
+    
+    virtual HIRTypeExpressionPtr getHirType() override
+    {
+        //TODO: add a type to the basic block
+        return nullptr;
     }
 };
 
