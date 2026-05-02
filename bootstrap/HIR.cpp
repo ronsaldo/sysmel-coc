@@ -36,6 +36,8 @@ HIRFunction::addBasicBlock(const HIRBasicBlockPtr &basicBlock)
 
 void HIRFunction::dump(std::ostream &out)
 {
+    enumerateInstructions();
+
     out << "HIRFunction(\n  " << name;
     dependentFunctionType->dump(out);
 
@@ -48,6 +50,47 @@ void HIRFunction::dump(std::ostream &out)
     }
     
     out << ")";
+}
+
+void HIRFunction::enumerateInstructions()
+{
+    if(!enumeratedInstructions.empty())
+        return;
+
+    // Arguments
+    for(auto &argument : dependentFunctionType->arguments)
+    {
+        argument->index = int32_t(enumeratedInstructions.size());
+        enumeratedInstructions.push_back(argument);
+    }
+
+    // Captures
+    for(auto &capture : captures)
+    {
+        capture->index = int32_t(enumeratedInstructions.size());
+        enumeratedInstructions.push_back(capture);
+    }
+
+    // Basic blocks
+    auto basicBlock = firstBasicBlock;
+    while (basicBlock)
+    {
+        basicBlock->index = int32_t(enumeratedInstructions.size());
+        enumeratedInstructions.push_back(basicBlock);
+
+        // Instructions
+        auto instruction = basicBlock->firstInstruction;
+        while(instruction)
+        {
+            instruction->index = int32_t(enumeratedInstructions.size());
+            enumeratedInstructions.push_back(instruction);
+            
+            instruction = instruction->nextInstruction;
+        }
+
+        basicBlock = basicBlock->nextBasicBlock;
+    }
+    
 }
     
 void
@@ -68,12 +111,13 @@ HIRBasicBlock::addInstruction(const HIRInstructionPtr &instruction)
 void
 HIRBasicBlock::dump(std::ostream &out)
 {
-    out << "@" << index << "<" << name << ">:\n";
+    out << "$" << index << "<" << name << ">:\n";
     auto instruction = firstInstruction;
     while(instruction)
     {
         out << "  ";
         instruction->dump(out);
+        out << "\n";
         instruction = instruction->nextInstruction;
     }
 }

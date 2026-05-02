@@ -354,6 +354,30 @@ FunctionValue::ensureAnalysis()
     hirFunction->name = name;
     hirFunction->dependentFunctionType = std::static_pointer_cast<HIRDependentFunctionType> (hirDependentFunctionType);
 
+    // Alloca block and builder
+    auto allocaBlock = std::make_shared<HIRBasicBlock> ();
+    allocaBlock->name = "alloca";
+    hirFunction->addBasicBlock(allocaBlock);
+
+    auto allocaBuilder = std::make_shared<HIRBuilder> ();
+    allocaBuilder->function = hirFunction;
+    allocaBuilder->basicBlock = allocaBlock;
+
+    // Entry block and builder
+    auto entryBlock = std::make_shared<HIRBasicBlock> ();
+    entryBlock->name = "entry";
+    hirFunction->addBasicBlock(entryBlock);
+
+    auto builder = std::make_shared<HIRBuilder> ();
+    builder->allocaBuilder = allocaBuilder;
+    builder->function = hirFunction;
+    builder->basicBlock = entryBlock;
+
+    // TODO: Build the body
+
+    // Finish the alloca block
+    allocaBuilder->branch(entryBlock, sourcePosition);
+
     printf("Analyzed HIR function: %s\n", hirFunction->dumpAsString().c_str());
 }
 

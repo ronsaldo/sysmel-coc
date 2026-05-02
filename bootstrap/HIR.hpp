@@ -31,12 +31,24 @@ typedef std::shared_ptr<struct HIRFunctionLocalValue> HIRFunctionLocalValuePtr;
 typedef std::shared_ptr<struct HIRArgument> HIRArgumentPtr;
 typedef std::shared_ptr<struct HIRCapture> HIRCapturePtr;
 typedef std::shared_ptr<struct HIRBasicBlock> HIRBasicBlockPtr;
+
 typedef std::shared_ptr<struct HIRInstruction> HIRInstructionPtr;
+typedef std::shared_ptr<struct HIRBranchInstruction> HIRBranchInstructionPtr;
+typedef std::shared_ptr<struct HIRReturnInstruction> HIRReturnInstructionPtr;
+typedef std::shared_ptr<struct HIRReturnVoidInstruction> HIRReturnVoidInstructionPtr;
+typedef std::shared_ptr<struct HIRUnreachableInstruction> HIRUnreachableInstructionPtr;
 
 typedef std::shared_ptr<struct HIRBuilder> HIRBuilderPtr;
 
 struct HIRValue : Value
 {
+    SourcePositionPtr sourcePosition;
+
+    virtual std::string asString()
+    {
+        return dumpAsString();
+    }
+
     virtual HIRValuePtr analyzeAndBuildWithContext(const BuildContextPtr &context)
     {
         (void)context;
@@ -216,6 +228,9 @@ struct HIRFunction : HIRConstant
 
     void addBasicBlock(const HIRBasicBlockPtr &basicBlock);
     virtual void dump(std::ostream &out) override;
+
+    void enumerateInstructions();
+    std::vector<HIRFunctionLocalValuePtr> enumeratedInstructions;
 };
 
 struct HIRFunctionClosure : HIRConstant
@@ -226,6 +241,13 @@ struct HIRFunctionLocalValue : HIRValue
 {
     std::string name;
     int32_t index = -1;
+
+    virtual std::string asString() override
+    {
+        std::ostringstream out;
+        out << '$' << index;
+        return out.str();
+    }
 };
 
 struct HIRArgument : HIRFunctionLocalValue
@@ -266,6 +288,67 @@ struct HIRInstruction : HIRFunctionLocalValue
 {
     HIRInstructionPtr previousInstruction;
     HIRInstructionPtr nextInstruction;
+
+    virtual bool isTerminator() const
+    {
+        return false;
+    }
+};
+
+struct HIRBranchInstruction : HIRInstruction
+{
+    HIRBasicBlockPtr destination;
+
+    virtual bool isTerminator() const
+    {
+        return true;
+    }
+
+    virtual void dump(std::ostream &out)
+    {
+        out << "branch " << destination->asString();
+    }
+};
+
+struct HIRReturnInstruction : HIRInstruction
+{
+    HIRValuePtr returnValue;
+
+    virtual bool isTerminator() const
+    {
+        return true;
+    }
+
+    virtual void dump(std::ostream &out)
+    {
+        out << "return " << returnValue->asString();
+    }
+};
+
+struct HIRReturnVoidInstruction : HIRInstruction
+{
+    virtual bool isTerminator() const
+    {
+        return true;
+    }
+
+    virtual void dump(std::ostream &out)
+    {
+        out << "returnVoid";
+    }
+};
+
+struct HIRUnreachableInstruction : HIRInstruction
+{
+    virtual bool isTerminator() const
+    {
+        return true;
+    }
+
+    virtual void dump(std::ostream &out)
+    {
+        out << "unreachable";
+    }
 };
 
 struct HIRBuilder
@@ -273,6 +356,46 @@ struct HIRBuilder
     HIRBuilderPtr allocaBuilder;
     HIRFunctionPtr function;
     HIRBasicBlockPtr basicBlock;
+
+    bool isLastTerminator() const
+    {
+        return basicBlock && basicBlock->lastInstruction && basicBlock->lastInstruction->isTerminator();
+    }
+
+    HIRBranchInstructionPtr branch(const HIRBasicBlockPtr &destination, const SourcePositionPtr &sourcePosition)
+    {
+        auto instruction = std::make_shared<HIRBranchInstruction> ();
+        instruction->sourcePosition = sourcePosition;
+        instruction->destination = destination;
+        basicBlock->addInstruction(instruction);
+        return instruction;
+    }
+
+    HIRReturnInstructionPtr returnValue(const HIRValuePtr &value, const SourcePositionPtr &sourcePosition)
+    {
+        auto instruction = std::make_shared<HIRReturnInstruction> ();
+        instruction->returnValue = value;
+        instruction->sourcePosition = sourcePosition;
+        basicBlock->addInstruction(instruction);
+        return instruction;
+    }
+
+    HIRReturnVoidInstructionPtr returnVoid(const SourcePositionPtr &sourcePosition)
+    {
+        auto instruction = std::make_shared<HIRReturnVoidInstruction> ();
+        instruction->sourcePosition = sourcePosition;
+        basicBlock->addInstruction(instruction);
+        return instruction;
+    }
+
+    HIRUnreachableInstructionPtr unreachable(const SourcePositionPtr &sourcePosition)
+    {
+        auto instruction = std::make_shared<HIRUnreachableInstruction> ();
+        instruction->sourcePosition = sourcePosition;
+        basicBlock->addInstruction(instruction);
+        return instruction;
+    }
+
 };
 
 #endif //SYSMEL_HIR_HPP
