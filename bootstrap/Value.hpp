@@ -28,7 +28,7 @@ typedef std::shared_ptr<struct Package> PackagePtr;
 typedef std::shared_ptr<struct MacroContext> MacroContextPtr;
 typedef std::shared_ptr<struct Environment> EnvironmentPtr;
 typedef std::shared_ptr<struct LexicalEnvironment> LexicalEnvironmentPtr;
-typedef std::shared_ptr<struct CoreTypeAndMacros> CoreTypesPtr;
+typedef std::shared_ptr<struct CoreTypeAndMacros> CoreTypeAndMacrosPtr;
 typedef std::shared_ptr<struct EvaluationContext> EvaluationContextPtr;
 
 struct Value : std::enable_shared_from_this<Value>
@@ -57,6 +57,11 @@ struct Value : std::enable_shared_from_this<Value>
     }
 
     virtual bool isBooleanValue() const
+    {
+        return false;
+    }
+
+    virtual bool isStringValue() const
     {
         return false;
     }
@@ -341,7 +346,15 @@ struct StringValue : PrimitiveValue
     StringValue(const TypePtr initType)
         : PrimitiveValue(initType) {}
 
+    StringValue(const TypePtr initType, const std::string &initValue)
+        : PrimitiveValue(initType), value(initValue) {}
+
     std::string value;
+
+    virtual bool isStringValue() const
+    {
+        return true;
+    }
 
     virtual void dump(std::ostream &out) override
     {
@@ -663,6 +676,7 @@ struct EvaluationContext : Value
     ValuePtr visitDecayedExpression(const ParseTreeNodePtr &parseNode);
 
     std::string visitOptionalSymbolNode(const ParseTreeNodePtr &parseNode);
+    std::string visitStringNode(const ParseTreeNodePtr &parseNode);
     bool visitBooleanCondition(const ParseTreeNodePtr &parseNode);
 
     TypePtr visitNodeExpectingType(const ParseTreeNodePtr &parseNode);
@@ -688,7 +702,7 @@ struct EvaluationContext : Value
     }
 
     PackagePtr package;
-    CoreTypesPtr coreTypes;
+    CoreTypeAndMacrosPtr coreTypes;
     LexicalEnvironmentPtr lexicalEnvironment;
 };
 

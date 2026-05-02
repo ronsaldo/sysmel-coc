@@ -229,6 +229,13 @@ void CoreTypeAndMacros::registerInPackage(PackagePtr package)
     package->setSymbolBinding("true", trueValue);
     package->setSymbolBinding("nil", nilValue);
 
+    package->setSymbolBinding("loadFileOnce:", std::make_shared<PrimitiveMacro> (1, [](const MacroContextPtr &context, const std::vector<ParseTreeNodePtr> &arguments) {
+        auto loadFile = std::make_shared<ParseTreeLoadFileNode> ();
+        loadFile->sourcePosition = context->sourcePosition;
+        loadFile->fileName = arguments[0];
+        return loadFile;
+    }));
+
     package->setSymbolBinding("let:with:", std::make_shared<PrimitiveMacro> (2, [](const MacroContextPtr &context, const std::vector<ParseTreeNodePtr> &arguments) {
         auto letWith = std::make_shared<ParseTreeVariableDefinitionNode> ();
         letWith->sourcePosition = context->sourcePosition;
@@ -321,6 +328,20 @@ EvaluationContext::visitOptionalSymbolNode(const ParseTreeNodePtr &parseNode)
     }
 
     return std::static_pointer_cast<SymbolValue> (symbolValue)->value;
+}
+
+std::string
+EvaluationContext::visitStringNode(const ParseTreeNodePtr &parseNode)
+{
+    auto stringValue = visitDecayedExpression(parseNode);
+    if(!stringValue->isStringValue())
+    {
+        parseNode->sourcePosition->printOn(stderr);
+        fprintf(stderr, ": Expected a string value.\n");
+        abort();
+    }
+
+    return std::static_pointer_cast<StringValue> (stringValue)->value;
 }
 
 bool

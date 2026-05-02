@@ -8,6 +8,9 @@
 typedef std::shared_ptr<struct SourceCode> SourceCodePtr;
 typedef std::shared_ptr<struct SourcePosition> SourcePositionPtr;
 
+typedef std::shared_ptr<struct Package> PackagePtr;
+typedef std::shared_ptr<struct CoreTypeAndMacros> CoreTypeAndMacrosPtr;
+
 struct SourceCode
 {
     std::string text;
@@ -65,5 +68,8 @@ struct SourcePosition
         fprintf(out, "%s:%d.%d-%d-%d:", sourceCode->name.c_str(), startLine, startColumn, endLine, endColumn);
     }
 };
+
+bool sourceCode_evaluate(const SourceCodePtr &sourceCode, const CoreTypeAndMacrosPtr &coreTypes, const PackagePtr &package, bool printResult);
+SourceCodePtr sourceCode_createForFileNamed(const std::string &filename);
 
 #endif //SYSMEL_META_MODEL_H

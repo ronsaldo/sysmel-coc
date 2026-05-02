@@ -1015,4 +1015,23 @@ struct ParseTreeDoWhileExpressionNode : ParseTreeNode
         out << ")";
     }
 };
+
+struct ParseTreeLoadFileNode : ParseTreeNode
+{
+    ParseTreeNodePtr fileName;
+
+    virtual ValuePtr analyzeAndEvaluateInContext(const EvaluationContextPtr &context) override;
+
+    virtual void collectParseErrorNodesIn(std::vector<ParseTreeParseErrorNodePtr> &out) override
+    {
+        fileName->collectParseErrorNodesIn(out);
+    }
+
+    virtual void dump(std::ostream &out) override
+    {
+        out << "ParseTreeLoadFileNode(";
+        fileName->dump(out);
+        out << ")";
+    }
+};
 #endif //SYSMEL_PARSE_TREE_HPP
