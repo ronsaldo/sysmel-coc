@@ -880,6 +880,7 @@ struct CoreTypeAndMacros : Value
     NominalTypePtr evaluationContextType;
     NominalTypePtr environmentType;
     NominalTypePtr packageType;
+    NominalTypePtr hirValueType;
 
     NominalTypePtr primitiveMacroType;
     NominalTypePtr macroContextType;

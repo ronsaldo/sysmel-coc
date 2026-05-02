@@ -348,6 +348,10 @@ CoreTypeAndMacros::CoreTypeAndMacros()
     
     evaluationContextType = std::make_shared<NominalType> ("EvaluationContext", pointerSize, pointerAlignment);
 
+    environmentType = std::make_shared<NominalType> ("Environment", pointerSize, pointerAlignment);
+    packageType = std::make_shared<NominalType> ("Package", pointerSize, pointerAlignment);
+    hirValueType = std::make_shared<NominalType> ("HIRValue", pointerSize, pointerAlignment);
+
     primitiveMacroType = std::make_shared<NominalType> ("PrimitiveMacro", pointerSize, pointerAlignment);
     macroContextType = std::make_shared<NominalType> ("MacroContext", pointerSize, pointerAlignment);
 
@@ -390,6 +394,8 @@ void CoreTypeAndMacros::registerInPackage(PackagePtr package)
     package->setSymbolBinding("ParseTreeNode", parseTreeNodeType);
     package->setSymbolBinding("CoreTypeAndMacros", coreTypesType);
     package->setSymbolBinding("EvaluationContext", evaluationContextType);
+    package->setSymbolBinding("Package", packageType);
+    package->setSymbolBinding("HIRValue", hirValueType);
 
     package->setSymbolBinding("PrimitiveMacro", primitiveMacroType);
     package->setSymbolBinding("MacroContext", macroContextType);

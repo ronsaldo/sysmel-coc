@@ -5,9 +5,9 @@
 
 typedef std::shared_ptr<struct HIRValue> HIRValuePtr;
 
-struct HIRValue
+struct HIRValue : Value
 {
-
+    virtual TypePtr getTypeInContext(const EvaluationContextPtr &context);
 };
 
 #endif //SYSMEL_HIR_HPP
