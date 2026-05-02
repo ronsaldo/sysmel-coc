@@ -39,7 +39,7 @@ ValuePtr ParseTreeLoadFileNode::analyzeAndEvaluateInContext(const EvaluationCont
     if(!sourceCode)
     {
         sourcePosition->printOn(stderr);
-        fprintf(stderr, " Filed to open source file '%s'.\n", filePath.c_str());
+        fprintf(stderr, " Failed to open source file '%s'.\n", filePath.c_str());
         abort();
     }
 
@@ -50,6 +50,17 @@ ValuePtr ParseTreeLoadFileNode::analyzeAndEvaluateInContext(const EvaluationCont
 ValuePtr
 ParseTreeAddMethodNode::analyzeAndEvaluateInContext(const EvaluationContextPtr &context)
 {
+    auto ownerValue = context->visitDecayedExpression(owner);
+    if(!ownerValue->isType())
+    {
+        sourcePosition->printOn(stderr);
+        fprintf(stderr, " Expected a type or template for adding a method.\n");
+        abort();
+    }
+
+    TypePtr ownerValueType = std::static_pointer_cast<Type> (ownerValue);
+    auto methodNode = method->copyWithSelfType(ownerValueType);
+
     printf("TODO: ParseTreeAddMethodNode::analyzeAndEvaluateInContext\n");
     abort();
 }

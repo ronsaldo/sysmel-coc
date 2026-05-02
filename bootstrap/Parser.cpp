@@ -399,7 +399,7 @@ sysmel_parser_parseIdentifier(sysmel_ParserState_t *state)
     return node;
 }
 
-static ParseTreeNodePtr
+static ParseTreeArgumentDefinitionNodePtr
 sysmel_parser_parseBlockArgument(sysmel_ParserState_t *state)
 {
     size_t startPosition = state->position;
@@ -429,7 +429,7 @@ sysmel_parser_parseBlockType(sysmel_ParserState_t *state)
 {
     size_t startPosition = state->position;
     bool shouldEmitType = false;
-    std::vector<ParseTreeNodePtr> argumentDefinitions;
+    std::vector<ParseTreeArgumentDefinitionNodePtr> argumentDefinitions;
     ParseTreeNodePtr resultTypeExpression = nullptr;
 
     while(sysmel_parserState_peekKind(state, 0) == SysmelTokenKind_Colon)
@@ -601,7 +601,7 @@ sysmel_parser_parseDictionary(sysmel_ParserState_t *state)
     return dictionaryNode;
 }
 
-static ParseTreeNodePtr
+static ParseTreeArgumentDefinitionNodePtr
 sysmel_parser_parseMethodArgument(sysmel_ParserState_t *state)
 {
     ParseTreeNodePtr argumentTypeExpression;
@@ -620,10 +620,19 @@ static ParseTreeFunctionTypeNodePtr
 sysmel_parser_parseMethodHeader(sysmel_ParserState_t *state)
 {
     size_t startPosition = state->position;
-    std::vector<ParseTreeNodePtr> argumentDefinitions;
+    std::vector<ParseTreeArgumentDefinitionNodePtr> argumentDefinitions;
     ParseTreeNodePtr resultTypeExpression = nullptr;
     std::string selector;
 
+    // Self implicit argument.
+    {
+        auto selfArgument = std::make_shared<ParseTreeArgumentDefinitionNode> ();
+        selfArgument->sourcePosition = sysmel_parserState_sourcePositionFrom(state, startPosition);
+        selfArgument->name = "self";
+        argumentDefinitions.push_back(selfArgument);
+    }
+
+    // Remaining explicit arguments.
     if(sysmel_parserState_peekKind(state, 0) == SysmelTokenKind_Identifier)
     {
         auto token = sysmel_parserState_next(state);
@@ -672,7 +681,7 @@ sysmel_parser_parseMethodHeader(sysmel_ParserState_t *state)
     return functionType;
 }
 
-static ParseTreeNodePtr
+static ParseTreeFunctionNodePtr
 sysmel_parser_parseMethod(sysmel_ParserState_t *state)
 {
     size_t startPosition = state->position;

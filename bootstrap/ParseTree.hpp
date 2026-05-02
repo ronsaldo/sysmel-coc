@@ -155,6 +155,23 @@ struct ParseTreeLiteralSymbolNode : ParseTreeNode
     }
 };
 
+struct ParseTreeLiteralValueNode : ParseTreeNode
+{
+    ValuePtr value;
+    
+    virtual ValuePtr analyzeAndEvaluateInContext(const EvaluationContextPtr &context) override
+    {
+        (void)context;
+        return value;
+    }
+
+    virtual void dump(std::ostream &out) override
+    {
+        out << "ParseTreeLiteralValueNode()";
+    }
+};
+
+
 struct ParseTreeIdentifierReferenceNode : ParseTreeNode
 {
     std::string value;
@@ -412,11 +429,25 @@ struct ParseTreeArgumentDefinitionNode : ParseTreeNode
     std::string name;
     ParseTreeNodePtr typeExpression;
     bool isSelf = false;
+    bool isImplicit = false;
     
     virtual void collectParseErrorNodesIn(std::vector<ParseTreeParseErrorNodePtr> &out) override
     {
         if(typeExpression)
             typeExpression->collectParseErrorNodesIn(out);
+    }
+
+    ParseTreeArgumentDefinitionNodePtr copyWithType(TypePtr newType)
+    {
+        auto newTypeExpression = std::make_shared<ParseTreeLiteralValueNode> ();
+        newTypeExpression->value = newType;
+
+        auto copy = std::make_shared<ParseTreeArgumentDefinitionNode> ();
+        copy->name = name;
+        copy->typeExpression = newTypeExpression;
+        copy->isSelf = isSelf;
+        copy->isImplicit = isImplicit;
+        return copy;
     }
 
     virtual void dump(std::ostream &out) override
@@ -433,9 +464,24 @@ struct ParseTreeArgumentDefinitionNode : ParseTreeNode
 
 struct ParseTreeFunctionTypeNode : ParseTreeNode
 {
-    std::vector<ParseTreeNodePtr> argumentDefinitions;
+    std::vector<ParseTreeArgumentDefinitionNodePtr> argumentDefinitions;
     ParseTreeNodePtr resultTypeExpression;
     ParseTreeNodePtr nameExpression;
+
+    ParseTreeFunctionTypeNodePtr copyWithSelfType(TypePtr selfType)
+    {
+        auto functionTypeWithSelf = std::make_shared<ParseTreeFunctionTypeNode> ();
+        functionTypeWithSelf->argumentDefinitions = argumentDefinitions;
+        functionTypeWithSelf->resultTypeExpression = resultTypeExpression;
+        functionTypeWithSelf->nameExpression = nameExpression;
+
+        for(size_t i = 0; i < functionTypeWithSelf->argumentDefinitions.size(); ++i)
+        {
+            if(functionTypeWithSelf->argumentDefinitions[i]->name == "self")
+                functionTypeWithSelf->argumentDefinitions[i] = functionTypeWithSelf->argumentDefinitions[i]->copyWithType(selfType);
+        }
+        return functionTypeWithSelf;
+    }
 
     virtual void collectParseErrorNodesIn(std::vector<ParseTreeParseErrorNodePtr> &out) override
     {
@@ -476,10 +522,25 @@ struct ParseTreeFunctionNode : ParseTreeNode
     ParseTreeNodePtr nameExpression;
     ParseTreeFunctionTypeNodePtr functionType;
     ParseTreeNodePtr body;
+    bool isMethod = false;
     bool isPublic = false;
     bool isMacro = false;
     bool isCompileTime = false;
     bool isTemplate = false;
+
+    ParseTreeFunctionNodePtr copyWithSelfType(TypePtr selfType)
+    {
+        auto functionWithSelf = std::make_shared<ParseTreeFunctionNode> ();
+        nameExpression = nameExpression;
+        functionType = functionType->copyWithSelfType(selfType);
+        body = body;
+        isMethod = isMethod;
+        isPublic = isPublic;
+        isMacro = isMacro;
+        isCompileTime = isCompileTime;
+        isTemplate = isTemplate;
+        return functionWithSelf;
+    }
 
     virtual void collectParseErrorNodesIn(std::vector<ParseTreeParseErrorNodePtr> &out) override
     {
@@ -1043,7 +1104,7 @@ struct ParseTreeLoadFileNode : ParseTreeNode
 struct ParseTreeAddMethodNode : ParseTreeNode
 {
     ParseTreeNodePtr owner;
-    ParseTreeNodePtr method;
+    ParseTreeFunctionNodePtr method;
 
     virtual ValuePtr analyzeAndEvaluateInContext(const EvaluationContextPtr &context) override;
 
