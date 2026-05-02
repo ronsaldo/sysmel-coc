@@ -87,9 +87,12 @@ sourceCode_createForFileNamed(const std::string &filename)
 
     sourceCode->text.resize(sourceFileSize);
 
-    if(fread(sourceCode->text.data(), sourceFileSize, 1, sourceFile) != 1)
+    char *textBuffer = (char*)malloc(sourceFileSize);
+
+    if(fread(textBuffer, sourceFileSize, 1, sourceFile) != 1)
     {
-        fclose(sourceFile);    
+        fclose(sourceFile);
+        free(textBuffer);
         perror("Failed to read file.");
         return nullptr;
     }
@@ -98,6 +101,8 @@ sourceCode_createForFileNamed(const std::string &filename)
 
     sourceCode->directory = path_dirname(filename);
     sourceCode->name = path_basename(filename);
+    sourceCode->text = std::string(textBuffer, textBuffer + sourceFileSize);
+    free(textBuffer);
 
     return sourceCode;
 }

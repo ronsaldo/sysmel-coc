@@ -48,6 +48,8 @@ typedef std::shared_ptr<struct BuildContext> BuildContextPtr;
 
 struct Value : std::enable_shared_from_this<Value>
 {
+    virtual ~Value() {}
+
     virtual ValuePtr analyzeAndEvaluateInContext(const EvaluationContextPtr &context)
     {
         (void)context;
@@ -171,7 +173,7 @@ struct NominalType : Type
         out << name;
     }
 
-    virtual ValuePtr getOrCreateDefaultValue()
+    virtual ValuePtr getOrCreateDefaultValue() override
     {
         return defaultValue;
     }
@@ -193,7 +195,7 @@ struct DynamicType : Type
         out << name;
     }
 
-    virtual ValuePtr getOrCreateDefaultValue()
+    virtual ValuePtr getOrCreateDefaultValue() override
     {
         return defaultValue;
     }
@@ -335,7 +337,7 @@ struct SimpleFunctionType : Type
     std::vector<TypePtr> argumentTypes;
     TypePtr resultType;
 
-    virtual std::vector<ValuePtr> analyzeAndEvaluationFunctionApplicationArgumentsInContext(const ParseTreeFunctionApplicationNodePtr &application, const EvaluationContextPtr &context);
+    virtual std::vector<ValuePtr> analyzeAndEvaluationFunctionApplicationArgumentsInContext(const ParseTreeFunctionApplicationNodePtr &application, const EvaluationContextPtr &context) override;
     virtual TypePtr getTypeInContext(const EvaluationContextPtr &context) override;
 
     virtual void dump(std::ostream &out) override
@@ -421,7 +423,7 @@ struct BooleanValue : PrimitiveValue
 
     bool value = false;
     
-    virtual bool isBooleanValue() const
+    virtual bool isBooleanValue() const override
     {
         return true;
     }
@@ -492,7 +494,7 @@ struct StringValue : PrimitiveValue
 
     std::string value;
 
-    virtual bool isStringValue() const
+    virtual bool isStringValue() const override
     {
         return true;
     }
@@ -510,7 +512,7 @@ struct SymbolValue : PrimitiveValue
 
     std::string value;
 
-    virtual bool isSymbolValue() const
+    virtual bool isSymbolValue() const override
     {
         return true;
     }
@@ -537,7 +539,7 @@ struct FunctionValue : Value
     bool isAnalyzed = false;
     std::string primitiveName;
 
-    virtual ValuePtr analyzeAndEvaluateFunctionApplicationNodeInContext(const ParseTreeFunctionApplicationNodePtr &applicationNode, const EvaluationContextPtr &context);
+    virtual ValuePtr analyzeAndEvaluateFunctionApplicationNodeInContext(const ParseTreeFunctionApplicationNodePtr &applicationNode, const EvaluationContextPtr &context) override;
     virtual void ensureAnalysis() override;
     
     ValuePtr evaluateWithArgumentsAndCaptures(const std::vector<ValuePtr> &arguments, const std::vector<ValuePtr> &captures);
@@ -836,7 +838,7 @@ struct PrimitiveMacro : Value
     PrimitiveMacro(size_t initArgumentCount, FT &&initFunction)
         : argumentCount(initArgumentCount), function(initFunction) {}
 
-    virtual ValuePtr analyzeAndEvaluateFunctionApplicationNodeInContext(const ParseTreeFunctionApplicationNodePtr &applicationNode, const EvaluationContextPtr &context);
+    virtual ValuePtr analyzeAndEvaluateFunctionApplicationNodeInContext(const ParseTreeFunctionApplicationNodePtr &applicationNode, const EvaluationContextPtr &context) override;
 
     virtual void dump(std::ostream &out) override
     {

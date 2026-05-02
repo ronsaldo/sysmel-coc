@@ -18,7 +18,7 @@ struct ParseTreeNode : Value
 {
     SourcePositionPtr sourcePosition;
 
-    virtual ValuePtr analyzeAndEvaluateInContext(const EvaluationContextPtr &context)
+    virtual ValuePtr analyzeAndEvaluateInContext(const EvaluationContextPtr &context) override
     {
         (void)context;
         fprintf(stderr, "analyzeAndEvaluateInContext not implemented in %s\n", dumpAsString().c_str());
@@ -537,14 +537,14 @@ struct ParseTreeFunctionNode : ParseTreeNode
     ParseTreeFunctionNodePtr copyWithSelfType(TypePtr selfType)
     {
         auto functionWithSelf = std::make_shared<ParseTreeFunctionNode> ();
-        nameExpression = nameExpression;
-        functionType = functionType->copyWithSelfType(selfType);
-        body = body;
-        isMethod = isMethod;
-        isPublic = isPublic;
-        isMacro = isMacro;
-        isCompileTime = isCompileTime;
-        isTemplate = isTemplate;
+        functionWithSelf->nameExpression = nameExpression;
+        functionWithSelf->functionType = functionType->copyWithSelfType(selfType);
+        functionWithSelf->body = body;
+        functionWithSelf->isMethod = isMethod;
+        functionWithSelf->isPublic = isPublic;
+        functionWithSelf->isMacro = isMacro;
+        functionWithSelf->isCompileTime = isCompileTime;
+        functionWithSelf->isTemplate = isTemplate;
         return functionWithSelf;
     }
 
@@ -721,7 +721,7 @@ struct ParseTreeMessageSendNode : ParseTreeNode
         out << "])";
     }
 
-    virtual void splitMessageCascadeFirstMessage(ParseTreeNodePtr *outReceiver, ParseTreeNodePtr *outFirstMessage)
+    virtual void splitMessageCascadeFirstMessage(ParseTreeNodePtr *outReceiver, ParseTreeNodePtr *outFirstMessage) override
     {
         auto cascadedMessage = std::make_shared<ParseTreeCascadedMessageNode> ();
         cascadedMessage->sourcePosition = sourcePosition;
