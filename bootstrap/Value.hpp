@@ -15,19 +15,30 @@ typedef std::shared_ptr<struct ParseTreeNode> ParseTreeNodePtr;
 typedef std::shared_ptr<struct ParseTreeIdentifierReferenceNode> ParseTreeIdentifierReferenceNodePtr;
 typedef std::shared_ptr<struct ParseTreeFunctionApplicationNode> ParseTreeFunctionApplicationNodePtr;
 typedef std::shared_ptr<struct ParseTreeAssignmentNode> ParseTreeAssignmentNodePtr;
+
 typedef std::shared_ptr<struct NominalType> NominalTypePtr;
+typedef std::shared_ptr<struct DynamicType> DynamicTypePtr;
 typedef std::shared_ptr<struct UniverseType> UniverseTypePtr;
+
 typedef std::shared_ptr<struct DerivedType> DerivedTypePtr;
 typedef std::shared_ptr<struct PointerLikeType> PointerLikeTypePtr;
 typedef std::shared_ptr<struct PointerType> PointerTypePtr;
 typedef std::shared_ptr<struct ReferenceType> ReferenceTypePtr;
 typedef std::shared_ptr<struct MutableValueBoxType> MutableValueBoxTypePtr;
+
 typedef std::shared_ptr<struct TupleType> TupleTypePtr;
 typedef std::shared_ptr<struct AssociationType> AssociationTypePtr;
+
+typedef std::shared_ptr<struct ArgumentDefinitionValue> ArgumentDefinitionValuePtr;
+typedef std::shared_ptr<struct DependentFunctionType> DependentFunctionTypePtr;
+
+
 typedef std::shared_ptr<struct Package> PackagePtr;
 typedef std::shared_ptr<struct MacroContext> MacroContextPtr;
 typedef std::shared_ptr<struct Environment> EnvironmentPtr;
 typedef std::shared_ptr<struct LexicalEnvironment> LexicalEnvironmentPtr;
+typedef std::shared_ptr<struct FunctionalSignatureAnalysisEnvironment> FunctionalSignatureAnalysisEnvironmentPtr;
+
 typedef std::shared_ptr<struct CoreTypeAndMacros> CoreTypeAndMacrosPtr;
 typedef std::shared_ptr<struct EvaluationContext> EvaluationContextPtr;
 
@@ -52,6 +63,11 @@ struct Value : std::enable_shared_from_this<Value>
     virtual TypePtr getTypeInContext(const EvaluationContextPtr &context) = 0;
 
     virtual bool isType() const
+    {
+        return false;
+    }
+
+    virtual bool isArgumentDefinitionValue() const
     {
         return false;
     }
@@ -142,6 +158,29 @@ struct NominalType : Type
     size_t valueAlignment;
 };
 
+struct DynamicType : Type
+{
+    DynamicType(const std::string &initName, size_t initValueSize, size_t initValueAlignment)
+        : name(initName), valueSize(initValueSize), valueAlignment(initValueAlignment) {}
+
+    virtual void dump(std::ostream &out) override
+    {
+        out << name;
+    }
+
+    virtual ValuePtr getOrCreateDefaultValue()
+    {
+        return defaultValue;
+    }
+
+    ValuePtr defaultValue;
+
+    std::string name;
+    size_t valueSize;
+    size_t valueAlignment;
+};
+
+
 struct UniverseType : Type
 {
     UniverseType(const std::string &initName, size_t initLevel)
@@ -211,6 +250,53 @@ struct MutableValueBoxType : DerivedType
         out << ")";
     }
 };
+
+struct ArgumentDefinitionValue : Value
+{
+    std::string name;
+    ValuePtr typeExpression;
+    int index = 0;
+    bool hasDependentUsers = false;
+
+    virtual TypePtr getTypeInContext(const EvaluationContextPtr &context) override;
+
+    virtual bool isArgumentDefinitionValue() const override
+    {
+        return true;
+    }
+
+    virtual void dump(std::ostream &out) override
+    {
+        out << "ArgumentDefinitionValue(" << name;
+        out << ", ";
+        typeExpression->dump(out);
+        out << ")";
+    }
+};
+
+struct DependentFunctionType : Type
+{
+    std::vector<ArgumentDefinitionValuePtr> arguments;
+    ValuePtr resultTypeExpression;
+    bool hasDependentArgs = false;
+
+    virtual TypePtr getTypeInContext(const EvaluationContextPtr &context) override;
+
+    virtual void dump(std::ostream &out) override
+    {
+        out << "DependentFunctionType([";
+        for(size_t i = 0; i < arguments.size(); ++i)
+        {
+            if(i > 0)
+                out << ", ";
+            arguments[i]->dump(out);
+        }
+        out << "], ";
+        resultTypeExpression->dump(out);
+        out << ", hasDependentArgs = " << hasDependentArgs << ")";
+    }
+};
+
 
 struct TupleType : Type
 {
@@ -592,6 +678,46 @@ struct LexicalEnvironment : Environment
     }
 };
 
+struct FunctionalSignatureAnalysisEnvironment : LexicalEnvironment
+{
+    FunctionalSignatureAnalysisEnvironment(const EnvironmentPtr &initParent)
+        : LexicalEnvironment(initParent) {}
+
+    std::vector<ArgumentDefinitionValuePtr> argumentList;
+    std::vector<ArgumentDefinitionValuePtr> dependentArguments;
+
+    void addArgument(const ArgumentDefinitionValuePtr &argument)
+    {
+        if(!argument->name.empty())
+            symbolTable[argument->name] = argument;
+        argumentList.push_back(argument);
+    }
+
+    void markUsedArgumentDefinition(const ArgumentDefinitionValuePtr &argument)
+    {
+        if(argument->hasDependentUsers)
+            return;
+
+        argument->hasDependentUsers = true;
+        dependentArguments.push_back(argument);
+    }
+
+    virtual ValuePtr lookupSymbolRecursively(const std::string &symbol) override
+    {
+        auto it = symbolTable.find(symbol);
+        if(it != symbolTable.end())
+        {
+            auto localSymbol = it->second;
+            if(localSymbol->isArgumentDefinitionValue())
+                markUsedArgumentDefinition(std::static_pointer_cast<ArgumentDefinitionValue> (localSymbol));
+
+            return localSymbol;
+        }
+
+        return parent->lookupSymbolRecursively(symbol);
+    }
+};
+
 struct MacroContext : Value
 {
     SourcePositionPtr sourcePosition;
@@ -651,9 +777,12 @@ struct CoreTypeAndMacros : Value
     NominalTypePtr symbolType;
     NominalTypePtr voidType;
     NominalTypePtr undefinedType;
+    
+    DynamicTypePtr dynamicType;
 
     NominalTypePtr parseTreeNodeType;
     NominalTypePtr coreTypesType;
+    NominalTypePtr argumentDefinitionValue;
     NominalTypePtr evaluationContextType;
     NominalTypePtr environmentType;
     NominalTypePtr packageType;

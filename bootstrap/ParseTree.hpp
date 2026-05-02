@@ -431,6 +431,8 @@ struct ParseTreeArgumentDefinitionNode : ParseTreeNode
     bool isSelf = false;
     bool isImplicit = false;
     
+    virtual ValuePtr analyzeAndEvaluateInContext(const EvaluationContextPtr &context) override;
+    
     virtual void collectParseErrorNodesIn(std::vector<ParseTreeParseErrorNodePtr> &out) override
     {
         if(typeExpression)

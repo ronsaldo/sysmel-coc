@@ -25,10 +25,52 @@ ParseTreeBinaryExpressionSequenceNode::analyzeAndEvaluateInContext(const Evaluat
 }
 
 ValuePtr
+ParseTreeArgumentDefinitionNode::analyzeAndEvaluateInContext(const EvaluationContextPtr &context)
+{
+    ValuePtr typeValue;
+    if(typeExpression)
+        typeValue = context->visitNodeExpectingType(typeExpression);
+    if(!typeValue)
+        typeValue = context->coreTypes->dynamicType;
+
+    auto argumentDefinitionValue = std::make_shared<ArgumentDefinitionValue> ();
+    argumentDefinitionValue->name = name;
+    argumentDefinitionValue->typeExpression = typeValue;
+    return argumentDefinitionValue;
+}
+
+ValuePtr
 ParseTreeFunctionTypeNode::analyzeAndEvaluateInContext(const EvaluationContextPtr &context)
 {
-    printf("TODO: ParseTreeFunctionTypeNode\n");
-    abort();
+    auto signatureAnalysisEnvironment = std::make_shared<FunctionalSignatureAnalysisEnvironment> (context->lexicalEnvironment);
+    auto analysisContext = context->clone();
+    analysisContext->lexicalEnvironment = signatureAnalysisEnvironment;
+
+    // Arguments.
+    std::vector<ArgumentDefinitionValuePtr> argumentValues;
+    argumentValues.reserve(argumentDefinitions.size());
+    for(size_t i = 0; i < argumentDefinitions.size(); ++i)
+    {
+        auto argumentDefinitionValue = analysisContext->visitExpression(argumentDefinitions[i]);
+        assert(argumentDefinitionValue->isArgumentDefinitionValue());
+
+        auto argumentValue = std::static_pointer_cast<ArgumentDefinitionValue> (argumentDefinitionValue);
+        argumentValue->index = i;
+        
+        signatureAnalysisEnvironment->addArgument(argumentValue);
+        argumentValues.push_back(argumentValue);
+    }
+
+    // Result type.
+    ValuePtr resultType = context->coreTypes->dynamicType;
+    if(resultTypeExpression)
+        resultType = context->visitNodeExpectingType(resultTypeExpression);
+
+    auto functionType = std::make_shared<DependentFunctionType> ();
+    functionType->arguments = argumentValues;
+    functionType->resultTypeExpression = resultType;
+    functionType->hasDependentArgs = !signatureAnalysisEnvironment->dependentArguments.empty();
+    return functionType;
 }
 
 ValuePtr

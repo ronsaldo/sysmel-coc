@@ -72,6 +72,20 @@ AssociationType::getTypeInContext(const EvaluationContextPtr &context)
 }
 
 TypePtr
+ArgumentDefinitionValue::getTypeInContext(const EvaluationContextPtr &context)
+{
+    // TODO: Use the max universe.
+    return context->coreTypes->argumentDefinitionValue;
+}
+
+TypePtr
+DependentFunctionType::getTypeInContext(const EvaluationContextPtr &context)
+{
+    // TODO: Use the max universe.
+    return context->coreTypes->propType;
+}
+
+TypePtr
 Package::getTypeInContext(const EvaluationContextPtr &context)
 {
     return context->coreTypes->packageType;
@@ -169,15 +183,19 @@ CoreTypeAndMacros::CoreTypeAndMacros()
     symbolType    = std::make_shared<NominalType> ("Symbol", pointerSize, pointerAlignment);
     symbolType->defaultValue = std::make_shared<SymbolValue> (symbolType);
 
+    dynamicType = std::make_shared<DynamicType> ("Dynamic", pointerSize, pointerAlignment);
+
     voidType      = std::make_shared<NominalType> ("Void", 0, 1);
     undefinedType = std::make_shared<NominalType> ("UndefinedObject", 0, 1);
 
-    parseTreeNodeType     = std::make_shared<NominalType> ("ParseTreeNode", pointerSize, pointerAlignment);;
-    coreTypesType         = std::make_shared<NominalType> ("CoreTypeAndMacros", pointerSize, pointerAlignment);;
-    evaluationContextType = std::make_shared<NominalType> ("EvaluationContext", pointerSize, pointerAlignment);;
+    parseTreeNodeType     = std::make_shared<NominalType> ("ParseTreeNode", pointerSize, pointerAlignment);
+    coreTypesType         = std::make_shared<NominalType> ("CoreTypeAndMacros", pointerSize, pointerAlignment);
+    argumentDefinitionValue = std::make_shared<NominalType> ("ArgumentDefinitionValue", pointerSize, pointerAlignment);
+    
+    evaluationContextType = std::make_shared<NominalType> ("EvaluationContext", pointerSize, pointerAlignment);
 
-    primitiveMacroType = std::make_shared<NominalType> ("PrimitiveMacro", pointerSize, pointerAlignment);;
-    macroContextType = std::make_shared<NominalType> ("MacroContext", pointerSize, pointerAlignment);;
+    primitiveMacroType = std::make_shared<NominalType> ("PrimitiveMacro", pointerSize, pointerAlignment);
+    macroContextType = std::make_shared<NominalType> ("MacroContext", pointerSize, pointerAlignment);
 
     propType = std::make_shared<UniverseType> ("Prop", 0);
     typeType = std::make_shared<UniverseType> ("Type", 1);
@@ -199,6 +217,7 @@ CoreTypeAndMacros::CoreTypeAndMacros()
     nilValue = std::make_shared<NilValue> (undefinedType);
     nilValue->type = undefinedType;
     undefinedType->defaultValue = nilValue;
+    dynamicType->defaultValue = nilValue;
 
 }
 
