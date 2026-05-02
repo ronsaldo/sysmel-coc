@@ -12,6 +12,7 @@ typedef std::shared_ptr<struct Value> ValuePtr;
 typedef std::shared_ptr<struct Type> TypePtr;
 
 typedef std::shared_ptr<struct HIRValue> HIRValuePtr;
+typedef std::shared_ptr<struct HIRTypeExpression> HIRTypeExpressionPtr;
 typedef std::shared_ptr<struct HIRBuilder> HIRBuilderPtr;
 
 typedef std::shared_ptr<struct ParseTreeNode> ParseTreeNodePtr;
@@ -29,6 +30,7 @@ typedef std::shared_ptr<struct PointerType> PointerTypePtr;
 typedef std::shared_ptr<struct ReferenceType> ReferenceTypePtr;
 typedef std::shared_ptr<struct MutableValueBoxType> MutableValueBoxTypePtr;
 
+typedef std::shared_ptr<struct SimpleFunctionType> SimpleFunctionTypePtr;
 typedef std::shared_ptr<struct TupleType> TupleTypePtr;
 typedef std::shared_ptr<struct AssociationType> AssociationTypePtr;
 
@@ -153,6 +155,7 @@ struct Type : Value
     }
 
     virtual TypePtr getTypeInContext(const EvaluationContextPtr &context) override;
+    virtual HIRTypeExpressionPtr asHIRTypeWithContext(const BuildContextPtr &context) = 0;
 
     virtual bool isSatisfiedByValue(const ValuePtr &value, const EvaluationContextPtr &context) const;
     virtual bool isSatisfiedByType(const TypePtr &otherType) const;
@@ -167,6 +170,9 @@ struct NominalType : Type
 {
     NominalType(const std::string &initName, size_t initValueSize, size_t initValueAlignment)
         : name(initName), valueSize(initValueSize), valueAlignment(initValueAlignment) {}
+
+    HIRTypeExpressionPtr hirTypeCache;
+    virtual HIRTypeExpressionPtr asHIRTypeWithContext(const BuildContextPtr &context) override;
 
     virtual void dump(std::ostream &out) override
     {
@@ -189,6 +195,9 @@ struct DynamicType : Type
 {
     DynamicType(const std::string &initName, size_t initValueSize, size_t initValueAlignment)
         : name(initName), valueSize(initValueSize), valueAlignment(initValueAlignment) {}
+
+    HIRTypeExpressionPtr hirTypeCache;
+    virtual HIRTypeExpressionPtr asHIRTypeWithContext(const BuildContextPtr &context) override;
 
     virtual void dump(std::ostream &out) override
     {
@@ -213,6 +222,9 @@ struct UniverseType : Type
     UniverseType(const std::string &initName, size_t initLevel)
         : name(initName), level(initLevel) {}
     
+    HIRTypeExpressionPtr hirTypeCache;
+    virtual HIRTypeExpressionPtr asHIRTypeWithContext(const BuildContextPtr &context) override;
+
     virtual TypePtr getTypeInContext(const EvaluationContextPtr &context) override;
 
     virtual void dump(std::ostream &out) override
@@ -244,6 +256,9 @@ struct PointerType : PointerLikeType
     PointerType(const TypePtr &initBaseType)
         : PointerLikeType(initBaseType) {}
 
+    HIRTypeExpressionPtr hirTypeCache;
+    virtual HIRTypeExpressionPtr asHIRTypeWithContext(const BuildContextPtr &context) override;
+
     virtual void dump(std::ostream &out) override
     {
         out << "PointerType(";
@@ -257,6 +272,9 @@ struct ReferenceType : PointerLikeType
     ReferenceType(const TypePtr &initBaseType)
         : PointerLikeType(initBaseType) {}
 
+    HIRTypeExpressionPtr hirTypeCache;
+    virtual HIRTypeExpressionPtr asHIRTypeWithContext(const BuildContextPtr &context) override;
+
     virtual void dump(std::ostream &out) override
     {
         out << "ReferenceType(";
@@ -269,6 +287,9 @@ struct MutableValueBoxType : DerivedType
 {
     MutableValueBoxType(const TypePtr &initBaseType)
         : DerivedType(initBaseType) {}
+
+    HIRTypeExpressionPtr hirTypeCache;
+    virtual HIRTypeExpressionPtr asHIRTypeWithContext(const BuildContextPtr &context) override;
 
     virtual void dump(std::ostream &out) override
     {
@@ -310,6 +331,9 @@ struct DependentFunctionType : Type
 
     virtual TypePtr getTypeInContext(const EvaluationContextPtr &context) override;
 
+    HIRTypeExpressionPtr hirTypeCache;
+    virtual HIRTypeExpressionPtr asHIRTypeWithContext(const BuildContextPtr &context) override;
+
     TypePtr simplify();
 
     virtual bool isDependentFunctionType() const override
@@ -340,6 +364,9 @@ struct SimpleFunctionType : Type
     virtual std::vector<ValuePtr> analyzeAndEvaluationFunctionApplicationArgumentsInContext(const ParseTreeFunctionApplicationNodePtr &application, const EvaluationContextPtr &context) override;
     virtual TypePtr getTypeInContext(const EvaluationContextPtr &context) override;
 
+    HIRTypeExpressionPtr hirTypeCache;
+    virtual HIRTypeExpressionPtr asHIRTypeWithContext(const BuildContextPtr &context) override;
+
     virtual void dump(std::ostream &out) override
     {
         out << "SimpleFunctionType([";
@@ -359,6 +386,9 @@ struct TupleType : Type
 {
     virtual TypePtr getTypeInContext(const EvaluationContextPtr &context) override;
 
+    HIRTypeExpressionPtr hirTypeCache;
+    virtual HIRTypeExpressionPtr asHIRTypeWithContext(const BuildContextPtr &context) override;
+
     virtual void dump(std::ostream &out) override
     {
         out << "TupleType(";
@@ -377,6 +407,9 @@ struct TupleType : Type
 struct AssociationType : Type
 {
     virtual TypePtr getTypeInContext(const EvaluationContextPtr &context) override;
+    
+    HIRTypeExpressionPtr hirTypeCache;
+    virtual HIRTypeExpressionPtr asHIRTypeWithContext(const BuildContextPtr &context) override;
 
     virtual void dump(std::ostream &out) override
     {
@@ -925,7 +958,7 @@ struct EvaluationContext : Value
         out << "EvaluationContext()";
     }
 
-    EvaluationContextPtr clone()
+    EvaluationContextPtr clone() const
     {
         auto cloned = std::make_shared<EvaluationContext> ();
         cloned->package = package;
@@ -951,7 +984,16 @@ struct BuildContext : Value
         out << "BuildContext()";
     }
 
-    BuildContextPtr clone()
+    EvaluationContextPtr asEvaluationContext() const
+    {
+        auto context = std::make_shared<EvaluationContext> ();
+        context->package = package;
+        context->coreTypes = coreTypes;
+        context->lexicalEnvironment = lexicalEnvironment;
+        return context;
+    }
+
+    BuildContextPtr clone() const
     {
         auto cloned = std::make_shared<BuildContext> ();
         cloned->package = package;

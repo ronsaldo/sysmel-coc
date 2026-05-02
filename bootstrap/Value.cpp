@@ -1,5 +1,6 @@
 #include "Value.hpp"
 #include "ParseTree.hpp"
+#include "HIR.hpp"
 #include <sstream>
 
 ValuePtr
@@ -23,8 +24,10 @@ Value::analyzeAndEvaluateAssignmentNodeInContext(const ParseTreeAssignmentNodePt
 HIRValuePtr
 Value::analyzeAndBuildWithContext(const BuildContextPtr &context)
 {
+    auto type = getTypeInContext(context->asEvaluationContext());
     auto literal = std::make_shared<HIRConstantLiteralValue> ();
     literal->value = shared_from_this();
+    literal->type = type->asHIRTypeWithContext(context);
     return literal;
 }
 
@@ -40,14 +43,59 @@ Type::getTypeInContext(const EvaluationContextPtr &context)
     return context->coreTypes->propType;
 }
 
-bool Type::isSatisfiedByValue(const ValuePtr &value, const EvaluationContextPtr &context) const
+bool
+Type::isSatisfiedByValue(const ValuePtr &value, const EvaluationContextPtr &context) const
 {
     return isSatisfiedByType(value->getTypeInContext(context));
 }
 
-bool Type::isSatisfiedByType(const TypePtr &otherType) const
+bool
+Type::isSatisfiedByType(const TypePtr &otherType) const
 {
     return this == otherType.get();
+}
+
+HIRTypeExpressionPtr
+NominalType::asHIRTypeWithContext(const BuildContextPtr &context)
+{
+    (void)context;
+    if(!hirTypeCache)
+    {
+        auto hirNominalType = std::make_shared<HIRNominalType> ();
+        hirNominalType->nominalType = std::static_pointer_cast<NominalType> (shared_from_this());
+        hirTypeCache = hirNominalType;
+    }
+
+    return hirTypeCache;
+}
+
+HIRTypeExpressionPtr
+DynamicType::asHIRTypeWithContext(const BuildContextPtr &context)
+{
+    (void)context;
+    if(!hirTypeCache)
+    {
+        auto dynamicType = std::make_shared<HIRDynamicType> ();
+        dynamicType->dynamicType = std::static_pointer_cast<DynamicType> (shared_from_this());
+        hirTypeCache = dynamicType;
+    }
+
+    return hirTypeCache;
+}
+
+HIRTypeExpressionPtr
+UniverseType::asHIRTypeWithContext(const BuildContextPtr &context)
+{
+    (void)context;
+    if(!hirTypeCache)
+    {
+        auto universeType = std::make_shared<HIRUniverseType> ();
+        universeType->universe = std::static_pointer_cast<UniverseType> (shared_from_this());
+        universeType->level = level;
+        hirTypeCache = universeType;
+    }
+
+    return hirTypeCache;
 }
 
 TypePtr
@@ -63,12 +111,91 @@ UniverseType::getTypeInContext(const EvaluationContextPtr &context)
     return type;
 }
 
+HIRTypeExpressionPtr
+PointerType::asHIRTypeWithContext(const BuildContextPtr &context)
+{
+    if(!hirTypeCache)
+    {
+        auto pointerType = std::make_shared<HIRPointerType> ();
+        hirTypeCache = pointerType;
+
+        pointerType->baseType = baseType->asHIRTypeWithContext(context);
+        pointerType->pointerType = std::static_pointer_cast<PointerType> (shared_from_this());
+    }
+
+    return hirTypeCache;   
+}
+
+HIRTypeExpressionPtr
+ReferenceType::asHIRTypeWithContext(const BuildContextPtr &context)
+{
+    if(!hirTypeCache)
+    {
+        auto referenceType = std::make_shared<HIRReferenceType> ();
+        hirTypeCache = referenceType;
+
+        referenceType->baseType = baseType->asHIRTypeWithContext(context);
+        referenceType->referenceType = std::static_pointer_cast<ReferenceType> (shared_from_this());
+    }
+
+    return hirTypeCache;   
+}
+
+HIRTypeExpressionPtr
+MutableValueBoxType::asHIRTypeWithContext(const BuildContextPtr &context)
+{
+    if(!hirTypeCache)
+    {
+        auto boxType = std::make_shared<HIRMutableValueBoxType> ();
+        hirTypeCache = boxType;
+
+        boxType->baseType = baseType->asHIRTypeWithContext(context);
+        boxType->boxType = std::static_pointer_cast<MutableValueBoxType> (shared_from_this());
+    }
+
+    return hirTypeCache;   
+}
+
 ValuePtr
 ReferenceValue::analyzeAndEvaluateAssignmentNodeInContext(const ParseTreeAssignmentNodePtr &assignmentNode, const EvaluationContextPtr &context)
 {
     auto castedValue = context->visitNodeWithExpectedType(assignmentNode->value, type->baseType);
     storeValue(castedValue);
     return shared_from_this();
+}
+
+HIRTypeExpressionPtr
+DependentFunctionType::asHIRTypeWithContext(const BuildContextPtr &context)
+{
+    if(!hirTypeCache)
+    {
+        printf("TODO: DependentFunctionType::asHIRTypeWithContext\n");
+        abort();
+    }
+
+    return hirTypeCache;
+}
+
+HIRTypeExpressionPtr
+SimpleFunctionType::asHIRTypeWithContext(const BuildContextPtr &context)
+{
+    if(!hirTypeCache)
+    {
+        auto simpleFunctionType = std::make_shared<HIRSimpleFunctionType> ();
+        hirTypeCache = simpleFunctionType;
+
+        simpleFunctionType->argumentTypes.reserve(argumentTypes.size());
+        for(auto &argument : argumentTypes)
+        {
+            auto hirElementType = argument->asHIRTypeWithContext(context);
+            simpleFunctionType->argumentTypes.push_back(hirElementType);   
+        }
+
+        simpleFunctionType->resultType = resultType->asHIRTypeWithContext(context);
+        simpleFunctionType->simpleFunctionType = std::static_pointer_cast<SimpleFunctionType> (shared_from_this());
+    }
+
+    return hirTypeCache;   
 }
 
 TypePtr
@@ -78,11 +205,48 @@ TupleType::getTypeInContext(const EvaluationContextPtr &context)
     return context->coreTypes->propType;
 }
 
+HIRTypeExpressionPtr
+TupleType::asHIRTypeWithContext(const BuildContextPtr &context)
+{
+    if(!hirTypeCache)
+    {
+        auto tupleType = std::make_shared<HIRTupleType> ();
+        hirTypeCache = tupleType;
+
+        tupleType->elements.reserve(elements.size());
+        for(auto &element : elements)
+        {
+            auto hirElementType = element->asHIRTypeWithContext(context);
+            tupleType->elements.push_back(hirElementType);   
+        }
+
+        tupleType->tupleType = std::static_pointer_cast<TupleType> (shared_from_this());
+    }
+
+    return hirTypeCache;   
+}
+
 TypePtr
 AssociationType::getTypeInContext(const EvaluationContextPtr &context)
 {
     // TODO: Use the max universe.
     return context->coreTypes->propType;
+}
+
+HIRTypeExpressionPtr
+AssociationType::asHIRTypeWithContext(const BuildContextPtr &context)
+{
+    if(!hirTypeCache)
+    {
+        auto associationType = std::make_shared<HIRAssociationType> ();
+        hirTypeCache = associationType;
+
+        associationType->keyType = keyType->asHIRTypeWithContext(context);
+        associationType->valueType = valueType->asHIRTypeWithContext(context);
+        associationType->associationType = std::static_pointer_cast<AssociationType> (shared_from_this());
+    }
+
+    return hirTypeCache;   
 }
 
 TypePtr
