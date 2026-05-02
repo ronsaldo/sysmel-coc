@@ -20,6 +20,14 @@ Value::analyzeAndEvaluateAssignmentNodeInContext(const ParseTreeAssignmentNodePt
     abort();
 }
 
+HIRValuePtr
+Value::analyzeAndBuildWithContext(const BuildContextPtr &context)
+{
+    auto literal = std::make_shared<HIRConstantLiteralValue> ();
+    literal->value = shared_from_this();
+    return literal;
+}
+
 void
 Value::enqueuePendingAnalysis(const PackagePtr &package)
 {
@@ -347,6 +355,7 @@ CoreTypeAndMacros::CoreTypeAndMacros()
     argumentDefinitionValue = std::make_shared<NominalType> ("ArgumentDefinitionValue", pointerSize, pointerAlignment);
     
     evaluationContextType = std::make_shared<NominalType> ("EvaluationContext", pointerSize, pointerAlignment);
+    buildContextType = std::make_shared<NominalType> ("BuildContext", pointerSize, pointerAlignment);
 
     environmentType = std::make_shared<NominalType> ("Environment", pointerSize, pointerAlignment);
     packageType = std::make_shared<NominalType> ("Package", pointerSize, pointerAlignment);
@@ -394,6 +403,7 @@ void CoreTypeAndMacros::registerInPackage(PackagePtr package)
     package->setSymbolBinding("ParseTreeNode", parseTreeNodeType);
     package->setSymbolBinding("CoreTypeAndMacros", coreTypesType);
     package->setSymbolBinding("EvaluationContext", evaluationContextType);
+    package->setSymbolBinding("BuildContext", buildContextType);
     package->setSymbolBinding("Package", packageType);
     package->setSymbolBinding("HIRValue", hirValueType);
 

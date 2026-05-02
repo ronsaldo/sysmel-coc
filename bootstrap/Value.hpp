@@ -10,7 +10,10 @@
 
 typedef std::shared_ptr<struct Value> ValuePtr;
 typedef std::shared_ptr<struct Type> TypePtr;
+
 typedef std::shared_ptr<struct HIRValue> HIRValuePtr;
+typedef std::shared_ptr<struct HIRBuilder> HIRBuilderPtr;
+
 typedef std::shared_ptr<struct ParseTreeNode> ParseTreeNodePtr;
 typedef std::shared_ptr<struct ParseTreeIdentifierReferenceNode> ParseTreeIdentifierReferenceNodePtr;
 typedef std::shared_ptr<struct ParseTreeFunctionApplicationNode> ParseTreeFunctionApplicationNodePtr;
@@ -41,6 +44,7 @@ typedef std::shared_ptr<struct FunctionalSignatureAnalysisEnvironment> Functiona
 
 typedef std::shared_ptr<struct CoreTypeAndMacros> CoreTypeAndMacrosPtr;
 typedef std::shared_ptr<struct EvaluationContext> EvaluationContextPtr;
+typedef std::shared_ptr<struct BuildContext> BuildContextPtr;
 
 struct Value : std::enable_shared_from_this<Value>
 {
@@ -59,6 +63,8 @@ struct Value : std::enable_shared_from_this<Value>
 
     virtual ValuePtr analyzeAndEvaluateFunctionApplicationNodeInContext(const ParseTreeFunctionApplicationNodePtr &applicationNode, const EvaluationContextPtr &context);
     virtual ValuePtr analyzeAndEvaluateAssignmentNodeInContext(const ParseTreeAssignmentNodePtr &assignmentNode, const EvaluationContextPtr &context);
+
+    virtual HIRValuePtr analyzeAndBuildWithContext(const BuildContextPtr &context);
 
     virtual void enqueuePendingAnalysis(const PackagePtr &package);
     virtual void ensureAnalysis()
@@ -878,6 +884,7 @@ struct CoreTypeAndMacros : Value
     NominalTypePtr coreTypesType;
     NominalTypePtr argumentDefinitionValue;
     NominalTypePtr evaluationContextType;
+    NominalTypePtr buildContextType;
     NominalTypePtr environmentType;
     NominalTypePtr packageType;
     NominalTypePtr hirValueType;
@@ -928,6 +935,34 @@ struct EvaluationContext : Value
     PackagePtr package;
     CoreTypeAndMacrosPtr coreTypes;
     LexicalEnvironmentPtr lexicalEnvironment;
+};
+
+struct BuildContext : Value
+{
+    virtual TypePtr getTypeInContext(const EvaluationContextPtr &context) override
+    {
+        return context->coreTypes->buildContextType;
+    }
+
+    virtual void dump(std::ostream &out) override
+    {
+        out << "BuildContext()";
+    }
+
+    BuildContextPtr clone()
+    {
+        auto cloned = std::make_shared<BuildContext> ();
+        cloned->package = package;
+        cloned->coreTypes = coreTypes;
+        cloned->lexicalEnvironment = lexicalEnvironment;
+        cloned->builder = builder;
+        return cloned;
+    }
+
+    PackagePtr package;
+    CoreTypeAndMacrosPtr coreTypes;
+    LexicalEnvironmentPtr lexicalEnvironment;
+    HIRBuilderPtr builder;
 };
 
 #endif //SYSMEL_VALUE_HPP
