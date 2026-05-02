@@ -2,11 +2,21 @@
 #include "ParseTree.hpp"
 #include <sstream>
 
-ValuePtr Value::analyzeAndEvaluateFunctionApplicationNodeInContext(const ParseTreeFunctionApplicationNodePtr &applicationNode, const EvaluationContextPtr &context)
+ValuePtr
+Value::analyzeAndEvaluateFunctionApplicationNodeInContext(const ParseTreeFunctionApplicationNodePtr &applicationNode, const EvaluationContextPtr &context)
 {
     (void)context;
     applicationNode->sourcePosition->printOn(stderr);
-    fprintf(stderr, ": Cannot apply to non-functional value.\n");
+    fprintf(stderr, " Cannot apply to non-functional value.\n");
+    abort();
+}
+
+ValuePtr
+Value::analyzeAndEvaluateAssignmentNodeInContext(const ParseTreeAssignmentNodePtr &assignmentNode, const EvaluationContextPtr &context)
+{
+    (void)context;
+    assignmentNode->sourcePosition->printOn(stderr);
+    fprintf(stderr, " Cannot assign non-assignable value.\n");
     abort();
 }
 
@@ -37,6 +47,14 @@ UniverseType::getTypeInContext(const EvaluationContextPtr &context)
         type = std::make_shared<UniverseType> (typeName.str(), level + 1);
     }
     return type;
+}
+
+ValuePtr
+ReferenceValue::analyzeAndEvaluateAssignmentNodeInContext(const ParseTreeAssignmentNodePtr &assignmentNode, const EvaluationContextPtr &context)
+{
+    auto castedValue = context->visitNodeWithExpectedType(assignmentNode->value, type->baseType);
+    storeValue(castedValue);
+    return shared_from_this();
 }
 
 TypePtr
@@ -74,6 +92,24 @@ Package::getOrCreateAssociationType(const TypePtr &keyType, const TypePtr &value
     associationType->keyType = keyType;
     associationType->valueType = valueType;
     return associationType;
+}
+
+PointerTypePtr
+Package::getOrCreatePointerType(const TypePtr &baseType)
+{
+    return std::make_shared<PointerType> (baseType);
+}
+
+ReferenceTypePtr
+Package::getOrCreateReferenceType(const TypePtr &baseType)
+{
+    return std::make_shared<ReferenceType> (baseType);
+}
+
+MutableValueBoxTypePtr
+Package::getOrCreateMutableValueBoxType(const TypePtr &baseType)
+{
+    return std::make_shared<MutableValueBoxType> (baseType);
 }
 
 TypePtr
@@ -263,7 +299,11 @@ ValuePtr EvaluationContext::visitExpression(const ParseTreeNodePtr &parseNode)
 
 ValuePtr EvaluationContext::visitDecayedExpression(const ParseTreeNodePtr &parseNode)
 {
-    return visitExpression(parseNode);
+    auto value = visitExpression(parseNode);
+    if(value->isReferenceValue())
+        return std::static_pointer_cast<ReferenceValue> (value)->loadValue();
+
+    return value;
 }
 
 std::string

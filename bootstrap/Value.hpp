@@ -6,14 +6,22 @@
 #include <sstream>
 #include <unordered_map>
 #include <functional>
+#include "SourceCode.hpp"
 
 typedef std::shared_ptr<struct Value> ValuePtr;
 typedef std::shared_ptr<struct Type> TypePtr;
+typedef std::shared_ptr<struct HIRValue> HIRValuePtr;
 typedef std::shared_ptr<struct ParseTreeNode> ParseTreeNodePtr;
 typedef std::shared_ptr<struct ParseTreeIdentifierReferenceNode> ParseTreeIdentifierReferenceNodePtr;
 typedef std::shared_ptr<struct ParseTreeFunctionApplicationNode> ParseTreeFunctionApplicationNodePtr;
+typedef std::shared_ptr<struct ParseTreeAssignmentNode> ParseTreeAssignmentNodePtr;
 typedef std::shared_ptr<struct NominalType> NominalTypePtr;
 typedef std::shared_ptr<struct UniverseType> UniverseTypePtr;
+typedef std::shared_ptr<struct DerivedType> DerivedTypePtr;
+typedef std::shared_ptr<struct PointerLikeType> PointerLikeTypePtr;
+typedef std::shared_ptr<struct PointerType> PointerTypePtr;
+typedef std::shared_ptr<struct ReferenceType> ReferenceTypePtr;
+typedef std::shared_ptr<struct MutableValueBoxType> MutableValueBoxTypePtr;
 typedef std::shared_ptr<struct TupleType> TupleTypePtr;
 typedef std::shared_ptr<struct AssociationType> AssociationTypePtr;
 typedef std::shared_ptr<struct Package> PackagePtr;
@@ -39,6 +47,7 @@ struct Value : std::enable_shared_from_this<Value>
     }
 
     virtual ValuePtr analyzeAndEvaluateFunctionApplicationNodeInContext(const ParseTreeFunctionApplicationNodePtr &applicationNode, const EvaluationContextPtr &context);
+    virtual ValuePtr analyzeAndEvaluateAssignmentNodeInContext(const ParseTreeAssignmentNodePtr &assignmentNode, const EvaluationContextPtr &context);
 
     virtual TypePtr getTypeInContext(const EvaluationContextPtr &context) = 0;
 
@@ -64,6 +73,26 @@ struct Value : std::enable_shared_from_this<Value>
         std::ostringstream out;
         dump(out);
         return out.str();
+    }
+
+    virtual ValuePtr loadValueWithFieldIndex(int fieldIndex)
+    {
+        (void)fieldIndex;
+        fprintf(stderr, "Value %s does not have fields that can be loaded.\n", dumpAsString().c_str());
+        abort();
+    }
+
+    virtual void storeValueWithFieldIndex(const ValuePtr &valueToStore, int fieldIndex)
+    {
+        (void)valueToStore;
+        (void)fieldIndex;
+        fprintf(stderr, "Value %s does not have fields that can be mutated.\n", dumpAsString().c_str());
+        abort();
+    }
+    
+    virtual bool isReferenceValue() const
+    {
+        return false;
     }
 };
 
@@ -123,6 +152,59 @@ struct UniverseType : Type
     std::string name;
     size_t level;
     UniverseTypePtr type;
+};
+
+struct DerivedType : Type
+{
+    DerivedType(const TypePtr &initBaseType)
+        : baseType(initBaseType) {}
+    
+    TypePtr baseType;
+};
+
+struct PointerLikeType : DerivedType
+{
+    PointerLikeType(const TypePtr &initBaseType)
+        : DerivedType(initBaseType) {}
+};
+
+struct PointerType : PointerLikeType
+{
+    PointerType(const TypePtr &initBaseType)
+        : PointerLikeType(initBaseType) {}
+
+    virtual void dump(std::ostream &out) override
+    {
+        out << "PointerType(";
+        baseType->dump(out);
+        out << ")";
+    }
+};
+
+struct ReferenceType : PointerLikeType
+{
+    ReferenceType(const TypePtr &initBaseType)
+        : PointerLikeType(initBaseType) {}
+
+    virtual void dump(std::ostream &out) override
+    {
+        out << "ReferenceType(";
+        baseType->dump(out);
+        out << ")";
+    }
+};
+
+struct MutableValueBoxType : DerivedType
+{
+    MutableValueBoxType(const TypePtr &initBaseType)
+        : DerivedType(initBaseType) {}
+
+    virtual void dump(std::ostream &out) override
+    {
+        out << "MutableValueBoxType(";
+        baseType->dump(out);
+        out << ")";
+    }
 };
 
 struct TupleType : Type
@@ -285,6 +367,78 @@ struct SymbolValue : PrimitiveValue
     }
 };
 
+struct MutableValueBox : Value
+{
+    ValuePtr boxedValue;
+    TypePtr type;
+
+    virtual void dump(std::ostream &out) override
+    {
+        out << "MutableValueBox()";
+    }
+
+    virtual TypePtr getTypeInContext(const EvaluationContextPtr &context) override
+    {
+        (void)context;
+        return type;
+    }
+    
+    virtual ValuePtr loadValueWithFieldIndex(int fieldIndex) override
+    {
+        (void)fieldIndex;
+        return boxedValue;
+    }
+
+    virtual void storeValueWithFieldIndex(const ValuePtr &valueToStore, int fieldIndex) override
+    {
+        (void)fieldIndex;
+        boxedValue = valueToStore;
+    }
+};
+
+struct PointerLikeValue : Value
+{
+    ValuePtr storage;
+    PointerLikeTypePtr type;
+    int fieldIndex = 0;
+
+    virtual void dump(std::ostream &out) override
+    {
+        out << "PointerLikeValue()";
+    }
+
+    virtual TypePtr getTypeInContext(const EvaluationContextPtr &context) override
+    {
+        (void)context;
+        return type;
+    }
+
+    virtual ValuePtr loadValue()
+    {
+        return storage->loadValueWithFieldIndex(fieldIndex);
+    }
+
+    virtual void storeValue(const ValuePtr &valueToStore)
+    {
+        storage->storeValueWithFieldIndex(valueToStore, fieldIndex);
+    }
+};
+
+struct ReferenceValue : PointerLikeValue
+{
+    virtual bool isReferenceValue() const override
+    {
+        return true;
+    }
+
+    virtual void dump(std::ostream &out) override
+    {
+        out << "ReferenceValue()";
+    }
+    
+    virtual ValuePtr analyzeAndEvaluateAssignmentNodeInContext(const ParseTreeAssignmentNodePtr &assignmentNode, const EvaluationContextPtr &context) override;
+};
+
 struct TupleValue : Value
 {
     std::vector<ValuePtr> elements;
@@ -335,15 +489,21 @@ struct Package : Value
 {
     std::string name;
     std::unordered_map<std::string, ValuePtr> packageSymbolTable;
+    std::vector<ValuePtr> packageChildren;
 
     virtual TypePtr getTypeInContext(const EvaluationContextPtr &context) override;
 
     TupleTypePtr getOrCreateTupleType(const std::vector<TypePtr> &elements);
     AssociationTypePtr getOrCreateAssociationType(const TypePtr &keyType, const TypePtr &valueType);
 
+    PointerTypePtr getOrCreatePointerType(const TypePtr &baseType);
+    ReferenceTypePtr getOrCreateReferenceType(const TypePtr &baseType);
+    MutableValueBoxTypePtr getOrCreateMutableValueBoxType(const TypePtr &baseType);
+
     void setSymbolBinding(std::string symbol, ValuePtr binding)
     {
         packageSymbolTable[symbol] = binding;
+        packageChildren.push_back(binding);
     }
 
     virtual void dump(std::ostream &out) override

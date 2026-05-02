@@ -1,3 +1,4 @@
+#include "HIR.cpp"
 #include "Main.cpp"
 #include "Parser.cpp"
 #include "ParseTree.cpp"

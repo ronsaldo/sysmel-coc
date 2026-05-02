@@ -3,6 +3,7 @@
 
 #include "SourceCode.hpp"
 #include "Value.hpp"
+#include "HIR.hpp"
 #include <stdint.h>
 #include <vector>
 #include <assert.h>
@@ -286,6 +287,12 @@ struct ParseTreeAssignmentNode : ParseTreeNode
     ParseTreeNodePtr store;
     ParseTreeNodePtr value;
 
+    virtual ValuePtr analyzeAndEvaluateInContext(const EvaluationContextPtr &context) override
+    {
+        auto storeValue = context->visitExpression(store);
+        return storeValue->analyzeAndEvaluateAssignmentNodeInContext(std::static_pointer_cast<ParseTreeAssignmentNode> (shared_from_this()), context);
+    }
+
     virtual void collectParseErrorNodesIn(std::vector<ParseTreeParseErrorNodePtr> &out) override
     {
         store->collectParseErrorNodesIn(out);
@@ -380,7 +387,7 @@ struct ParseTreeBinaryExpressionSequenceNode : ParseTreeNode
     std::vector<ParseTreeNodePtr> elements;
     
     virtual ValuePtr analyzeAndEvaluateInContext(const EvaluationContextPtr &context) override;
-    
+
     virtual void collectParseErrorNodesIn(std::vector<ParseTreeParseErrorNodePtr> &out) override
     {
         for(auto &arg : elements)
@@ -781,25 +788,44 @@ struct ParseTreeVariableDefinitionNode : ParseTreeNode
             initial = typeValue->getOrCreateDefaultValue();
         }
 
+        if(!name.empty())
+        {
+            if(context->lexicalEnvironment->hasSymbolBinding(name))
+            {
+                sourcePosition->printOn(stderr);
+                fprintf(stderr, ": symbol %s is already bound.\n", name.c_str());
+                abort();
+
+            }
+        }
+
         if(isMutable)
         {
-            fprintf(stderr, "TODO: mutable ParseTreeVariableDefinitionNode::analyzeAndEvaluateInContext\n");
-            abort();
+            TypePtr valueType = typeValue;
+            if(!valueType)
+                valueType = initial->getTypeInContext(context);
+
+            // Value box
+            auto valueBoxType = context->package->getOrCreateMutableValueBoxType(valueType);
+            auto box = std::make_shared<MutableValueBox> ();
+            box->type = valueBoxType;
+            box->boxedValue = initial;
+
+            // Reference
+            auto referenceType = context->package->getOrCreateReferenceType(valueType);
+            auto referenceValue = std::make_shared<ReferenceValue>();
+            referenceValue->storage = box;
+            referenceValue->type = referenceType;
+
+            if(!name.empty())
+                context->lexicalEnvironment->setSymbolBinding(name, referenceValue);
+
+            return referenceValue;
         }
         else
         {
             if(!name.empty())
-            {
-                if(context->lexicalEnvironment->hasSymbolBinding(name))
-                {
-                    sourcePosition->printOn(stderr);
-                    fprintf(stderr, ": symbol %s is already bound.\n", name.c_str());
-                    abort();
-
-                }
-
                 context->lexicalEnvironment->setSymbolBinding(name, initial);
-            }
 
             return initial;
         }
