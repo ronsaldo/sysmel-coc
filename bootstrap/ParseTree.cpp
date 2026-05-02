@@ -34,6 +34,7 @@ ParseTreeArgumentDefinitionNode::analyzeAndEvaluateInContext(const EvaluationCon
         typeValue = context->coreTypes->dynamicType;
 
     auto argumentDefinitionValue = std::make_shared<ArgumentDefinitionValue> ();
+    argumentDefinitionValue->sourcePosition = sourcePosition;
     argumentDefinitionValue->name = name;
     argumentDefinitionValue->typeExpression = typeValue;
     return argumentDefinitionValue;
@@ -82,10 +83,20 @@ ParseTreeFunctionNode::analyzeAndEvaluateInContext(const EvaluationContextPtr &c
     auto dependentFunctionType = std::static_pointer_cast<DependentFunctionType> (functionTypeValue);
 
     auto functionValue = std::make_shared<FunctionValue> ();
+    functionValue->sourcePosition = sourcePosition;
     functionValue->dependentFunctionType = dependentFunctionType;
     functionValue->functionType = dependentFunctionType->simplify();
     functionValue->body = body;
     functionValue->definitionContext = context;
+
+    functionValue->isMethod      = isMethod;
+    functionValue->isPublic      = isPublic;
+    functionValue->isMacro       = isMacro;
+    functionValue->isCompileTime = isCompileTime;
+    functionValue->isTemplate    = isTemplate;
+
+    functionValue->enqueuePendingAnalysis(context->package);
+
     return functionValue;
 }
 

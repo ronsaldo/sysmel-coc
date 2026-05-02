@@ -20,6 +20,12 @@ Value::analyzeAndEvaluateAssignmentNodeInContext(const ParseTreeAssignmentNodePt
     abort();
 }
 
+void
+Value::enqueuePendingAnalysis(const PackagePtr &package)
+{
+    package->pendingAnalysisQueue.push_back(shared_from_this());
+}
+
 TypePtr
 Type::getTypeInContext(const EvaluationContextPtr &context)
 {
@@ -108,10 +114,129 @@ TypePtr DependentFunctionType::simplify()
     return std::static_pointer_cast<DependentFunctionType> (shared_from_this());
 }
 
+std::vector<ValuePtr>
+SimpleFunctionType::analyzeAndEvaluationFunctionApplicationArgumentsInContext(const ParseTreeFunctionApplicationNodePtr &applicationNode, const EvaluationContextPtr &context)
+{
+    auto argumentCount = argumentTypes.size();
+    if(argumentCount != applicationNode->arguments.size())
+    {
+        applicationNode->sourcePosition->printOn(stderr);
+        fprintf(stderr, " Expected %d arguments instead of %d.\n", int(applicationNode->arguments.size()), int(argumentCount));
+        abort();
+    }
+
+    std::vector<ValuePtr> typecheckedArguments;
+    typecheckedArguments.reserve(argumentCount);
+    for(size_t i = 0; i < argumentCount; ++i)
+    {
+        auto checkedArgument =context->visitNodeWithExpectedType(applicationNode->arguments[i], argumentTypes[i]);
+        typecheckedArguments.push_back(checkedArgument);
+    }
+
+    return typecheckedArguments;
+}
+
 TypePtr SimpleFunctionType::getTypeInContext(const EvaluationContextPtr &context)
 {
     // TODO: Use the max universe.
     return context->coreTypes->propType;
+}
+
+void
+FunctionValue::ensureAnalysis()
+{
+    if(isAnalyzed)
+        return;
+    if(isTemplate)
+        return;
+
+    isAnalyzed = true;
+}
+
+ValuePtr
+FunctionValue::evaluateWithArgumentsAndCaptures(const std::vector<ValuePtr> &arguments, const std::vector<ValuePtr> &captures)
+{
+    ensureAnalysis();
+
+    (void)arguments;
+    (void)captures;
+
+    printf("TODO: evaluateWithArgumentsAndCaptures\n");
+    abort();
+}
+
+ValuePtr FunctionValue::evaluateWithArgumentsViaParseTree(const std::vector<ValuePtr> &arguments)
+{
+    ensureAnalysis();
+
+    // Make the activation context.
+    auto activationEnvironment = std::make_shared<FunctionalActivationEnvironment> (definitionContext->lexicalEnvironment);
+    auto activationContext = definitionContext->clone();
+    activationContext->lexicalEnvironment = activationEnvironment;
+
+    // Arguments
+    assert(arguments.size() == dependentFunctionType->arguments.size());
+    auto argumentCount = arguments.size();
+    for(size_t i = 0; i < argumentCount; ++i)
+    {
+        auto argumentValue = arguments[i];
+        auto argumentDefinition = dependentFunctionType->arguments[i];
+        auto expectedArgumentTypeValue = argumentDefinition->typeExpression->analyzeAndEvaluateInContext(activationContext);
+        if(!expectedArgumentTypeValue->isType())
+        {
+            sourcePosition->printOn(stderr);
+            fprintf(stderr, " Expected an argument type instead of %s.\n", expectedArgumentTypeValue->dumpAsString().c_str());
+            abort();
+        }
+
+        auto expectedArgumentType = std::static_pointer_cast<Type> (expectedArgumentTypeValue);
+        if(!expectedArgumentType->isSatisfiedByValue(argumentValue, activationContext))
+        {
+            argumentDefinition->sourcePosition->printOn(stderr);
+            auto argumentType = argumentValue->getTypeInContext(activationContext);
+            fprintf(stderr, " Expected an argument with type %s instead of %s.\n",
+                expectedArgumentTypeValue->dumpAsString().c_str(), argumentType->dumpAsString().c_str());
+            abort();
+        }
+
+        if(!argumentDefinition->name.empty())
+            activationEnvironment->setSymbolBinding(argumentDefinition->name, argumentValue);
+    }
+
+    // Result type computation.
+    auto resultTypeValue = dependentFunctionType->resultTypeExpression->analyzeAndEvaluateInContext(activationContext);
+    if(!resultTypeValue->isType())
+    {
+        sourcePosition->printOn(stderr);
+        fprintf(stderr, " Expected a result type instead of %s.\n", resultTypeValue->dumpAsString().c_str());
+        abort();
+    }
+
+    auto resultType = std::static_pointer_cast<Type> (resultTypeValue);
+
+    // Make the body environment.
+    auto bodyEnvironment = std::make_shared<LexicalEnvironment> (activationEnvironment);
+    activationContext->lexicalEnvironment = bodyEnvironment;
+
+    // Evaluate the body.
+    auto bodyResult = activationContext->visitNodeWithExpectedType(body, resultType);
+
+    // Return
+    return bodyResult;
+}
+
+ValuePtr
+FunctionValue::evaluateWithArguments(const std::vector<ValuePtr> &arguments)
+{
+    return evaluateWithArgumentsViaParseTree(arguments);
+    //return evaluateWithArgumentsAndCaptures(arguments, std::vector<ValuePtr> ());
+}
+
+ValuePtr
+FunctionValue::analyzeAndEvaluateFunctionApplicationNodeInContext(const ParseTreeFunctionApplicationNodePtr &applicationNode, const EvaluationContextPtr &context)
+{
+    auto typecheckedArguments = functionType->analyzeAndEvaluationFunctionApplicationArgumentsInContext(applicationNode, context);
+    return evaluateWithArguments(typecheckedArguments);
 }
 
 TypePtr

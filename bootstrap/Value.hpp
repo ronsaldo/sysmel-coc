@@ -60,6 +60,12 @@ struct Value : std::enable_shared_from_this<Value>
     virtual ValuePtr analyzeAndEvaluateFunctionApplicationNodeInContext(const ParseTreeFunctionApplicationNodePtr &applicationNode, const EvaluationContextPtr &context);
     virtual ValuePtr analyzeAndEvaluateAssignmentNodeInContext(const ParseTreeAssignmentNodePtr &assignmentNode, const EvaluationContextPtr &context);
 
+    virtual void enqueuePendingAnalysis(const PackagePtr &package);
+    virtual void ensureAnalysis()
+    {
+        // By default do nothin
+    }
+
     virtual TypePtr getTypeInContext(const EvaluationContextPtr &context) = 0;
 
     virtual bool isType() const
@@ -126,7 +132,15 @@ struct Type : Value
 {
     virtual ValuePtr getOrCreateDefaultValue()
     {
-        fprintf(stderr, "Type %s does not have a default value.", dumpAsString().c_str());
+        fprintf(stderr, "Type %s does not have a default value.\n", dumpAsString().c_str());
+        abort();
+    }
+
+    virtual std::vector<ValuePtr> analyzeAndEvaluationFunctionApplicationArgumentsInContext(const ParseTreeFunctionApplicationNodePtr &application, const EvaluationContextPtr &context)
+    {
+        (void)application;
+        (void)context;
+        fprintf(stderr, "Type %s is not functional.\n", dumpAsString().c_str());
         abort();
     }
 
@@ -258,6 +272,7 @@ struct MutableValueBoxType : DerivedType
 
 struct ArgumentDefinitionValue : Value
 {
+    SourcePositionPtr sourcePosition;
     std::string name;
     ValuePtr typeExpression;
     int index = 0;
@@ -314,6 +329,7 @@ struct SimpleFunctionType : Type
     std::vector<TypePtr> argumentTypes;
     TypePtr resultType;
 
+    virtual std::vector<ValuePtr> analyzeAndEvaluationFunctionApplicationArgumentsInContext(const ParseTreeFunctionApplicationNodePtr &application, const EvaluationContextPtr &context);
     virtual TypePtr getTypeInContext(const EvaluationContextPtr &context) override;
 
     virtual void dump(std::ostream &out) override
@@ -502,10 +518,25 @@ struct SymbolValue : PrimitiveValue
 
 struct FunctionValue : Value
 {
+    SourcePositionPtr sourcePosition;
     DependentFunctionTypePtr dependentFunctionType;
     TypePtr functionType;
     ParseTreeNodePtr body;
     EvaluationContextPtr definitionContext;
+    bool isMethod = false;
+    bool isPublic = false;
+    bool isMacro = false;
+    bool isCompileTime = false;
+    bool isTemplate = false;
+    bool isAnalyzed = false;
+    std::string primitiveName;
+
+    virtual ValuePtr analyzeAndEvaluateFunctionApplicationNodeInContext(const ParseTreeFunctionApplicationNodePtr &applicationNode, const EvaluationContextPtr &context);
+    virtual void ensureAnalysis() override;
+    
+    ValuePtr evaluateWithArgumentsAndCaptures(const std::vector<ValuePtr> &arguments, const std::vector<ValuePtr> &captures);
+    ValuePtr evaluateWithArgumentsViaParseTree(const std::vector<ValuePtr> &arguments);
+    ValuePtr evaluateWithArguments(const std::vector<ValuePtr> &arguments);
 
     virtual TypePtr getTypeInContext(const EvaluationContextPtr &context) override
     {
@@ -644,6 +675,7 @@ struct Package : Value
     std::string name;
     std::unordered_map<std::string, ValuePtr> packageSymbolTable;
     std::vector<ValuePtr> packageChildren;
+    std::vector<ValuePtr> pendingAnalysisQueue;
 
     virtual TypePtr getTypeInContext(const EvaluationContextPtr &context) override;
 
@@ -731,6 +763,13 @@ struct LexicalEnvironment : Environment
 
         return parent->lookupSymbolRecursively(symbol);
     }
+};
+
+struct FunctionalActivationEnvironment : LexicalEnvironment
+{
+    FunctionalActivationEnvironment(const EnvironmentPtr &initParent)
+        : LexicalEnvironment(initParent) {}
+
 };
 
 struct FunctionalSignatureAnalysisEnvironment : LexicalEnvironment
