@@ -12,6 +12,9 @@ class HIRValue(ABC):
     def accept(self, visitor: HIRVisitor):
         return visitor.visitValue(self)
     
+    def analyzeAndEvaluateIdentifierReferenceNode(self, evaluator, node: ParseTreeIdentifierReferenceNode):
+        return self
+
     def analyzeAndBuildIdentifierReferenceNode(self, analyzer, node: ParseTreeIdentifierReferenceNode):
         return self
 
@@ -907,14 +910,22 @@ class HIRContext:
         self.corePackage.addCoreTypes(self.coreTypes)
         self.currentPackage = self.corePackage
 
-    def createTopLevelEnvironment(self):
-        return HIRLexicalEnvironment(HIRPackageEnvironment(self.currentPackage, HIREmptyEnvironment()))
+    def createTopLevelEnvironment(self, sourceCode: SourceCode):
+        lexicalEnvironment = HIRLexicalEnvironment(HIRPackageEnvironment(self.currentPackage, HIREmptyEnvironment()))
+        if sourceCode.directory is not None:
+            lexicalEnvironment.setSymbolBinding('__FileDir__', HIRConstantLiteralStringValue(sourceCode.directory, self.coreTypes.stringType, None))
+        if sourceCode.name is not None:
+            lexicalEnvironment.setSymbolBinding('__FileName__', HIRConstantLiteralStringValue(sourceCode.name, self.coreTypes.stringType, None))
+        return lexicalEnvironment
+    
+    def createTopLevelEvaluationContext(self, sourceCode: SourceCode):
+        return HIREvaluationContext(self, self.createTopLevelEnvironment(sourceCode))
 
     def createTopLevelFunctionBuilder(self, sourcePosition: SourcePosition = None):
         dependentFunctionType = HIRDependentFunctionType([], self.coreTypes.dynamicType, self.coreTypes, sourcePosition)
         topLevelFunction = HIRFunction(None, dependentFunctionType, sourcePosition)
         topLevelFunction.isTopLevel = True
-        topLevelEnvironment = self.createTopLevelEnvironment()
+        topLevelEnvironment = self.createTopLevelEnvironment(sourcePosition.sourceCode)
 
         # Alloca block
         allocaBlock = HIRBasicBlock("alloca", sourcePosition)
@@ -938,6 +949,11 @@ class HIRContext:
 
     def getOrCreateMutableValueBoxType(self, baseType):
         return HIRMutableValueBoxType(baseType, self.coreTypes, None)
+
+class HIREvaluationContext:
+    def __init__(self, context: HIRContext, environment: HIRLexicalEnvironment):
+        self.context = context
+        self.environment = environment
 
 class HIRBuilder:
     def __init__(self, function: HIRFunction, context: HIRContext, basicBlock: HIRBasicBlock, environment: HIRLexicalEnvironment):

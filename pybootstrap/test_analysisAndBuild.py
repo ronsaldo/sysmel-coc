@@ -32,90 +32,90 @@ class TestAnalysisAndBuild(unittest.TestCase):
         topLevelFunction = self.buildTopLevelSourceString(string)
         print(topLevelFunction.fullPrintString())
 
-    def evaluateTopLevelSourceString(self, string: str):
+    def evaluateTopLevelFunctionSourceString(self, string: str):
         topLevelFunction = self.buildTopLevelSourceString(string)
         return topLevelFunction.evaluateWithArguments([])
 
     def testEmptyTopLevel(self):
-        topLevelResult = self.evaluateTopLevelSourceString('')
+        topLevelResult = self.evaluateTopLevelFunctionSourceString('')
         self.assertTrue(topLevelResult.isVoidConstant())
 
     def testLiteralInteger(self):
-        topLevelResult = self.evaluateTopLevelSourceString('42')
+        topLevelResult = self.evaluateTopLevelFunctionSourceString('42')
         self.assertTrue(topLevelResult.isIntegerConstant())
         self.assertEqual(topLevelResult.value, 42)
 
     def testLiteralFloat(self):
-        topLevelResult = self.evaluateTopLevelSourceString('42.5')
+        topLevelResult = self.evaluateTopLevelFunctionSourceString('42.5')
         self.assertTrue(topLevelResult.isFloatConstant())
         self.assertEqual(topLevelResult.value, 42.5)
 
     def testLiteralCharacter(self):
-        topLevelResult = self.evaluateTopLevelSourceString("'A'")
+        topLevelResult = self.evaluateTopLevelFunctionSourceString("'A'")
         self.assertTrue(topLevelResult.isCharacterConstant())
         self.assertEqual(topLevelResult.value, ord('A'))
 
     def testLiteralString(self):
-        topLevelResult = self.evaluateTopLevelSourceString('"Hello World"')
+        topLevelResult = self.evaluateTopLevelFunctionSourceString('"Hello World"')
         self.assertTrue(topLevelResult.isStringConstant())
         self.assertEqual(topLevelResult.value, 'Hello World')
 
     def testLiteralSymbol(self):
-        topLevelResult = self.evaluateTopLevelSourceString('#hello')
+        topLevelResult = self.evaluateTopLevelFunctionSourceString('#hello')
         self.assertTrue(topLevelResult.isSymbolConstant())
         self.assertEqual(topLevelResult.value, 'hello')
 
     def testLexicalBlock(self):
-        topLevelResult = self.evaluateTopLevelSourceString('{42}')
+        topLevelResult = self.evaluateTopLevelFunctionSourceString('{42}')
         self.assertTrue(topLevelResult.isIntegerConstant())
         self.assertEqual(topLevelResult.value, 42)
 
     def testPackageSymbols(self):
-        topLevelResult = self.evaluateTopLevelSourceString('false')
+        topLevelResult = self.evaluateTopLevelFunctionSourceString('false')
         self.assertTrue(topLevelResult.isBooleanConstant())
         self.assertFalse(topLevelResult.value)
         
-        topLevelResult = self.evaluateTopLevelSourceString('true')
+        topLevelResult = self.evaluateTopLevelFunctionSourceString('true')
         self.assertTrue(topLevelResult.isBooleanConstant())
         self.assertTrue(topLevelResult.value)
 
-        topLevelResult = self.evaluateTopLevelSourceString('void')
+        topLevelResult = self.evaluateTopLevelFunctionSourceString('void')
         self.assertTrue(topLevelResult.isVoidConstant())
 
-        topLevelResult = self.evaluateTopLevelSourceString('nil')
+        topLevelResult = self.evaluateTopLevelFunctionSourceString('nil')
         self.assertTrue(topLevelResult.isNilConstant())
 
     def testLetWithMacro(self):
-        topLevelResult = self.evaluateTopLevelSourceString('let: #x with: 42')
+        topLevelResult = self.evaluateTopLevelFunctionSourceString('let: #x with: 42')
         self.assertTrue(topLevelResult.isIntegerConstant())
         self.assertEqual(topLevelResult.value, 42)
 
-        topLevelResult = self.evaluateTopLevelSourceString('let: #x with: 42. x')
+        topLevelResult = self.evaluateTopLevelFunctionSourceString('let: #x with: 42. x')
         self.assertTrue(topLevelResult.isIntegerConstant())
         self.assertEqual(topLevelResult.value, 42)
 
     def testLetMutableWithMacro(self):
-        topLevelResult = self.evaluateTopLevelSourceString('let: #x mutableWith: 42')
+        topLevelResult = self.evaluateTopLevelFunctionSourceString('let: #x mutableWith: 42')
         self.assertTrue(topLevelResult.isIntegerConstant())
         self.assertEqual(topLevelResult.value, 42)
 
-        topLevelResult = self.evaluateTopLevelSourceString('let: #x mutableWith: 42. x := 5. x')
+        topLevelResult = self.evaluateTopLevelFunctionSourceString('let: #x mutableWith: 42. x := 5. x')
         self.assertTrue(topLevelResult.isIntegerConstant())
         self.assertEqual(topLevelResult.value, 5)
 
     def testIfThenElseMacro(self):
-        topLevelResult = self.evaluateTopLevelSourceString('if: true then: 1 else: 2')
+        topLevelResult = self.evaluateTopLevelFunctionSourceString('if: true then: 1 else: 2')
         self.assertTrue(topLevelResult.isIntegerConstant())
         self.assertEqual(topLevelResult.value, 1)
 
-        topLevelResult = self.evaluateTopLevelSourceString('if: false then: 1 else: 2')
+        topLevelResult = self.evaluateTopLevelFunctionSourceString('if: false then: 1 else: 2')
         self.assertTrue(topLevelResult.isIntegerConstant())
         self.assertEqual(topLevelResult.value, 2)
 
     def testIfThenMacro(self):
-        topLevelResult = self.evaluateTopLevelSourceString('if: true then: 1')
+        topLevelResult = self.evaluateTopLevelFunctionSourceString('if: true then: 1')
         self.assertTrue(topLevelResult.isVoidConstant())
 
     def testWhileDoMacro(self):
-        topLevelResult = self.evaluateTopLevelSourceString('while: false do: {}')
+        topLevelResult = self.evaluateTopLevelFunctionSourceString('while: false do: {}')
         self.assertTrue(topLevelResult.isVoidConstant())

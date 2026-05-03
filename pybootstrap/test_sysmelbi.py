@@ -3,6 +3,7 @@ import unittest
 from test_scanner import *
 from test_parser import *
 from test_hir import *
+from test_analysisAndEvaluation import *
 from test_analysisAndBuild import *
 
 if __name__ == '__main__':
