@@ -18,16 +18,18 @@ class AnalysisAndBuildPass(ParseTreeVisitor):
     def castValueToExpectedType(self, value: HIRValue, expectedType: HIRType, sourcePosition: SourcePosition):
         if expectedType is None:
             return value
-        assert False
-        if value.getType().isControlFlowEscapeType():
-            return value
-        if value.getType().isDynamicType():
-            ## TODO: Unbox with an instruction.
-            return value
-        if expectedType.isVoidType() and not value.isVoidValue():
-            return self.builder.getVoidLiteral(sourcePosition)
-        if not expectedType.isSatisfiedByHIRValue(value):
+
+        #if value.getType().isControlFlowEscapeType():
+        #    return value
+        #if value.getType().isDynamicType():
+        #    ## TODO: Unbox with an instruction.
+        #    return value
+        #if expectedType.isVoidType() and not value.isVoidValue():
+        #    return self.builder.getVoidLiteral(sourcePosition)
+
+        if not expectedType.isSatisfiedByValue(value):
             raise RuntimeError("%s: expected a value of type %s instead of %s." % (str(sourcePosition), str(expectedType), str(value.getType())))
+
         return value
 
 
@@ -59,8 +61,9 @@ class AnalysisAndBuildPass(ParseTreeVisitor):
     def visitAssertNode(self, node):
         assert False
 
-    def visitAssignmentNode(self, node):
-        assert False
+    def visitAssignmentNode(self, node: ParseTreeAssignmentNode):
+        storeValue = self.visitNode(node.store)
+        return storeValue.analyzeAndBuildAssignment(self, node)
 
     def visitAssociationNode(self, node):
         assert False

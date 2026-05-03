@@ -21,6 +21,16 @@ class HIRValue(ABC):
             raise RuntimeError(str(node.sourcePosition) +  ": cannot analyze and build non-functional value.")
         return selfType.analyzeAndBuildApplicationNode(buildPass, node, functional)
 
+    def analyzeAndBuildAssignment(self, buildPass, node: ParseTreeAssignmentNode):
+        selfType = self.getType()
+        if not selfType.isReferenceType():
+            raise RuntimeError(str(node.sourcePosition) +  ": storage type does not support assignments.")
+
+        baseType = selfType.baseType
+        valueToStore = buildPass.visitNodeWithExpectedType(node.value, baseType)
+        buildPass.builder.store(self, valueToStore, node.sourcePosition)
+        return self
+    
     @abstractmethod
     def getType(self):
         pass
@@ -101,6 +111,12 @@ class HIRType(HIRValue):
 
     def analyzeAndBuildApplicationNode(self, buildPass, node: ParseTreeApplicationNode, functional):
         raise RuntimeError(str(node.sourcePosition) +  ": cannot analyze and build non-functional value.")
+    
+    def isSatisfiedByValue(self, value: HIRValue):
+        return self.isSatisfiedByType(value.getType())
+
+    def isSatisfiedByType(self, subtype):
+        return self == subtype
 
     def getType(self):
         return self.coreTypes.getUniverseAtLevel(0)

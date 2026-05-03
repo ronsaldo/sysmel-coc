@@ -95,8 +95,10 @@ class TestAnalysisAndBuild(unittest.TestCase):
         self.assertEqual(topLevelResult.value, 42)
 
     def testLetMutableWithMacro(self):
-        #self.printTopLevelSourceStringFunction('let: #x mutableWith: 42')
-
         topLevelResult = self.evaluateTopLevelSourceString('let: #x mutableWith: 42')
         self.assertTrue(topLevelResult.isIntegerConstant())
         self.assertEqual(topLevelResult.value, 42)
+
+        topLevelResult = self.evaluateTopLevelSourceString('let: #x mutableWith: 42. x := 5. x')
+        self.assertTrue(topLevelResult.isIntegerConstant())
+        self.assertEqual(topLevelResult.value, 5)
