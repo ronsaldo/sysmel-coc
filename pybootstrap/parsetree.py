@@ -107,6 +107,10 @@ class ParseTreeVisitor(ABC):
         pass
 
     @abstractmethod
+    def visitFunctionTypeNode(self, node):
+        pass
+
+    @abstractmethod
     def visitFunctionNode(self, node):
         pass
 
@@ -279,7 +283,10 @@ class ParseTreeNode(ABC):
 
     def isBindableNameNode(self) -> bool:
         return False
-    
+
+    def isFunctionTypeNode(self) -> bool:
+        return False
+
     def isFunctionNode(self) -> bool:
         return False
 
@@ -474,13 +481,24 @@ class ParseTreeArgumentDefinitionNode(ParseTreeNode):
 
     def isArgumentDefinitionNode(self) -> bool:
         return True
-    
-class ParseTreeFunctionNode(ParseTreeNode):
-    def __init__(self, sourcePosition: SourcePosition, nameExpression: ParseTreeNode, argumentDefinitions: list[ParseTreeNode], resultTypeExpression: ParseTreeNode, body: ParseTreeNode, isPublic: bool) -> None:
+
+class ParseTreeFunctionTypeNode(ParseTreeNode):
+    def __init__(self, sourcePosition: SourcePosition, argumentDefinitions: list[ParseTreeNode], resultTypeExpression: ParseTreeNode) -> None:
         super().__init__(sourcePosition)
-        self.nameExpression = nameExpression
         self.argumentDefinitions = argumentDefinitions
         self.resultTypeExpression = resultTypeExpression
+    
+    def accept(self, visitor: ParseTreeVisitor):
+        return visitor.visitFunctionTypeNode(self)
+
+    def isFunctionTypeNode(self) -> bool:
+        return True    
+
+class ParseTreeFunctionNode(ParseTreeNode):
+    def __init__(self, sourcePosition: SourcePosition, nameExpression: ParseTreeNode, functionType: ParseTreeFunctionTypeNode, body: ParseTreeNode, isPublic: bool) -> None:
+        super().__init__(sourcePosition)
+        self.nameExpression = nameExpression
+        self.functionType = functionType
         self.body = body
         self.isPublic = isPublic
     
@@ -926,9 +944,12 @@ class ParseTreeSequentialVisitor(ParseTreeVisitor):
     def visitBinaryExpressionSequenceNode(self, node: ParseTreeBinaryExpressionSequenceNode):
         self.visitNodes(node.elements)
 
-    def visitFunctionNode(self, node: ParseTreeFunctionNode):
+    def visitFunctionTypeNode(self, node: ParseTreeFunctionTypeNode):
         self.visitNodes(node.argumentDefinitions)
         self.visitOptionalNode(node.resultTypeExpression)
+
+    def visitFunctionNode(self, node: ParseTreeFunctionNode):
+        self.visitNode(node.functionType)
         self.visitNode(node.body)
 
     def visitMethodNode(self, node: ParseTreeMethodNode):

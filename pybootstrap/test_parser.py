@@ -120,13 +120,13 @@ class TestParser(unittest.TestCase):
         node : ParseTreeFunctionNode = self.parseSourceStringWithoutErrors('{:a |}')
         self.assertTrue(node.isFunctionNode())
 
-        self.assertEqual(len(node.argumentDefinitions), 1)        
-        self.assertEqual(node.argumentDefinitions[0].name, 'a')
-        self.assertEqual(node.argumentDefinitions[0].typeExpression, None)
+        self.assertEqual(len(node.functionType.argumentDefinitions), 1)        
+        self.assertEqual(node.functionType.argumentDefinitions[0].name, 'a')
+        self.assertEqual(node.functionType.argumentDefinitions[0].typeExpression, None)
 
-    def testBlockWithTypes(self):
-        node : ParseTreeFunctionNode = self.parseSourceStringWithoutErrors('{:(Integer)a :: Integer}')
-        self.assertTrue(node.isFunctionNode())
+    def testBlockDependentType(self):
+        node : ParseTreeFunctionTypeNode = self.parseSourceStringWithoutErrors('{:(Integer)a :: Integer}')
+        self.assertTrue(node.isFunctionTypeNode())
 
         self.assertEqual(len(node.argumentDefinitions), 1)        
         self.assertEqual(node.argumentDefinitions[0].name, 'a')
@@ -136,9 +136,9 @@ class TestParser(unittest.TestCase):
         node : ParseTreeFunctionNode = self.parseSourceStringWithoutErrors('{:(Integer)a :: Integer | a}')
         self.assertTrue(node.isFunctionNode())
 
-        self.assertEqual(len(node.argumentDefinitions), 1)        
-        self.assertEqual(node.argumentDefinitions[0].name, 'a')
-        self.assertTrue(node.argumentDefinitions[0].typeExpression.isIdentifierReferenceNode())
+        self.assertEqual(len(node.functionType.argumentDefinitions), 1)        
+        self.assertEqual(node.functionType.argumentDefinitions[0].name, 'a')
+        self.assertTrue(node.functionType.argumentDefinitions[0].typeExpression.isIdentifierReferenceNode())
 
         self.assertTrue(node.body.isIdentifierReferenceNode())
 

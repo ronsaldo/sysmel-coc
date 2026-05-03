@@ -249,7 +249,7 @@ def parseBlockArgument(state: ParserState) -> tuple[ParserState, ParseTreeNode]:
 
     return state, ParseTreeArgumentDefinitionNode(state.sourcePositionFrom(startPosition), optionalName, typeExpression)
 
-def parseBlockHeader(state: ParserState) -> tuple[ParserState, ParseTreeNode]:
+def parseBlockType(state: ParserState) -> tuple[ParserState, ParseTreeNode]:
     startPosition = state.position
     shouldEmitHeader = False
     argumentDefinitions = []
@@ -269,13 +269,12 @@ def parseBlockHeader(state: ParserState) -> tuple[ParserState, ParseTreeNode]:
 
     ## Separating bar
     if state.peekKind() == TokenKind.BAR:
-        state.advance()
         shouldEmitHeader = True
 
     if not shouldEmitHeader:
-        return None
+        return state, None
     
-    return ParseTreeFunctionNode(state.sourcePositionFrom(startPosition), None, argumentDefinitions, resultTypeExpression, None, False)
+    return state, ParseTreeFunctionTypeNode(state.sourcePositionFrom(startPosition), argumentDefinitions, resultTypeExpression)
 
 def parseBlock(state: ParserState) -> tuple[ParserState, ParseTreeNode]:
     # {
@@ -283,11 +282,27 @@ def parseBlock(state: ParserState) -> tuple[ParserState, ParseTreeNode]:
     assert state.peekKind() == TokenKind.LEFT_CURLY_BRACKET
     state.advance()
 
-    blockHeader = parseBlockHeader(state)
+    state, blockType = parseBlockType(state)
 
-    state, body = parseSequenceUntilEndOrDelimiter(state, TokenKind.RIGHT_CURLY_BRACKET)
+    shouldEmitFunction = False
+    if state.peekKind() == TokenKind.BAR:
+        state.advance()
+        shouldEmitFunction = True
 
+    if blockType is not None:
+        if shouldEmitFunction:
+            state, body = parseSequenceUntilEndOrDelimiter(state, TokenKind.RIGHT_CURLY_BRACKET)
+            body = state.expectAddingErrorToNode(TokenKind.RIGHT_CURLY_BRACKET, body)
+            return state, ParseTreeFunctionNode(state.sourcePositionFrom(startPosition), None, blockType, body, False)
+        else:
+            blockType = state.expectAddingErrorToNode(TokenKind.RIGHT_CURLY_BRACKET, blockType)
+            return state, blockType
+    else:
+        state, body = parseSequenceUntilEndOrDelimiter(state, TokenKind.RIGHT_CURLY_BRACKET)
+        body = state.expectAddingErrorToNode(TokenKind.RIGHT_CURLY_BRACKET, body)
+        return state, ParseTreeLexicalBlockNode(state.sourcePositionFrom(startPosition), body)
     # }
+
     body = state.expectAddingErrorToNode(TokenKind.RIGHT_CURLY_BRACKET, body)
     if blockHeader is None:
         return state, ParseTreeLexicalBlockNode(state.sourcePositionFrom(startPosition), body)
