@@ -40,6 +40,27 @@ class HIRValue(ABC):
     def isSimpleFunctionType(self):
         return False
 
+    def isIntegerConstant(self):
+        return False
+
+    def isFloatConstant(self):
+        return False
+    
+    def isBooleanConstant(self):
+        return False
+
+    def isCharacterConstant(self):
+        return False
+
+    def isStringConstant(self):
+        return False
+
+    def isSymbolConstant(self):
+        return False
+
+    def isVoidConstant(self):
+        return False
+    
     def evaluateInActivationContext(self, context):
         raise RuntimeError("%s evaluateInActivationContext subclassResponsibility" % str(self.__class__))
     
@@ -70,6 +91,9 @@ class HIRNominalType(HIRType):
 
     def isNominalType(self):
         return True
+    
+    def __str__(self):
+        return self.name
  
 
 class HIRDynamicType(HIRType):
@@ -82,6 +106,9 @@ class HIRDynamicType(HIRType):
 
     def isDynamicType(self):
         return True
+    
+    def __str__(self):
+        return self.name
 
 class HIRUniverseType(HIRType):
     def __init__(self, name: str, coreTypes, level: int):
@@ -97,6 +124,9 @@ class HIRUniverseType(HIRType):
 
     def isUniverseType(self):
         return True
+
+    def __str__(self):
+        return self.name
 
 class HIRAssociationType(HIRType):
     def __init__(self, keyType: HIRType, valueType: HIRType, coreTypes, sourcePosition = None):
@@ -153,38 +183,77 @@ class HIRConstantLiteralIntegerValue(HIRConstantLiteralValue):
         super().__init__(type, sourcePosition)
         self.value = value
 
+    def __str__(self):
+        return 'integer %d' % self.value
+
+    def isIntegerConstant(self):
+        return True
+
 class HIRConstantLiteralFloatValue(HIRConstantLiteralValue):
     def __init__(self, value: float, type: HIRType, sourcePosition):
         super().__init__(type, sourcePosition)
         self.value = value
+
+    def __str__(self):
+        return 'float %f' % self.value
+
+    def isFloatConstant(self):
+        return True
 
 class HIRConstantLiteralBooleanValue(HIRConstantLiteralValue):
     def __init__(self, value: bool, type: HIRType, sourcePosition):
         super().__init__(type, sourcePosition)
         self.value = value
 
+    def __str__(self):
+        if self.value:
+            return 'true'
+        else:
+            return 'false'
+
+    def isBooleanConstant(self):
+        return True
+
 class HIRConstantLiteralCharacterValue(HIRConstantLiteralValue):
     def __init__(self, value: int, type: HIRType, sourcePosition):
         super().__init__(type, sourcePosition)
         self.value = value
 
+    def isCharacterConstant(self):
+        return True
+    
 class HIRConstantLiteralStringValue(HIRConstantLiteralValue):
     def __init__(self, value: str, type: HIRType, sourcePosition):
         super().__init__(type, sourcePosition)
         self.value = value
 
+    def isStringConstant(self):
+        return True
+    
 class HIRConstantLiteralSymbolValue(HIRConstantLiteralValue):
     def __init__(self, value: str, type: HIRType, sourcePosition):
         super().__init__(type, sourcePosition)
         self.value = value
 
+    def isSymbolConstant(self):
+        return True
+
 class HIRConstantLiteralVoidValue(HIRConstantLiteralValue):
     def __init__(self, type: HIRType, sourcePosition):
         super().__init__(type, sourcePosition)
 
+    def isVoidConstant(self):
+        return True
+
+    def __str__(self):
+        return 'void'
+
 class HIRConstantLiteralNilValue(HIRConstantLiteralValue):
     def __init__(self, type: HIRType, sourcePosition):
         super().__init__(type, sourcePosition)
+
+    def __str__(self):
+        return 'nil'
 
 class HIRFunction(HIRConstant):
     def __init__(self, name: str, dependentFunctionType: HIRDependentFunctionType, sourcePosition):
@@ -194,6 +263,7 @@ class HIRFunction(HIRConstant):
         self.captures = []
         self.firstBasicBlock = None
         self.lastBasicBlock = None
+        self.isTopLevel = False
         self.enumeratedInstructions = None
 
     def getType(self):
@@ -380,6 +450,20 @@ class HIRInstruction(HIRFunctionLocalValue):
     def isTerminator(self):
         return False
 
+class HIRBranchInstruction(HIRInstruction):
+    def __init__(self, destination: HIRBasicBlock, type, name=None, sourcePosition=None):
+        super().__init__(type, name, sourcePosition)
+        self.destination = destination
+
+    def isTerminator(self):
+        return True
+
+    def fullPrintString(self) -> str:
+        return "branch " + str(self.destination)
+
+    def evaluateInActivationContext(self, context):
+        context.pc = self.destination.index
+
 class HIRReturnInstruction(HIRInstruction):
     def __init__(self, valueToReturn, type, name=None, sourcePosition=None):
         super().__init__(type, name, sourcePosition)
@@ -450,6 +534,12 @@ class HIREnvironment:
 
 class HIREmptyEnvironment(HIREnvironment):
     pass
+
+class HIRPackageEnvironment(HIREnvironment):
+    def __init__(self, package, parent):
+        super().__init__()
+        self.package = package
+        self.parent = parent
 
 class HIRLexicalEnvironment(HIREnvironment):
     def __init__(self, parent):
@@ -523,21 +613,80 @@ class HIRContext:
         self.corePackage.addCoreTypes(self.coreTypes)
         self.currentPackage = self.corePackage
 
+    def createTopLevelEnvironment(self):
+        return HIRLexicalEnvironment(HIRPackageEnvironment(self.currentPackage, HIREmptyEnvironment()))
+
+    def createTopLevelFunctionBuilder(self, sourcePosition: SourcePosition = None):
+        dependentFunctionType = HIRDependentFunctionType([], self.coreTypes.dynamicType, self.coreTypes, sourcePosition)
+        topLevelFunction = HIRFunction(None, dependentFunctionType, sourcePosition)
+        topLevelFunction.isTopLevel = True
+        topLevelEnvironment = self.createTopLevelEnvironment()
+
+        # Alloca block
+        allocaBlock = HIRBasicBlock("alloca", sourcePosition)
+        topLevelFunction.addBasicBlock(allocaBlock)
+        allocaBuilder = HIRBuilder(topLevelFunction, self, allocaBlock, topLevelEnvironment)
+
+        # Entry block
+        entryBlock = HIRBasicBlock("entry", sourcePosition)
+        topLevelFunction.addBasicBlock(entryBlock)
+        builder = HIRBuilder(topLevelFunction, self, entryBlock, topLevelEnvironment)
+        builder.allocaBuilder = allocaBuilder
+        builder.entryBasicBlock = entryBlock
+
+        return builder
+
 class HIRBuilder:
     def __init__(self, function: HIRFunction, context: HIRContext, basicBlock: HIRBasicBlock, environment: HIRLexicalEnvironment):
         self.function = function
         self.context = context
         self.basicBlock = basicBlock
         self.environment = environment
+        self.allocaBuilder = None
+        self.entryBasicBlock = None
 
     def addInstruction(self, instruction):
         self.basicBlock.addInstruction(instruction)
+
+    def isLastTerminator(self):
+        if self.basicBlock is None or self.basicBlock.lastInstruction is None:
+            return False
+
+        return self.basicBlock.lastInstruction.isTerminator()
+
+    def finishBuilding(self):
+        if self.allocaBuilder is not None:
+            if self.entryBasicBlock is not None:
+                self.allocaBuilder.branch(self.entryBasicBlock, None)
+
+    def integerConstant(self, value: int, type: HIRType, sourcePosition: SourcePosition):
+        return HIRConstantLiteralIntegerValue(value, type, sourcePosition)
+
+    def characterConstant(self, value: int, type: HIRType, sourcePosition: SourcePosition):
+        return HIRConstantLiteralCharacterValue(value, type, sourcePosition)
+
+    def floatConstant(self, value: float, type: HIRType, sourcePosition: SourcePosition):
+        return HIRConstantLiteralFloatValue(value, type, sourcePosition)
+
+    def stringConstant(self, value: str, type: HIRType, sourcePosition: SourcePosition):
+        return HIRConstantLiteralStringValue(value, type, sourcePosition)
+
+    def symbolConstant(self, value: str, type: HIRType, sourcePosition: SourcePosition):
+        return HIRConstantLiteralSymbolValue(value, type, sourcePosition)
+
+    def branch(self, destination, sourcePosition):
+        instruction = HIRBranchInstruction(destination, self.context.coreTypes.voidType, None, sourcePosition)
+        self.addInstruction(instruction)
+        return instruction
 
     def returnValue(self, valueToReturn, sourcePosition):
         instruction = HIRReturnInstruction(valueToReturn, self.context.coreTypes.voidType, None, sourcePosition)
         self.addInstruction(instruction)
         return instruction
-    
+
+    def returnVoid(self, sourcePosition):
+        return self.returnValue(self.context.coreTypes.voidValue, sourcePosition)
+
     def unreachable(self, valueToReturn, sourcePosition):
         instruction = HIRUnreachable(self.context.coreTypes.voidType, None, sourcePosition)
         self.addInstruction(instruction)
