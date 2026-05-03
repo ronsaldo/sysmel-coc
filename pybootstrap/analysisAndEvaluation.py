@@ -24,6 +24,11 @@ class AnalysisAndEvaluationPass(ParseTreeVisitor):
         if not value.isType():
             raise RuntimeError(str(node.sourcePosition) +  " Error: Expected a type instead of  " + str(value))
         return value
+    
+    def visitBooleanNode(self, node: ParseTreeNode):
+        evaluatedNode = self.visitNodeWithExpectedType(node, self.evaluationContext.context.coreTypes.booleanType)
+        assert evaluatedNode.isBooleanConstant()
+        return evaluatedNode.value
 
     def visitOptionalSymbolNode(self, node: ParseTreeNode):
         if node is None:
@@ -117,20 +122,20 @@ class AnalysisAndEvaluationPass(ParseTreeVisitor):
     def visitQuasiQuoteNode(self, node):
         assert False
 
-    def visitQuasiUnquoteNode(self, node):
-        assert False
+    def visitQuasiUnquoteNode(self, node: ParseTreeQuasiUnquoteNode):
+        raise RuntimeError("%s: invalid location for a quasi unquote." % str(node.sourcePosition))
 
-    def visitQuoteNode(self, node):
-        assert False
+    def visitSpliceNode(self, node):
+        raise RuntimeError("%s: invalid location for a splice." % str(node.sourcePosition))
+
+    def visitQuoteNode(self, node: ParseTreeQuoteNode):
+        return HIRConstantLiteralParseTree(node.term, self.evaluationContext.context.coreTypes.parseTreeNodeType, node.sourcePosition)
 
     def visitSequenceNode(self, node: ParseTreeSequenceNode):
         result = self.evaluationContext.context.coreTypes.voidValue
         for element in node.elements:
             result = self.visitNode(element)
         return result
-
-    def visitSpliceNode(self, node):
-        assert False
 
     def visitRuntimeErrorNode(self, node):
         assert False
@@ -174,7 +179,15 @@ class AnalysisAndEvaluationPass(ParseTreeVisitor):
             return initialValue
 
     def visitIfSelectionNode(self, node: ParseTreeIfSelectionNode):
-        assert False
+        condition = self.visitBooleanNode(node.condition)
+        if condition:
+            if node.trueExpression is None:
+                return self.evaluationContext.context.coreTypes.voidValue
+            return self.visitNode(node.trueExpression)
+        else:
+            if node.falseExpression is None:
+                return self.evaluationContext.context.coreTypes.voidValue
+            return self.visitNode(node.falseExpression)
 
     def visitSwitchSelectionNode(self, node):
         assert False
@@ -183,10 +196,18 @@ class AnalysisAndEvaluationPass(ParseTreeVisitor):
         assert False
 
     def visitWhileDoNode(self, node: ParseTreeWhileDoNode):
-        assert False
+        while self.visitBooleanNode(node.condition):
+            self.visitOptionalNode(node.bodyExpression)
+            self.visitOptionalNode(node.continueExpression)
+        return self.evaluationContext.context.coreTypes.voidValue
 
     def visitDoWhileNode(self, node: ParseTreeDoWhileNode):
-        assert False
+        while True:
+            self.visitOptionalNode(node.bodyExpression)
+            self.visitOptionalNode(node.continueExpression)
+            if not self.visitBooleanCondition(node.condition):
+                break
+        return self.evaluationContext.context.coreTypes.voidValue
 
     def visitNamespaceNode(self, node: ParseTreeNamespaceNode):
         assert False

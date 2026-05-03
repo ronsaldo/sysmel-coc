@@ -123,6 +123,9 @@ class HIRValue(ABC):
     def isNilConstant(self):
         return False
 
+    def isParseTreeConstant(self):
+        return False
+
     def evaluateInActivationContext(self, context):
         raise RuntimeError("%s evaluateInActivationContext subclassResponsibility" % str(self.__class__))
     
@@ -369,6 +372,17 @@ class HIRConstantLiteralNilValue(HIRConstantLiteralValue):
 
     def __str__(self):
         return 'nil'
+
+class HIRConstantLiteralParseTree(HIRConstantLiteralValue):
+    def __init__(self, value: ParseTreeNode, type: HIRType, sourcePosition):
+        super().__init__(type, sourcePosition)
+        self.value = value
+
+    def isParseTreeConstant(self):
+        return True
+
+    def __str__(self):
+        return 'parseTreeConstant(%s)' % str(self.value)
 
 class HIRMutableValueBox(HIRValue):
     def __init__(self, type, initialValue, sourcePosition):
@@ -857,6 +871,7 @@ class HIRCoreTypes:
         self.voidType      = HIRVoidType('Void', self, None);
 
         self.packageType = HIRNominalType('Package', self, None)
+        self.parseTreeNodeType = HIRNominalType('ParseTreeNode', self, None)
         self.primitiveMacroType = HIRNominalType('PrimitiveMacro', self, None)
 
         self.prop = HIRUniverseType('Prop', self, 0);
@@ -884,6 +899,7 @@ class HIRCoreTypes:
             self.voidType,
 
             self.packageType,
+            self.parseTreeNodeType,
             self.primitiveMacroType,
 
             self.prop,

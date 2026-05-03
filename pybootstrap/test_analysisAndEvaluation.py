@@ -88,3 +88,25 @@ class TestAnalysisAndEvaluation(unittest.TestCase):
         topLevelResult = self.evaluateTopLevelSourceString('let: #x mutableWith: 42. x := 5. x')
         self.assertTrue(topLevelResult.isIntegerConstant())
         self.assertEqual(topLevelResult.value, 5)
+
+    def testIfThenElseMacro(self):
+        topLevelResult = self.evaluateTopLevelSourceString('if: true then: 1 else: 2')
+        self.assertTrue(topLevelResult.isIntegerConstant())
+        self.assertEqual(topLevelResult.value, 1)
+
+        topLevelResult = self.evaluateTopLevelSourceString('if: false then: 1 else: 2')
+        self.assertTrue(topLevelResult.isIntegerConstant())
+        self.assertEqual(topLevelResult.value, 2)
+
+    def testIfThenMacro(self):
+        topLevelResult = self.evaluateTopLevelSourceString('if: true then: 1')
+        self.assertTrue(topLevelResult.isIntegerConstant())
+        self.assertEqual(topLevelResult.value, 1)
+
+    def testWhileDoMacro(self):
+        topLevelResult = self.evaluateTopLevelSourceString('while: false do: {}')
+        self.assertTrue(topLevelResult.isVoidConstant())
+
+    def testQuote(self):
+        topLevelResult = self.evaluateTopLevelSourceString("`'42")
+        self.assertTrue(topLevelResult.isParseTreeConstant())
