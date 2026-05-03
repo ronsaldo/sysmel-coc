@@ -51,6 +51,12 @@ class AnalysisAndBuildPass(ParseTreeVisitor):
             return None
         return self.evaluateSymbolNode(symbolNode)
     
+    def evaluateTypeExpression(self, symbolNode: ParseTreeNode):
+        typeValue = self.visitDecayedNode(symbolNode)
+        if not typeValue.isType():
+            raise RuntimeError("%s: expected a type expression." % str(symbolNode.sourcePosition))
+        return typeValue
+
     def visitErrorNode(self, node):
         assert False
 
@@ -78,12 +84,6 @@ class AnalysisAndBuildPass(ParseTreeVisitor):
         assert False
 
     def visitFunctionNode(self, node):
-        assert False
-
-    def visitMethodNode(self, node):
-        assert False
-
-    def visitTemplateNode(self, node):
         assert False
 
     def visitCascadeMessageNode(self, node):

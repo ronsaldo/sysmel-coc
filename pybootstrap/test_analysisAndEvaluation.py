@@ -210,3 +210,21 @@ class TestAnalysisAndEvaluation(unittest.TestCase):
         value = self.evaluateTopLevelSourceString('1.0 + 2.0; yourself')
         self.assertTrue(value.isFloatConstant())
         self.assertEqual(1.0, value.value)
+
+    def testFunctionType(self):
+        value = self.evaluateTopLevelSourceString('{:(Integer)x :: Integer}')
+        self.assertTrue(value.isDependentFunctionType())
+        self.assertEqual(len(value.arguments), 1)
+        self.assertEqual(value.arguments[0].name, 'x')
+        self.assertEqual(value.arguments[0].type, self.context.coreTypes.integerType)
+        self.assertEqual(value.resultType, self.context.coreTypes.integerType)
+
+        simplifiedType = value.asSimplifiedType()
+        self.assertTrue(simplifiedType.isSimpleFunctionType())
+        self.assertEqual(len(simplifiedType.argumentTypes), 1)
+        self.assertEqual(simplifiedType.argumentTypes[0], self.context.coreTypes.integerType)
+        self.assertEqual(simplifiedType.resultType, self.context.coreTypes.integerType)
+
+    def testFunction(self):
+        #value = self.evaluateTopLevelSourceString('{:(Integer)x :: Integer | x}')
+        pass

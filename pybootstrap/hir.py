@@ -150,6 +150,10 @@ class HIRValue(ABC):
     def getValueInEvaluationContext(self, context):
         raise RuntimeError("%s getValueInEvaluationContext subclassResponsibility" % str(self.__class__))
 
+    def markDependentUsage(self):
+        # By default do nothing
+        pass
+
 class HIRType(HIRValue):
     def __init__(self, coreTypes, sourcePosition):
         super().__init__(sourcePosition)
@@ -361,6 +365,22 @@ class HIRDependentFunctionType(HIRType):
 
     def isDependentFunctionType(self):
         return True
+    
+    def canSimplify(self):
+        for argument in self.arguments:
+            if argument.hasDependentUser:
+                return False
+        return True
+    
+    def asSimplifiedType(self):
+        if not self.canSimplify():
+            return self
+        
+        argumentTypes = []
+        for argument in self.arguments:
+            argumentTypes.append(argument.type)
+        
+        return HIRSimpleFunctionType(argumentTypes, self.resultType, self.coreTypes, self.sourcePosition)
     
 class HIRConstant(HIRValue):
     def __init__(self, sourcePosition):
@@ -713,12 +733,21 @@ class HIRFunctionLocalValue(HIRValue):
         return context.instructionValues[self.index]
     
 class HIRArgument(HIRFunctionLocalValue):
+    def __init__(self, type, name = None, sourcePosition=None):
+        super().__init__(type, name, sourcePosition)
+        self.hasDependentUser = False
+        self.isSelf = False
+
     def fullPrintString(self) -> str:
         return '%d|%s := argument' %(self.index, str(self.name))
 
     def evaluateInActivationContext(self, context):
         # Nothing is required here
         pass
+    
+    def markDependentUsage(self):
+        self.hasDependentUser = True
+
 
 class HIRCapture(HIRFunctionLocalValue):
     def fullPrintString(self) -> str:
@@ -1007,6 +1036,17 @@ class HIRLexicalEnvironment(HIREnvironment):
     def lookSymbolRecursively(self, symbol):
         if symbol in self.symbolTable:
             return self.symbolTable[symbol]
+        return self.parent.lookSymbolRecursively(symbol)
+
+class HIRDependentFunctionTypeAnalysisEnvironment(HIRLexicalEnvironment):
+    def __init__(self, parent):
+        super().__init__(parent)
+
+    def lookSymbolRecursively(self, symbol):
+        if symbol in self.symbolTable:
+            binding = self.symbolTable[symbol]
+            binding.markDependentUsage()
+            return binding
         return self.parent.lookSymbolRecursively(symbol)
 
 class HIRCoreTypes:

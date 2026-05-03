@@ -115,14 +115,6 @@ class ParseTreeVisitor(ABC):
         pass
 
     @abstractmethod
-    def visitMethodNode(self, node):
-        pass
-
-    @abstractmethod
-    def visitTemplateNode(self, node):
-        pass
-
-    @abstractmethod
     def visitCascadeMessageNode(self, node):
         pass
 
@@ -522,34 +514,6 @@ class ParseTreeFunctionNode(ParseTreeNode):
         return visitor.visitFunctionNode(self)
 
     def isFunctionNode(self) -> bool:
-        return True
-
-class ParseTreeMethodNode(ParseTreeNode):
-    def __init__(self, sourcePosition: SourcePosition, selectorExpression: ParseTreeNode, argumentDefinitions: list[ParseTreeNode], resultTypeExpression: ParseTreeNode, body: ParseTreeNode) -> None:
-        super().__init__(sourcePosition)
-        self.selectorExpression = selectorExpression
-        self.argumentDefinitions = argumentDefinitions
-        self.resultTypeExpression = resultTypeExpression
-        self.body = body
-    
-    def accept(self, visitor: ParseTreeVisitor):
-        return visitor.visitMethodNode(self)
-
-    def isMethodNode(self) -> bool:
-        return True
-
-class ParseTreeTemplateNode(ParseTreeNode):
-    def __init__(self, sourcePosition: SourcePosition, nameExpression: ParseTreeNode, argumentDefinitions: list[ParseTreeNode], body: ParseTreeNode, isPublic: bool) -> None:
-        super().__init__(sourcePosition)
-        self.nameExpression = nameExpression
-        self.argumentDefinitions = argumentDefinitions
-        self.body = body
-        self.isPublic = isPublic
-    
-    def accept(self, visitor: ParseTreeVisitor):
-        return visitor.visitTemplateNode(self)
-
-    def isTemplateNode(self) -> bool:
         return True
     
 class ParseTreeCascadedMessageNode(ParseTreeNode):
@@ -968,22 +932,12 @@ class ParseTreeSequentialVisitor(ParseTreeVisitor):
         self.visitNode(node.functionType)
         self.visitNode(node.body)
 
-    def visitMethodNode(self, node: ParseTreeMethodNode):
-        self.visitNodes(node.argumentDefinitions)
-        self.visitOptionalNode(node.resultTypeExpression)
-        self.visitNode(node.body)
-
-    def visitTemplateNode(self, node: ParseTreeTemplateNode):
-        self.visitNodes(node.argumentDefinitions)
-        self.visitNode(node.body)
-
     def visitCascadeMessageNode(self, node: ParseTreeCascadedMessageNode):
         self.visitNode(node.selector)
         self.visitNodes(node.arguments)
 
     def visitDictionaryNode(self, node: ParseTreeDictionaryNode):
         self.visitNodes(node.elements)
-
 
     def visitIdentifierReferenceNode(self, node: ParseTreeIdentifierReferenceNode):
         pass
