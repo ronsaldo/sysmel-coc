@@ -23,7 +23,8 @@ class HIRTest(unittest.TestCase):
         builder = HIRBuilder(identity, self.context, entryBlock, HIREmptyEnvironment())
         builder.returnValue(argument, None)
 
-        print(identity.fullPrintString())
+        result = identity.evaluateWithArguments([HIRConstantLiteralIntegerValue(42, self.context.coreTypes.integerType, None)])
+        self.assertEqual(result.value, 42)
 
 if __name__ == '__main__':
     unittest.main()

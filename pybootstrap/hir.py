@@ -40,6 +40,12 @@ class HIRValue(ABC):
     def isSimpleFunctionType(self):
         return False
 
+    def evaluateInActivationContext(self, context):
+        raise RuntimeError("%s evaluateInActivationContext subclassResponsibility" % str(self.__class__))
+    
+    def getValueInEvaluationContext(self, context):
+        raise RuntimeError("%s getValueInEvaluationContext subclassResponsibility" % str(self.__class__))
+
 class HIRType(HIRValue):
     def __init__(self, coreTypes, sourcePosition):
         super().__init__(sourcePosition)
@@ -47,7 +53,10 @@ class HIRType(HIRValue):
 
     def getType(self):
         return self.coreTypes.getUniverseAtLevel(0)
-    
+
+    def getValueInEvaluationContext(self, context):
+        return self
+
     def isType(self):
         return True
 
@@ -127,6 +136,9 @@ class HIRDependentFunctionType(HIRType):
 class HIRConstant(HIRValue):
     def __init__(self, sourcePosition):
         super().__init__(sourcePosition)
+
+    def getValueInEvaluationContext(self, context):
+        return self
 
 class HIRConstantLiteralValue(HIRConstant):
     def __init__(self, type: HIRType, sourcePosition):
@@ -241,6 +253,59 @@ class HIRFunction(HIRConstant):
         result += "}\n"
         return result
 
+    def evaluateWithArgumentsAndCaptures(self, arguments, captures):
+        self.enumerateInstruction()
+        activationContext = HIRFunctionActivationContext(self.enumeratedInstructions, self.dependentFunctionType.coreTypes, self.sourcePosition)
+        activationContext.setCallArgumentsAndCaptures(arguments, captures)
+        activationContext.evaluateInstructions()
+        return activationContext.returnValue
+
+    def evaluateWithArguments(self, arguments):
+        return self.evaluateWithArgumentsAndCaptures(arguments, [])
+
+class HIRFunctionActivationContext:
+    def __init__(self, instructions, coreTypes, sourcePosition):
+        self.coreTypes = coreTypes
+        self.sourcePosition = sourcePosition
+        self.instructionPC = 0
+        self.pc = 0
+
+        self.instructions = instructions
+        self.instructionValues = [coreTypes.voidValue]*len(self.instructions)
+
+        self.returnValue = None
+
+    def atPCSetValue(self, valuePC, value):
+        self.instructionValues[valuePC] = value
+
+    def setCallArgumentsAndCaptures(self, argumentValues, captureValues):
+        ## Arguments
+        for i in range(len(argumentValues)):
+            self.instructionValues[i] = argumentValues[i]
+        
+        ## Captures
+        for i in range(len(captureValues)):
+            self.instructionValues[len(argumentValues) + i] = captureValues[i]
+
+    def setCurrentInstructionValue(self, valueToSet):
+        self.instructionValues[self.instructionPC] = valueToSet
+
+    def evaluateInstructions(self):
+        instructionCount = len(self.instructions)
+        while self.pc < instructionCount:
+            # Fetch the instruction
+            self.instructionPC = self.pc
+            self.pc = self.pc + 1
+            instruction = self.instructions[self.instructionPC]
+
+            # Evaluate the instruction
+            instruction.evaluateInActivationContext(self)
+
+            if self.returnValue is not None:
+                return self.returnValue
+
+        raise RuntimeError("Reached the end of a function instructions")
+
 class HIRFunctionLocalValue(HIRValue):
     def __init__(self, type, name: str = None, sourcePosition = None):
         super().__init__(sourcePosition)
@@ -254,14 +319,24 @@ class HIRFunctionLocalValue(HIRValue):
     def getType(self):
         return self.type
 
-
+    def getValueInEvaluationContext(self, context):
+        return context.instructionValues[self.index]
+    
 class HIRArgument(HIRFunctionLocalValue):
     def fullPrintString(self) -> str:
         return '%d|%s := argument' %(self.index, str(self.name))
 
+    def evaluateInActivationContext(self, context):
+        # Nothing is required here
+        pass
+
 class HIRCapture(HIRFunctionLocalValue):
     def fullPrintString(self) -> str:
         return '%d|%s := capture' %(self.index, str(self.name))
+
+    def evaluateInActivationContext(self, context):
+        # Nothing is required here
+        pass
 
 class HIRBasicBlock(HIRFunctionLocalValue):
     def __init__(self, name = None, sourcePosition=None):
@@ -292,19 +367,44 @@ class HIRBasicBlock(HIRFunctionLocalValue):
         result += '\n'
         return result
 
+    def evaluateInActivationContext(self, context):
+        # Nothing is required here
+        pass
+
 class HIRInstruction(HIRFunctionLocalValue):
     def __init__(self, type, name = None, sourcePosition=None):
         super().__init__(type, name, sourcePosition)
         self.previousInstruction = None
         self.nextInstruction = None
 
+    def isTerminator(self):
+        return False
+
 class HIRReturnInstruction(HIRInstruction):
     def __init__(self, valueToReturn, type, name=None, sourcePosition=None):
         super().__init__(type, name, sourcePosition)
         self.valueToReturn = valueToReturn
-    
+
+    def isTerminator(self):
+        return True
+
     def fullPrintString(self) -> str:
         return "return " + str(self.valueToReturn)
+
+    def evaluateInActivationContext(self, context):
+        returnValue = self.valueToReturn.getValueInEvaluationContext(context)
+        context.returnValue = returnValue
+
+
+class HIRUnreachable(HIRInstruction):
+    def __init__(self, type, name=None, sourcePosition=None):
+        super().__init__(type, name, sourcePosition)
+
+    def isTerminator(self):
+        return True
+
+    def fullPrintString(self) -> str:
+        return "unreachable"
 
 class HIRPackage(HIRValue):
     def __init__(self, name: str):
@@ -435,5 +535,10 @@ class HIRBuilder:
 
     def returnValue(self, valueToReturn, sourcePosition):
         instruction = HIRReturnInstruction(valueToReturn, self.context.coreTypes.voidType, None, sourcePosition)
+        self.addInstruction(instruction)
+        return instruction
+    
+    def unreachable(self, valueToReturn, sourcePosition):
+        instruction = HIRUnreachable(self.context.coreTypes.voidType, None, sourcePosition)
         self.addInstruction(instruction)
         return instruction
