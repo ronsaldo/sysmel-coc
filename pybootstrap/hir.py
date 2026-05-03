@@ -1,5 +1,6 @@
 from parsetree import *
 from abc import ABC, abstractmethod
+import math
 
 class HIRVisitor(ABC):
     def visitValue(self, value):
@@ -1014,6 +1015,7 @@ class HIRCoreTypes:
 
     def createCorePrimitiveFunctions(self):
         self.createIntegerPrimitiveFunctions()
+        self.createFloatPrimitiveFunctions()
 
     def getBooleanConstant(self, value):
         if value:
@@ -1086,6 +1088,72 @@ class HIRCoreTypes:
         self.integerType.withSelectorAddMethod('<=', HIRPrimitiveFunction('Integer::<=', self.getOrCreateSimpleFunctionType((self.integerType, self.integerType), self.booleanType), integerLessOrEquals, None, isPure = True, isCompileTime = True))
         self.integerType.withSelectorAddMethod('>',  HIRPrimitiveFunction('Integer::>',  self.getOrCreateSimpleFunctionType((self.integerType, self.integerType), self.booleanType), integerGreaterThan, None, isPure = True, isCompileTime = True))
         self.integerType.withSelectorAddMethod('>=', HIRPrimitiveFunction('Integer::>=', self.getOrCreateSimpleFunctionType((self.integerType, self.integerType), self.booleanType), integerGreaterOrEquals, None, isPure = True, isCompileTime = True))
+
+    def createFloatPrimitiveFunctions(self):
+        def floatNegated(operand, resultType):
+            assert operand.isFloatConstant()
+            return HIRConstantLiteralFloatValue(-operand.value, resultType, None)
+        def floatSqrt(operand, resultType):
+            assert operand.isFloatConstant()
+            return HIRConstantLiteralFloatValue(math.sqrt(operand.value), resultType, None)
+        
+        def floatAdd(leftOperand, rightOperand, resultType):
+            assert leftOperand.isFloatConstant()
+            assert rightOperand.isFloatConstant()
+            return HIRConstantLiteralFloatValue(leftOperand.value + rightOperand.value, resultType, None)
+        def floatSubtract(leftOperand, rightOperand, resultType):
+            assert leftOperand.isFloatConstant()
+            assert rightOperand.isFloatConstant()
+            return HIRConstantLiteralFloatValue(leftOperand.value - rightOperand.value, resultType, None)
+        def floatMultiply(leftOperand, rightOperand, resultType):
+            assert leftOperand.isFloatConstant()
+            assert rightOperand.isFloatConstant()
+            return HIRConstantLiteralFloatValue(leftOperand.value * rightOperand.value, resultType, None)
+        def floatDivide(leftOperand, rightOperand, resultType):
+            assert leftOperand.isFloatConstant()
+            assert rightOperand.isFloatConstant()
+            return HIRConstantLiteralFloatValue(leftOperand.value // rightOperand.value, resultType, None)
+
+        def floatEquals(leftOperand, rightOperand, resultType):
+            assert leftOperand.isFloatConstant()
+            assert rightOperand.isFloatConstant()
+            return self.getBooleanConstant(leftOperand.value == rightOperand.value)
+        def floatNotEquals(leftOperand, rightOperand, resultType):
+            assert leftOperand.isFloatConstant()
+            assert rightOperand.isFloatConstant()
+            return self.getBooleanConstant(leftOperand.value != rightOperand.value)
+
+        def floatLessThan(leftOperand, rightOperand, resultType):
+            assert leftOperand.isFloatConstant()
+            assert rightOperand.isFloatConstant()
+            return self.getBooleanConstant(leftOperand.value < rightOperand.value)
+        def floatLessOrEquals(leftOperand, rightOperand, resultType):
+            assert leftOperand.isFloatConstant()
+            assert rightOperand.isFloatConstant()
+            return self.getBooleanConstant(leftOperand.value <= rightOperand.value)
+        def floatGreaterThan(leftOperand, rightOperand, resultType):
+            assert leftOperand.isFloatConstant()
+            assert rightOperand.isFloatConstant()
+            return self.getBooleanConstant(leftOperand.value > rightOperand.value)
+        def floatGreaterOrEquals(leftOperand, rightOperand, resultType):
+            assert leftOperand.isFloatConstant()
+            assert rightOperand.isFloatConstant()
+            return self.getBooleanConstant(leftOperand.value >= rightOperand.value)
+
+        self.floatType.withSelectorAddMethod('negated', HIRPrimitiveFunction('Float::negated', self.getOrCreateSimpleFunctionType((self.floatType,), self.floatType), floatNegated, None, isPure = True, isCompileTime = True))
+        self.floatType.withSelectorAddMethod('sqrt',    HIRPrimitiveFunction('Float::sqrt', self.getOrCreateSimpleFunctionType((self.floatType,), self.floatType),    floatSqrt, None, isPure = True, isCompileTime = True))
+
+        self.floatType.withSelectorAddMethod('+', HIRPrimitiveFunction('Float::+', self.getOrCreateSimpleFunctionType((self.floatType, self.floatType), self.floatType), floatAdd, None, isPure = True, isCompileTime = True))
+        self.floatType.withSelectorAddMethod('-', HIRPrimitiveFunction('Float::-', self.getOrCreateSimpleFunctionType((self.floatType, self.floatType), self.floatType), floatSubtract, None, isPure = True, isCompileTime = True))
+        self.floatType.withSelectorAddMethod('*', HIRPrimitiveFunction('Float::*', self.getOrCreateSimpleFunctionType((self.floatType, self.floatType), self.floatType), floatMultiply, None, isPure = True, isCompileTime = True))
+        self.floatType.withSelectorAddMethod('/', HIRPrimitiveFunction('Float::/', self.getOrCreateSimpleFunctionType((self.floatType, self.floatType), self.floatType), floatDivide, None, isPure = True, isCompileTime = True))
+
+        self.floatType.withSelectorAddMethod('=',  HIRPrimitiveFunction('Float::=',  self.getOrCreateSimpleFunctionType((self.floatType, self.floatType), self.booleanType), floatEquals, None, isPure = True, isCompileTime = True))
+        self.floatType.withSelectorAddMethod('~=', HIRPrimitiveFunction('Float::~=', self.getOrCreateSimpleFunctionType((self.floatType, self.floatType), self.booleanType), floatNotEquals, None, isPure = True, isCompileTime = True))
+        self.floatType.withSelectorAddMethod('<',  HIRPrimitiveFunction('Float::<',  self.getOrCreateSimpleFunctionType((self.floatType, self.floatType), self.booleanType), floatLessThan, None, isPure = True, isCompileTime = True))
+        self.floatType.withSelectorAddMethod('<=', HIRPrimitiveFunction('Float::<=', self.getOrCreateSimpleFunctionType((self.floatType, self.floatType), self.booleanType), floatLessOrEquals, None, isPure = True, isCompileTime = True))
+        self.floatType.withSelectorAddMethod('>',  HIRPrimitiveFunction('Float::>',  self.getOrCreateSimpleFunctionType((self.floatType, self.floatType), self.booleanType), floatGreaterThan, None, isPure = True, isCompileTime = True))
+        self.floatType.withSelectorAddMethod('>=', HIRPrimitiveFunction('Float::>=', self.getOrCreateSimpleFunctionType((self.floatType, self.floatType), self.booleanType), floatGreaterOrEquals, None, isPure = True, isCompileTime = True))
 
     def getOrCreateSimpleFunctionType(self, argumentTypes, resultType):
         return HIRSimpleFunctionType(argumentTypes, resultType, self, None)

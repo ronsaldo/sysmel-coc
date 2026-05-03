@@ -156,3 +156,28 @@ class TestAnalysisAndEvaluation(unittest.TestCase):
         value = self.evaluateTopLevelSourceString('1 >= 2')
         self.assertTrue(value.isBooleanConstant())
         self.assertEqual(False, value.value)
+
+    def testMessageSend3(self):
+        value = self.evaluateTopLevelSourceString('1.0 + 2.0')
+        self.assertTrue(value.isFloatConstant())
+        self.assertEqual(3, value.value)
+
+        value = self.evaluateTopLevelSourceString('1.0 - 2.0')
+        self.assertTrue(value.isFloatConstant())
+        self.assertEqual(-1, value.value)
+
+        value = self.evaluateTopLevelSourceString('2.0 * 3.0')
+        self.assertTrue(value.isFloatConstant())
+        self.assertEqual(6, value.value)
+
+        value = self.evaluateTopLevelSourceString('6.0 / 3.0')
+        self.assertTrue(value.isFloatConstant())
+        self.assertEqual(2, value.value)
+
+        value = self.evaluateTopLevelSourceString('2.0 = 2.0')
+        self.assertTrue(value.isBooleanConstant())
+        self.assertEqual(True, value.value)
+
+        value = self.evaluateTopLevelSourceString('2.0 ~= 2.0')
+        self.assertTrue(value.isBooleanConstant())
+        self.assertEqual(False, value.value)
