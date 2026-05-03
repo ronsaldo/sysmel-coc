@@ -227,3 +227,17 @@ class TestAnalysisAndBuild(unittest.TestCase):
         value = self.evaluateTopLevelFunctionSourceString('1.0 + 2.0; yourself')
         self.assertTrue(value.isFloatConstant())
         self.assertEqual(1.0, value.value)
+
+    def testAssociationType(self):
+        type = self.evaluateTopLevelFunctionSourceString('Symbol : Integer')
+        self.assertTrue(type.isAssociationType())
+        self.assertEqual(type.keyType, self.context.coreTypes.symbolType)
+        self.assertEqual(type.valueType, self.context.coreTypes.integerType)
+
+    def testAssociation(self):
+        association = self.evaluateTopLevelFunctionSourceString('#first : 1')
+        self.assertTrue(association.key.isSymbolConstant())
+        self.assertEqual(association.key.value, 'first')
+
+        self.assertTrue(association.value.isIntegerConstant())
+        self.assertEqual(association.value.value, 1)

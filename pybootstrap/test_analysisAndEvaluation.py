@@ -240,5 +240,19 @@ class TestAnalysisAndEvaluation(unittest.TestCase):
         self.assertTrue(result.isIntegerConstant())
         self.assertEqual(result.value, -42)
 
+    def testAssociationType(self):
+        type = self.evaluateTopLevelSourceString('Symbol : Integer')
+        self.assertTrue(type.isAssociationType())
+        self.assertEqual(type.keyType, self.context.coreTypes.symbolType)
+        self.assertEqual(type.valueType, self.context.coreTypes.integerType)
+
+    def testAssociation(self):
+        association = self.evaluateTopLevelSourceString('#first : 1')
+        self.assertTrue(association.key.isSymbolConstant())
+        self.assertEqual(association.key.value, 'first')
+
+        self.assertTrue(association.value.isIntegerConstant())
+        self.assertEqual(association.value.value, 1)
+
 if __name__ == '__main__':
     unittest.main()

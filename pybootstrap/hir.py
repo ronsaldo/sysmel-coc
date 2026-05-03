@@ -143,6 +143,12 @@ class HIRValue(ABC):
 
     def isParseTreeConstant(self):
         return False
+    
+    def isAssociationConstant(self):
+        return False
+
+    def isTupleConstant(self):
+        return False
 
     def evaluateInActivationContext(self, context):
         raise RuntimeError("%s evaluateInActivationContext subclassResponsibility" % str(self.__class__))
@@ -288,6 +294,9 @@ class HIRAssociationType(HIRType):
     def isAssociationType(self):
         return True    
 
+    def __str__(self):
+        return '(%s : %s)' % (self.keyType, self.valueType)
+
 class HIRTupleType(HIRType):
     def __init__(self, elements: list[HIRType], coreTypes, sourcePosition = None):
         super().__init__(coreTypes, sourcePosition)
@@ -295,6 +304,14 @@ class HIRTupleType(HIRType):
 
     def isTupleType(self):
         return True
+
+    def __str__(self):
+        result = '('
+        for element in self.elements:
+            result += str(element)
+            result += ', '
+        result += ')'
+        return result
 
 class HIRDerivedType(HIRType):
     def __init__(self, baseType, coreTypes, sourcePosition):
@@ -457,6 +474,9 @@ class HIRConstantLiteralSymbolValue(HIRConstantLiteralValue):
         super().__init__(type, sourcePosition)
         self.value = value
 
+    def __repr__(self):
+        return 'symbol #"%s"' % self.value
+    
     def isSymbolConstant(self):
         return True
 
@@ -490,6 +510,22 @@ class HIRConstantLiteralParseTree(HIRConstantLiteralValue):
 
     def __str__(self):
         return 'parseTreeConstant(%s)' % str(self.value)
+
+class HIRConstantAssociation(HIRConstant):
+    def __init__(self, key, value, type, sourcePosition):
+        super().__init__(sourcePosition)
+        self.key = key
+        self.value = value
+        self.type = type
+
+    def getType(self):
+        return self.type
+    
+    def isAssociationConstant(self):
+        return True
+
+    def __str__(self):
+        return 'association(%s : %s)' % (str(self.key), str(self.value))
 
 class HIRMutableValueBox(HIRValue):
     def __init__(self, type, initialValue, sourcePosition):
@@ -950,6 +986,26 @@ class HIRCallInstruction(HIRInstruction):
         simplified = self.functional.evaluateWithArgumentsAndResultType(self.arguments, self.type)
         return simplified
 
+class HIRMakeAssociationInstruction(HIRInstruction):
+    def __init__(self, key: HIRValue, value: HIRValue, type, name=None, sourcePosition=None):
+        super().__init__(type, name, sourcePosition)
+        self.key = key
+        self.value = value
+
+    def evaluateInActivationContext(self, context):
+        key = self.key.getValueInEvaluationContext(context)
+        value = self.value.getValueInEvaluationContext(context)
+        association = HIRConstantAssociation(key, value, self.type, self.sourcePosition)
+        context.setCurrentInstructionValue(association)
+
+    def fullPrintString(self):
+        return "%s := makeAssociation %s with %s :: %s" % (str(self), str(self.key), str(self.value), str(self.type))
+
+    def simplifyWithBuilder(self, builder):
+        if self.key.isConstantValue() and self.value.isConstantValue():
+            return HIRConstantAssociation(self.key, self.value, self.type, self.sourcePosition)
+        return self
+
 class HIRPhiInstrucion(HIRInstruction):
     def __init__(self, type, name=None, sourcePosition=None):
         super().__init__(type, name, sourcePosition)
@@ -1396,6 +1452,9 @@ class HIRContext:
 
         return builder
 
+    def getOrCreateAssociationType(self, keyType, valueType):
+        return HIRAssociationType(keyType, valueType, self.coreTypes, None)
+
     def getOrCreatePointerType(self, baseType):
         return HIRPointerType(baseType, self.coreTypes, None)
 
@@ -1489,7 +1548,14 @@ class HIRBuilder:
         instruction = HIRStoreInstruction(self.context.coreTypes.voidType, storage, valueToStore, None, sourcePosition)
         self.addInstruction(instruction)
         return instruction
-    
+
+    def makeAssociation(self, key, value, type, sourcePosition):
+        instruction = HIRMakeAssociationInstruction(key, value,type, None, sourcePosition)
+        simplified = instruction.simplifyWithBuilder(self)
+        if instruction == simplified:
+            self.addInstruction(instruction)
+        return simplified
+
     def phi(self, type, sourcePosition):
         instruction = HIRPhiInstrucion(type, None, sourcePosition)
         self.addInstruction(instruction)

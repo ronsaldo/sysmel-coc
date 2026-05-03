@@ -63,8 +63,19 @@ class AnalysisAndEvaluationPass(ParseTreeVisitor):
         storeValue = self.visitNode(node.store)
         return storeValue.analyzeAndEvaluateAssignment(self, node)
 
-    def visitAssociationNode(self, node):
-        assert False
+    def visitAssociationNode(self, node: ParseTreeAssociationNode):
+        key = self.visitDecayedNode(node.key)
+        value = self.evaluationContext.context.coreTypes.nilValue
+        if node.value is not None:
+            value = self.visitDecayedNode(node.value)
+
+        if key.isType() and value.isType():
+            return self.evaluationContext.context.getOrCreateAssociationType(key, value)
+
+        keyType = key.getType()
+        valueType = value.getType()
+        associationType = self.evaluationContext.context.getOrCreateAssociationType(keyType, valueType)
+        return HIRConstantAssociation(key, value, associationType, node.sourcePosition)
 
     def visitBinaryExpressionSequenceNode(self, node: ParseTreeBinaryExpressionSequenceNode):
         expandedMessageSend = node.expandAsMessageSends()
@@ -104,10 +115,10 @@ class AnalysisAndEvaluationPass(ParseTreeVisitor):
 
         return function
 
-    def visitCascadeMessageNode(self, node):
+    def visitCascadeMessageNode(self, node: ParseTreeCascadedMessageNode):
         assert False
 
-    def visitDictionaryNode(self, node):
+    def visitDictionaryNode(self, node: ParseTreeDictionaryNode):
         assert False
 
     def visitIdentifierReferenceNode(self, node: ParseTreeIdentifierReferenceNode):

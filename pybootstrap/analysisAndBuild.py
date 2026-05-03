@@ -74,8 +74,19 @@ class AnalysisAndBuildPass(ParseTreeVisitor):
         storeValue = self.visitNode(node.store)
         return storeValue.analyzeAndBuildAssignment(self, node)
 
-    def visitAssociationNode(self, node):
-        assert False
+    def visitAssociationNode(self, node: ParseTreeAssociationNode):
+        key = self.visitDecayedNode(node.key)
+        value = self.builder.context.coreTypes.nilValue
+        if node.value is not None:
+            value = self.visitDecayedNode(node.value)
+
+        if key.isType() and value.isType():
+            return self.builder.context.getOrCreateAssociationType(key, value)
+
+        keyType = key.getType()
+        valueType = value.getType()
+        associationType = self.builder.context.getOrCreateAssociationType(keyType, valueType)
+        return self.builder.makeAssociation(key, value, associationType, node.sourcePosition)
 
     def visitBinaryExpressionSequenceNode(self, node: ParseTreeBinaryExpressionSequenceNode):
         return self.visitNode(node.expandAsMessageSends())
