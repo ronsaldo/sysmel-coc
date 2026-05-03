@@ -28,6 +28,18 @@ class HIRValue(ABC):
     def isUniverseType(self):
         return False
 
+    def isAssociationType(self):
+        return False
+
+    def isTupleType(self):
+        return False
+
+    def isDependentFunctionType(self):
+        return False
+
+    def isSimpleFunctionType(self):
+        return False
+
 class HIRType(HIRValue):
     def __init__(self, coreTypes, sourcePosition):
         super().__init__(sourcePosition)
@@ -75,6 +87,41 @@ class HIRUniverseType(HIRType):
         return self.coreTypes.getUniverseAtLevel(self.level + 1)
 
     def isUniverseType(self):
+        return True
+
+class HIRAssociationType(HIRType):
+    def __init__(self, keyType: HIRType, valueType: HIRType, coreTypes, sourcePosition = None):
+        super().__init__(coreTypes, sourcePosition)
+        self.keyType = keyType
+        self.valueType = valueType
+
+    def isAssociationType(self):
+        return True    
+
+class HIRTupleType(HIRType):
+    def __init__(self, elements: list[HIRType], coreTypes, sourcePosition = None):
+        super().__init__(coreTypes, sourcePosition)
+        self.elements = elements
+
+    def isTupleType(self):
+        return True
+
+class HIRSimpleFunctionType(HIRType):
+    def __init__(self, argumentTypes: HIRType, resultType: HIRType, coreTypes, sourcePosition):
+        super().__init__(coreTypes, sourcePosition)
+        self.argumentTypes = argumentTypes
+        self.resultType = resultType
+
+    def isSimpleFunctionType(self):
+        return True
+    
+class HIRDependentFunctionType(HIRType):
+    def __init__(self, arguments, resultType: HIRValue, coreTypes, sourcePosition):
+        super().__init__(coreTypes, sourcePosition)
+        self.arguments = arguments
+        self.resultType = resultType
+
+    def isDependentFunctionType(self):
         return True
     
 class HIRConstant(HIRValue):
@@ -127,6 +174,126 @@ class HIRConstantLiteralNilValue(HIRConstantLiteralValue):
     def __init__(self, type: HIRType, sourcePosition):
         super().__init__(type, sourcePosition)
 
+class HIRFunction(HIRConstant):
+    def __init__(self, name: str, dependentFunctionType: HIRDependentFunctionType, sourcePosition):
+        super().__init__(sourcePosition)
+        self.name = name
+        self.dependentFunctionType = dependentFunctionType
+        self.captures = []
+        self.firstBasicBlock = None
+        self.lastBasicBlock = None
+        self.enumeratedInstructions = None
+
+    def getType(self):
+        return self.dependentFunctionType
+    
+    def addBasicBlock(self, basicBlock):
+        if self.lastBasicBlock is None:
+            self.firstBasicBlock = self.lastBasicBlock = basicBlock
+        else:
+            basicBlock.previousBlock = self.lastBasicBlock
+            self.lastBasicBlock.nextBlock = basicBlock
+            self.lastBasicBlock = basicBlock
+
+    def enumerateInstruction(self):
+        if self.enumeratedInstructions is not None:
+            return self.enumeratedInstructions
+        
+        self.enumeratedInstructions = []
+        def addLocalValue(localValue):
+            localValue.index = len(self.enumeratedInstructions)
+            self.enumeratedInstructions.append(localValue)
+
+        for argument in self.dependentFunctionType.arguments:
+            addLocalValue(argument)
+
+        for capture in self.captures:
+            addLocalValue(capture)
+
+        basicBlock = self.firstBasicBlock
+        while basicBlock is not None:
+            addLocalValue(basicBlock)
+
+            instruction = basicBlock.firstInstruction
+            while instruction is not None:
+                addLocalValue(instruction)
+                instruction = instruction.nextInstruction
+
+            basicBlock = basicBlock.nextBlock
+
+        return self.enumeratedInstructions
+
+    def fullPrintString(self) -> str:
+        self.enumerateInstruction()
+        result = "HIRFunction "
+        if self.name is not None:
+            result += self.name
+        result += " {\n"
+
+        for argument in self.dependentFunctionType.arguments:
+            result += argument.fullPrintString() + '\n'
+        
+        basicBlock = self.firstBasicBlock
+        while basicBlock is not None:
+            result += basicBlock.fullPrintString()
+            basicBlock = basicBlock.nextBlock
+
+        result += "}\n"
+        return result
+
+class HIRFunctionLocalValue(HIRValue):
+    def __init__(self, type, name: str = None, sourcePosition = None):
+        super().__init__(sourcePosition)
+        self.type = type
+        self.name = name
+        self.index = -1
+
+    def getType(self):
+        return self.type
+
+
+class HIRArgument(HIRFunctionLocalValue):
+    def fullPrintString(self) -> str:
+        return '%d|%s := argument' %(self.index, str(self.name))
+
+class HIRCapture(HIRFunctionLocalValue):
+    def fullPrintString(self) -> str:
+        return '%d|%s := capture' %(self.index, str(self.name))
+
+class HIRBasicBlock(HIRFunctionLocalValue):
+    def __init__(self, name = None, sourcePosition=None):
+        super().__init__(None, name, sourcePosition)
+        self.previousBlock = None
+        self.nextBlock = None
+        self.firstInstruction = None
+        self.lastInstruction = None
+
+    def addInstruction(self, instruction):
+        if self.lastInstruction is None:
+            self.firstInstruction = self.lastInstruction = instruction
+        else:
+            instruction.previousInstruction = self.lastInstruction
+            self.lastInstruction.nextInstruction = instruction
+            self.lastInstruction = instruction
+
+    def fullPrintString(self) -> str:
+        result = str(self.index)
+        if self.name is not None:
+            result += '|' + self.name
+
+        instruction = self.firstInstruction
+        while instruction is not None:
+            instruction = instruction.nextInstruction
+
+        result += '\n'
+        return result
+
+class HIRInstruction(HIRFunctionLocalValue):
+    def __init__(self, type, name = None, sourcePosition=None):
+        super().__init__(type, name, sourcePosition)
+        self.previousInstruction = None
+        self.nextInstruction = None
+
 class HIRPackage(HIRValue):
     def __init__(self, name: str):
         self.name = name
@@ -140,6 +307,8 @@ class HIRPackage(HIRValue):
         for type in coreTypes.coreTypeList:
             typeName = type.getName()
             self.addSymbolWithBinding(typeName, type)
+        for value, name in coreTypes.coreValueList:
+            self.addSymbolWithBinding(name, value)
 
     def addSymbolWithBinding(self, symbol: str, binding: HIRValue):
         self.children.append(binding)
@@ -228,3 +397,7 @@ class HIRContext:
         self.corePackage = HIRPackage('CoreLib')
         self.corePackage.addCoreTypes(self.coreTypes)
         self.currentPackage = self.corePackage
+
+class HIRBuilder:
+    def __init__(self):
+        pass
