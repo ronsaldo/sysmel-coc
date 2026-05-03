@@ -382,7 +382,7 @@ class HIRCoreTypes:
             1: self.type,
         }
 
-        self.voidValue = HIRConstantLiteralVoidValue(self.booleanType, None)
+        self.voidValue = HIRConstantLiteralVoidValue(self.voidType, None)
         self.falseValue = HIRConstantLiteralBooleanValue(False, self.booleanType, None)
         self.trueValue = HIRConstantLiteralBooleanValue(True, self.booleanType, None)
         self.nilValue = HIRConstantLiteralNilValue(self.undefinedType, None)
