@@ -1,4 +1,4 @@
-from parsetree import SourcePosition
+from parsetree import *
 from abc import ABC, abstractmethod
 
 class HIRVisitor(ABC):
@@ -11,6 +11,9 @@ class HIRValue(ABC):
     
     def accept(self, visitor: HIRVisitor):
         return visitor.visitValue(self)
+    
+    def analyzeAndBuildIdentifierReferenceNode(self, analyzer, node: ParseTreeIdentifierReferenceNode):
+        return self
     
     @abstractmethod
     def getType(self):
@@ -60,7 +63,10 @@ class HIRValue(ABC):
 
     def isVoidConstant(self):
         return False
-    
+
+    def isNilConstant(self):
+        return False
+
     def evaluateInActivationContext(self, context):
         raise RuntimeError("%s evaluateInActivationContext subclassResponsibility" % str(self.__class__))
     
@@ -251,6 +257,9 @@ class HIRConstantLiteralVoidValue(HIRConstantLiteralValue):
 class HIRConstantLiteralNilValue(HIRConstantLiteralValue):
     def __init__(self, type: HIRType, sourcePosition):
         super().__init__(type, sourcePosition)
+
+    def isNilConstant(self):
+        return True
 
     def __str__(self):
         return 'nil'
@@ -533,7 +542,8 @@ class HIREnvironment:
         pass
 
 class HIREmptyEnvironment(HIREnvironment):
-    pass
+    def lookSymbolRecursively(self, symbol):
+        return None
 
 class HIRPackageEnvironment(HIREnvironment):
     def __init__(self, package, parent):
@@ -541,11 +551,23 @@ class HIRPackageEnvironment(HIREnvironment):
         self.package = package
         self.parent = parent
 
+    def lookSymbolRecursively(self, symbol):
+        packageSymbolBinding = self.package.lookupSymbolRecursivelyOrNone(symbol)
+        if packageSymbolBinding is not None:
+            return packageSymbolBinding
+
+        return self.parent.lookSymbolRecursively(symbol)
+
 class HIRLexicalEnvironment(HIREnvironment):
     def __init__(self, parent):
         super().__init__()
         self.parent = parent
         self.symbolTable = {}
+
+    def lookSymbolRecursively(self, symbol):
+        if symbol in self.symbolTable:
+            return self.symbolTable[symbol]
+        return self.parent.lookSymbolRecursively(symbol)
 
 class HIRCoreTypes:
     def __init__(self):

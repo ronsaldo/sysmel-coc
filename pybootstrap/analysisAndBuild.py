@@ -47,11 +47,23 @@ class AnalysisAndBuildPass(ParseTreeVisitor):
     def visitDictionaryNode(self, node):
         assert False
 
-    def visitIdentifierReferenceNode(self, node):
-        assert False
+    def visitIdentifierReferenceNode(self, node: ParseTreeIdentifierReferenceNode):
+        bindingOrNone = self.builder.environment.lookSymbolRecursively(node.value)
+        if bindingOrNone is None:
+            raise RuntimeError("%s: %s identifier is not found." % (str(node.sourcePosition), node.value))    
 
-    def visitLexicalBlockNode(self, node):
-        assert False
+        return bindingOrNone.analyzeAndBuildIdentifierReferenceNode(self, node)
+
+    def visitLexicalBlockNode(self, node: ParseTreeLexicalBlockNode):
+        oldLexicalEnvironment = self.builder.environment
+        childEnvironment = HIRLexicalEnvironment(oldLexicalEnvironment)
+
+        self.builder.environment = childEnvironment
+
+        result = self.visitNode(node.body)
+
+        self.builder.environment = oldLexicalEnvironment
+        return result
 
     def visitLiteralCharacterNode(self, node: ParseTreeLiteralCharacterNode):
         return self.builder.characterConstant(node.value, self.builder.context.coreTypes.characterType, node.sourcePosition)

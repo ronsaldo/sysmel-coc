@@ -60,3 +60,23 @@ class TestAnalysisAndBuild(unittest.TestCase):
         topLevelResult = self.evaluateTopLevelSourceString('#hello')
         self.assertTrue(topLevelResult.isSymbolConstant())
         self.assertEqual(topLevelResult.value, 'hello')
+
+    def testLexicalBlock(self):
+        topLevelResult = self.evaluateTopLevelSourceString('{42}')
+        self.assertTrue(topLevelResult.isIntegerConstant())
+        self.assertEqual(topLevelResult.value, 42)
+
+    def testPackageSymbols(self):
+        topLevelResult = self.evaluateTopLevelSourceString('false')
+        self.assertTrue(topLevelResult.isBooleanConstant())
+        self.assertFalse(topLevelResult.value)
+        
+        topLevelResult = self.evaluateTopLevelSourceString('true')
+        self.assertTrue(topLevelResult.isBooleanConstant())
+        self.assertTrue(topLevelResult.value)
+
+        topLevelResult = self.evaluateTopLevelSourceString('void')
+        self.assertTrue(topLevelResult.isVoidConstant())
+
+        topLevelResult = self.evaluateTopLevelSourceString('nil')
+        self.assertTrue(topLevelResult.isNilConstant())
