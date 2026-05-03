@@ -10,12 +10,44 @@ class AnalysisAndBuildPass(ParseTreeVisitor):
         value = self.visitNode(node)
         # TODO: Load references.
         return value
+
+    def castValueToExpectedType(self, value: HIRValue, expectedType: HIRType, sourcePosition: SourcePosition):
+        if expectedType is None:
+            return value
+        assert False
+        if value.getType().isControlFlowEscapeType():
+            return value
+        if value.getType().isDynamicType():
+            ## TODO: Unbox with an instruction.
+            return value
+        if expectedType.isVoidType() and not value.isVoidValue():
+            return self.builder.getVoidLiteral(sourcePosition)
+        if not expectedType.isSatisfiedByHIRValue(value):
+            raise RuntimeError("%s: expected a value of type %s instead of %s." % (str(sourcePosition), str(expectedType), str(value.getType())))
+        return value
+
+
+    def visitNodeWithExpectedType(self, node: ParseTreeNode, expectedType: HIRType):
+        decayedValue = self.visitDecayedNode(node)
+        return self.castValueToExpectedType(decayedValue, expectedType, node.sourcePosition)
+
+    def evaluateSymbolNode(self, symbolNode: ParseTreeNode):
+        symbolValue = self.visitDecayedNode(symbolNode)
+        if not symbolValue.isSymbolConstant():
+            raise RuntimeError("%s: expected a symbol value." % str(symbolNode.sourcePosition))
+        return symbolValue.value
+
+    def evaluateOptionalSymbolNode(self, symbolNode: ParseTreeNode):
+        if symbolNode is None:
+            return None
+        return self.evaluateSymbolNode(symbolNode)
     
     def visitErrorNode(self, node):
         assert False
 
-    def visitApplicationNode(self, node):
-        assert False
+    def visitApplicationNode(self, node: ParseTreeApplicationNode):
+        functional = self.visitDecayedNode(node.functional)
+        return functional.analyzeAndBuildApplicationNode(self, node, functional)
 
     def visitArgumentDefinitionNode(self, node):
         assert False
@@ -113,8 +145,23 @@ class AnalysisAndBuildPass(ParseTreeVisitor):
     def visitTupleNode(self, node):
         assert False
 
-    def visitVariableDefinitionNode(self, node):
-        assert False
+    def visitVariableDefinitionNode(self, node: ParseTreeVariableDefinitionNode):
+        name = self.evaluateOptionalSymbolNode(node.nameExpression)
+
+        typeValue = None
+        if node.typeExpression is not None:
+            typeValue = self.evaluateTypeExpression(node.typeExpression)
+
+        initialValue = self.builder.context.coreTypes.voidValue
+        if node.initialValue is not None:
+            initialValue = self.visitNodeWithExpectedType(node.initialValue, typeValue)
+
+        if node.isMutable:
+            assert False
+        else:
+            if name is not None:
+                self.builder.environment.setSymbolBinding(name, initialValue)
+            return initialValue
 
     def visitIfSelectionNode(self, node):
         assert False

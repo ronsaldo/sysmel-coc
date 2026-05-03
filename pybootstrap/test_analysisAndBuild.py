@@ -80,3 +80,12 @@ class TestAnalysisAndBuild(unittest.TestCase):
 
         topLevelResult = self.evaluateTopLevelSourceString('nil')
         self.assertTrue(topLevelResult.isNilConstant())
+
+    def testLetMacro(self):
+        topLevelResult = self.evaluateTopLevelSourceString('let: #x with: 42')
+        self.assertTrue(topLevelResult.isIntegerConstant())
+        self.assertEqual(topLevelResult.value, 42)
+
+        topLevelResult = self.evaluateTopLevelSourceString('let: #x with: 42. x')
+        self.assertTrue(topLevelResult.isIntegerConstant())
+        self.assertEqual(topLevelResult.value, 42)

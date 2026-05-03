@@ -14,7 +14,13 @@ class HIRValue(ABC):
     
     def analyzeAndBuildIdentifierReferenceNode(self, analyzer, node: ParseTreeIdentifierReferenceNode):
         return self
-    
+
+    def analyzeAndBuildApplicationNode(self, buildPass, node: ParseTreeApplicationNode, functional):
+        selfType = self.getType()
+        if selfType is None:
+            raise RuntimeError(str(node.sourcePosition) +  ": cannot analyze and build non-functional value.")
+        return selfType.analyzeAndBuildApplicationNode(buildPass, node, functional)
+
     @abstractmethod
     def getType(self):
         pass
@@ -77,6 +83,9 @@ class HIRType(HIRValue):
     def __init__(self, coreTypes, sourcePosition):
         super().__init__(sourcePosition)
         self.coreTypes = coreTypes
+
+    def analyzeAndBuildApplicationNode(self, buildPass, node: ParseTreeApplicationNode, functional):
+        raise RuntimeError(str(node.sourcePosition) +  ": cannot analyze and build non-functional value.")
 
     def getType(self):
         return self.coreTypes.getUniverseAtLevel(0)
@@ -263,6 +272,25 @@ class HIRConstantLiteralNilValue(HIRConstantLiteralValue):
 
     def __str__(self):
         return 'nil'
+
+class HIRMacroContext:
+    def __init__(self, sourcePosition: SourcePosition):
+        self.sourcePosition = sourcePosition
+
+class HIRPrimitiveMacro(HIRConstant):
+    def __init__(self, name: str, type, primitiveFunction, sourcePosition):
+        super().__init__(sourcePosition)
+        self.name = name
+        self.type = type
+        self.primitiveFunction = primitiveFunction
+
+    def getType(self):
+        return self.type
+
+    def analyzeAndBuildApplicationNode(self, buildPass, node: ParseTreeApplicationNode, functional):
+        macroContext = HIRMacroContext(node.sourcePosition)
+        expandedMacro = self.primitiveFunction(macroContext, *node.arguments)
+        return buildPass.visitNode(expandedMacro)
 
 class HIRFunction(HIRConstant):
     def __init__(self, name: str, dependentFunctionType: HIRDependentFunctionType, sourcePosition):
@@ -512,8 +540,12 @@ class HIRPackage(HIRValue):
         for type in coreTypes.coreTypeList:
             typeName = type.getName()
             self.addSymbolWithBinding(typeName, type)
+
         for value, name in coreTypes.coreValueList:
             self.addSymbolWithBinding(name, value)
+
+        for macro in coreTypes.corePrimitiveMacros:
+            self.addSymbolWithBinding(macro.name, macro)
 
     def addSymbolWithBinding(self, symbol: str, binding: HIRValue):
         self.children.append(binding)
@@ -564,6 +596,9 @@ class HIRLexicalEnvironment(HIREnvironment):
         self.parent = parent
         self.symbolTable = {}
 
+    def setSymbolBinding(self, symbol, binding):
+        self.symbolTable[symbol] = binding
+
     def lookSymbolRecursively(self, symbol):
         if symbol in self.symbolTable:
             return self.symbolTable[symbol]
@@ -586,6 +621,7 @@ class HIRCoreTypes:
         self.dynamicType = HIRDynamicType('Dynamic', self, None)
 
         self.packageType = HIRNominalType('Package', self, None)
+        self.primitiveMacroType = HIRNominalType('PrimitiveMacro', self, None)
 
         self.prop = HIRUniverseType('Prop', self, 0);
         self.type = HIRUniverseType('Type', self, 1);
@@ -611,6 +647,9 @@ class HIRCoreTypes:
 
             self.dynamicType,
 
+            self.packageType,
+            self.primitiveMacroType,
+
             self.prop,
             self.type,
         ]
@@ -619,6 +658,31 @@ class HIRCoreTypes:
             (self.falseValue, 'false'),
             (self.trueValue,  'true'),
             (self.nilValue,   'nil'),
+        ]
+        self.createCorePrimitiveMacros()
+
+    def createCorePrimitiveMacros(self):
+        def letWith(macroContext: HIRMacroContext, nameExpression: ParseTreeNode, initialValue: ParseTreeNode):
+            return ParseTreeVariableDefinitionNode(macroContext.sourcePosition, nameExpression, None, initialValue, False)
+        def letMutableWith(macroContext: HIRMacroContext, nameExpression: ParseTreeNode, initialValue: ParseTreeNode):
+            return ParseTreeVariableDefinitionNode(macroContext.sourcePosition, nameExpression, None, initialValue, False)
+
+        def ifThenElse(macroContext: HIRMacroContext, conditionExpression: ParseTreeNode, trueExpression: ParseTreeNode, falseExpression: ParseTreeNode):
+            return ParseTreeIfSelectionNode(macroContext.sourcePosition, conditionExpression, trueExpression, falseExpression)
+        def ifThen(macroContext: HIRMacroContext, conditionExpression: ParseTreeNode, trueExpression: ParseTreeNode):
+            return ParseTreeIfSelectionNode(macroContext.sourcePosition, conditionExpression, trueExpression, None)
+
+        def returnMacro(macroContext: HIRMacroContext, valueExpression: ParseTreeNode):
+            return ParseTreeReturnNode(macroContext.sourcePosition, valueExpression)
+
+        self.corePrimitiveMacros = [
+            HIRPrimitiveMacro('let:with:', self.primitiveMacroType, letWith, None),
+            HIRPrimitiveMacro('let:mutableWith:', self.primitiveMacroType, letMutableWith, None),
+
+            HIRPrimitiveMacro('if:then:else:', self.primitiveMacroType, ifThenElse, None),
+            HIRPrimitiveMacro('if:then:', self.primitiveMacroType, ifThen, None),
+
+            HIRPrimitiveMacro('return:', self.primitiveMacroType, returnMacro, None),
         ]
     
     def getUniverseAtLevel(self, level):
