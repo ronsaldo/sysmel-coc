@@ -24,6 +24,12 @@ class HIRValue(ABC):
             raise RuntimeError(str(node.sourcePosition) +  ": cannot analyze and build non-functional value.")
         return selfType.analyzeAndBuildApplicationNode(buildPass, node, functional)
 
+    def analyzeAndEvaluateApplicationNode(self, evaluationPass, node: ParseTreeApplicationNode, functional):
+        selfType = self.getType()
+        if selfType is None:
+            raise RuntimeError(str(node.sourcePosition) +  ": cannot analyze and evaluate non-functional value.")
+        return selfType.analyzeAndEvaluateApplicationNode(evaluationPass, node, functional)
+
     def analyzeAndBuildAssignment(self, buildPass, node: ParseTreeAssignmentNode):
         selfType = self.getType()
         if not selfType.isReferenceType():
@@ -32,6 +38,16 @@ class HIRValue(ABC):
         baseType = selfType.baseType
         valueToStore = buildPass.visitNodeWithExpectedType(node.value, baseType)
         buildPass.builder.store(self, valueToStore, node.sourcePosition)
+        return self
+    
+    def analyzeAndEvaluateAssignment(self, evaluationPass, node: ParseTreeAssignmentNode):
+        selfType = self.getType()
+        if not selfType.isReferenceType():
+            raise RuntimeError(str(node.sourcePosition) +  ": storage type does not support assignments.")
+
+        baseType = selfType.baseType
+        valueToStore = evaluationPass.visitNodeWithExpectedType(node.value, baseType)
+        self.storeValue(valueToStore)
         return self
     
     @abstractmethod
@@ -67,7 +83,10 @@ class HIRValue(ABC):
 
     def isReferenceType(self):
         return False
-    
+
+    def isReferenceValue(self):
+        return False
+
     def isMutableValueBoxType(self):
         return False
     
@@ -117,6 +136,9 @@ class HIRType(HIRValue):
 
     def analyzeAndBuildApplicationNode(self, buildPass, node: ParseTreeApplicationNode, functional):
         raise RuntimeError(str(node.sourcePosition) +  ": cannot analyze and build non-functional value.")
+    
+    def analyzeAndEvaluateApplicationNode(self, buildPass, node: ParseTreeApplicationNode, functional):
+        raise RuntimeError(str(node.sourcePosition) +  ": cannot analyze and evaluate non-functional value.")
     
     def isSatisfiedByValue(self, value: HIRValue):
         return self.isSatisfiedByType(value.getType())
@@ -385,7 +407,8 @@ class HIRPointerValue(HIRPointerLikeValue):
     pass
 
 class HIRReferenceValue(HIRPointerLikeValue):
-    pass
+    def isReferenceValue(self):
+        return True
 
 class HIRMacroContext:
     def __init__(self, sourcePosition: SourcePosition):
@@ -405,6 +428,11 @@ class HIRPrimitiveMacro(HIRConstant):
         macroContext = HIRMacroContext(node.sourcePosition)
         expandedMacro = self.primitiveFunction(macroContext, *node.arguments)
         return buildPass.visitNode(expandedMacro)
+
+    def analyzeAndEvaluateApplicationNode(self, evaluationPass, node: ParseTreeApplicationNode, functional):
+        macroContext = HIRMacroContext(node.sourcePosition)
+        expandedMacro = self.primitiveFunction(macroContext, *node.arguments)
+        return evaluationPass.visitNode(expandedMacro)
 
 class HIRFunction(HIRConstant):
     def __init__(self, name: str, dependentFunctionType: HIRDependentFunctionType, sourcePosition):
@@ -801,6 +829,11 @@ class HIRLexicalEnvironment(HIREnvironment):
 
     def setSymbolBinding(self, symbol, binding):
         self.symbolTable[symbol] = binding
+    
+    def setNewSymbolBinding(self, symbol, binding, sourcePosition):
+        if symbol in self.symbolTable:
+            raise RuntimeError(str(sourcePosition) +  " a binding for symbol '" + symbol + "'already exists.")
+        self.setSymbolBinding(symbol, binding)
 
     def lookSymbolRecursively(self, symbol):
         if symbol in self.symbolTable:

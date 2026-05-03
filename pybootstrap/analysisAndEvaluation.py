@@ -6,15 +6,39 @@ class AnalysisAndEvaluationPass(ParseTreeVisitor):
         super().__init__()
         self.evaluationContext = evaluationContext
 
-    def visitDecayedNode(self, node):
-        # TODO: Load the references.
-        return self.visitNode(node)
+    def visitDecayedNode(self, node: ParseTreeNode):
+        value = self.visitNode(node)
+        if value.isReferenceValue():
+            return value.loadValue()
+
+        return value
+
+    def visitNodeWithExpectedType(self, node, expectedType):
+        value = self.visitDecayedNode(node)
+        if (expectedType is not None) and (not expectedType.isSatisfiedByValue(value)):
+            raise RuntimeError(str(node.sourcePosition) +  " Error: Expected a value whose type is " + str(expectedType))
+        return value
+
+    def visitNodeExpectingType(self, node, expectedType):
+        value = self.visitDecayedNode(node)
+        if not value.isType():
+            raise RuntimeError(str(node.sourcePosition) +  " Error: Expected a type instead of  " + str(value))
+        return value
+
+    def visitOptionalSymbolNode(self, node: ParseTreeNode):
+        if node is None:
+            return None
+
+        evaluatedNode = self.visitNodeWithExpectedType(node, self.evaluationContext.context.coreTypes.symbolType)
+        assert evaluatedNode.isSymbolConstant()
+        return evaluatedNode.value
 
     def visitErrorNode(self, node):
         assert False
 
     def visitApplicationNode(self, node):
-        assert False
+        functional = self.visitDecayedNode(node.functional)
+        return functional.analyzeAndEvaluateApplicationNode(self, node, functional)
 
     def visitArgumentDefinitionNode(self, node):
         assert False
@@ -22,8 +46,9 @@ class AnalysisAndEvaluationPass(ParseTreeVisitor):
     def visitAssertNode(self, node):
         assert False
 
-    def visitAssignmentNode(self, node):
-        assert False
+    def visitAssignmentNode(self, node: ParseTreeAssignmentNode):
+        storeValue = self.visitNode(node.store)
+        return storeValue.analyzeAndEvaluateAssignment(self, node)
 
     def visitAssociationNode(self, node):
         assert False
@@ -113,38 +138,70 @@ class AnalysisAndEvaluationPass(ParseTreeVisitor):
     def visitTupleNode(self, node):
         assert False
 
-    def visitVariableDefinitionNode(self, node):
-        assert False
+    def visitVariableDefinitionNode(self, node: ParseTreeVariableDefinitionNode):
+        name = self.visitOptionalSymbolNode(node.nameExpression)
+        
+        typeValue = None
+        if node.typeExpression is not None:
+            typeValue = self.visitNodeExpectingType(node.typeExpression)
 
-    def visitIfSelectionNode(self, node):
+        initialValue = None
+        if node.initialValue is not None:
+            initialValue = self.visitNodeWithExpectedType(node.initialValue, typeValue)
+
+        if initialValue is None:
+            if typeValue is None:
+                raise RuntimeError(str(node.sourcePosition) +  " at least a type or an initial value must be specified.")
+            initialValue = typeValue.getOrCreateDefaultValue()
+
+        if node.isMutable:
+            valueType = typeValue
+            if valueType is None:
+                valueType = initialValue.getType()
+
+            valueBoxType = self.evaluationContext.context.getOrCreateMutableValueBoxType(valueType)
+            valueBox = HIRMutableValueBox(valueBoxType, initialValue, node.sourcePosition)
+
+            referenceType = self.evaluationContext.context.getOrCreateReferenceType(valueType)
+            referenceValue = HIRReferenceValue(referenceType, valueBox, 0, node.sourcePosition)
+            if name is not None:
+                self.evaluationContext.environment.setNewSymbolBinding(name, referenceValue, node.sourcePosition)
+
+            return referenceValue
+        else:
+            if name is not None:
+                self.evaluationContext.environment.setNewSymbolBinding(name, initialValue, node.sourcePosition)
+            return initialValue
+
+    def visitIfSelectionNode(self, node: ParseTreeIfSelectionNode):
         assert False
 
     def visitSwitchSelectionNode(self, node):
         assert False
 
-    def visitReturnNode(self, node):
+    def visitReturnNode(self, node: ParseTreeReturnNode):
         assert False
 
-    def visitWhileDoNode(self, node):
+    def visitWhileDoNode(self, node: ParseTreeWhileDoNode):
         assert False
 
-    def visitDoWhileNode(self, node):
+    def visitDoWhileNode(self, node: ParseTreeDoWhileNode):
         assert False
 
-    def visitNamespaceNode(self, node):
+    def visitNamespaceNode(self, node: ParseTreeNamespaceNode):
         assert False
 
-    def visitClassDefinitionNode(self, node):
+    def visitClassDefinitionNode(self, node: ParseTreeClassDefinitionNode):
         assert False
 
-    def visitStructDefinitionNode(self, node):
+    def visitStructDefinitionNode(self, node: ParseTreeStructDefinitionNode):
         assert False
 
-    def visitEnumDefinitionNode(self, node):
+    def visitEnumDefinitionNode(self, node: ParseTreeEnumDefinitionNode):
         assert False
 
-    def visitFieldDefinitionNode(self, node):
+    def visitFieldDefinitionNode(self, node: ParseTreeFieldDefinitionNode):
         assert False
 
-    def visitLoadFileOnceNode(self, node):
+    def visitLoadFileOnceNode(self, node: ParseTreeLoadFileOnceNode):
         assert False

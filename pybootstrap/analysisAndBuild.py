@@ -181,11 +181,11 @@ class AnalysisAndBuildPass(ParseTreeVisitor):
             self.builder.store(alloca, initialValue, node.sourcePosition)
 
             if name is not None:
-                self.builder.environment.setSymbolBinding(name, alloca)
+                self.builder.environment.setNewSymbolBinding(name, alloca, node.sourcePosition)
             return alloca
         else:
             if name is not None:
-                self.builder.environment.setSymbolBinding(name, initialValue)
+                self.builder.environment.setNewSymbolBinding(name, initialValue, node.sourcePosition)
             return initialValue
 
     def visitIfSelectionNode(self, node: ParseTreeIfSelectionNode):

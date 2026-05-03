@@ -70,3 +70,21 @@ class TestAnalysisAndEvaluation(unittest.TestCase):
 
         topLevelResult = self.evaluateTopLevelSourceString('nil')
         self.assertTrue(topLevelResult.isNilConstant())
+
+    def testLetWithMacro(self):
+        topLevelResult = self.evaluateTopLevelSourceString('let: #x with: 42')
+        self.assertTrue(topLevelResult.isIntegerConstant())
+        self.assertEqual(topLevelResult.value, 42)
+
+        topLevelResult = self.evaluateTopLevelSourceString('let: #x with: 42. x')
+        self.assertTrue(topLevelResult.isIntegerConstant())
+        self.assertEqual(topLevelResult.value, 42)
+
+    def testLetMutableWithMacro(self):
+        topLevelResult = self.evaluateTopLevelSourceString('let: #x mutableWith: 42')
+        self.assertTrue(topLevelResult.isIntegerConstant())
+        self.assertEqual(topLevelResult.value, 42)
+
+        topLevelResult = self.evaluateTopLevelSourceString('let: #x mutableWith: 42. x := 5. x')
+        self.assertTrue(topLevelResult.isIntegerConstant())
+        self.assertEqual(topLevelResult.value, 5)
