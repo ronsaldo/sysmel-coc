@@ -116,8 +116,15 @@ class AnalysisAndEvaluationPass(ParseTreeVisitor):
     def visitLiteralValueNode(self, node: ParseTreeLiteralValueNode):
         return node.value
 
-    def visitMessageCascadeNode(self, node):
-        assert False
+    def visitMessageCascadeNode(self, node: ParseTreeMessageCascadeNode):
+        resultValue = self.visitNode(node.receiver)
+        receiverNodeValue = ParseTreeLiteralValueNode(node.receiver.sourcePosition, resultValue)
+
+        for cascaded in node.messages:
+            cascadedMessage = cascaded.asMessageSendWithReceiver(receiverNodeValue)
+            resultValue = self.visitNode(cascadedMessage)
+
+        return resultValue
 
     def visitMessageSendNode(self, node: ParseTreeMessageSendNode):
         receiver = self.visitNode(node.receiver)
