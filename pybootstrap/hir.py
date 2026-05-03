@@ -43,6 +43,21 @@ class HIRValue(ABC):
     def isTupleType(self):
         return False
 
+    def isDerivedType(self):
+        return False
+
+    def isPointerLikeType(self):
+        return False
+
+    def isPointerType(self):
+        return False
+
+    def isReferenceType(self):
+        return False
+    
+    def isMutableValueBoxType(self):
+        return False
+    
     def isDependentFunctionType(self):
         return False
 
@@ -160,6 +175,30 @@ class HIRTupleType(HIRType):
     def isTupleType(self):
         return True
 
+class HIRDerivedType(HIRType):
+    def __init__(self, baseType, coreTypes, sourcePosition):
+        super().__init__(coreTypes, sourcePosition)
+        self.baseType = baseType
+
+    def isDerivedType(self):
+        return True
+
+class HIRPointerLikeType(HIRDerivedType):
+    def isPointerLikeType(self):
+        return True
+
+class HIRPointerType(HIRPointerLikeType):
+    def isPointerType(self):
+        return True
+
+class HIRReferenceType(HIRPointerLikeType):
+    def isReferenceType(self):
+        return True
+
+class HIRMutableValueBoxType(HIRPointerLikeType):
+    def isMutableValueBoxType(self):
+        return True
+
 class HIRSimpleFunctionType(HIRType):
     def __init__(self, argumentTypes: HIRType, resultType: HIRType, coreTypes, sourcePosition):
         super().__init__(coreTypes, sourcePosition)
@@ -272,6 +311,45 @@ class HIRConstantLiteralNilValue(HIRConstantLiteralValue):
 
     def __str__(self):
         return 'nil'
+
+class HIRMutableValueBox(HIRValue):
+    def __init__(self, type, initialValue, sourcePosition):
+        super().__init__(sourcePosition)
+        self.type = type
+        self.value = initialValue
+
+    def getType(self):
+        return self.type
+
+    def storeValueAtIndex(self, valueToStore, index):
+        assert index == 0
+        self.value = valueToStore
+
+    def loadValueAtIndex(self, index):
+        assert index == 0
+        return self.value
+    
+class HIRPointerLikeValue(HIRValue):
+    def __init__(self, type, storage, index, sourcePosition):
+        super().__init__(sourcePosition)
+        self.type = type
+        self.storage = storage
+        self.index = index
+
+    def getType(self):
+        return self.type
+
+    def storeValue(self, valueToStore):
+        self.storage.storeValueAtIndex(valueToStore, 0)
+
+    def loadValue(self):
+        return self.storage.loadValueAtIndex(0)
+
+class HIRPointerValue(HIRPointerLikeValue):
+    pass
+
+class HIRReferenceValue(HIRPointerLikeValue):
+    pass
 
 class HIRMacroContext:
     def __init__(self, sourcePosition: SourcePosition):
@@ -462,7 +540,7 @@ class HIRBasicBlock(HIRFunctionLocalValue):
             self.lastInstruction = instruction
 
     def fullPrintString(self) -> str:
-        result = str(self.index)
+        result = '$' + str(self.index)
         if self.name is not None:
             result += '|' + self.name
 
@@ -486,6 +564,50 @@ class HIRInstruction(HIRFunctionLocalValue):
 
     def isTerminator(self):
         return False
+
+class HIRAllocaInstruction(HIRInstruction):
+    def __init__(self, valueType, valueBoxType, referenceType, name=None, sourcePosition=None):
+        super().__init__(referenceType, name, sourcePosition)
+        self.valueType = valueType
+        self.valueBoxType = valueBoxType
+
+    def fullPrintString(self) -> str:
+        return '%s := alloca %s' % (str(self), str(self.valueType))
+
+    def evaluateInActivationContext(self, context: HIRFunctionActivationContext):
+        valueBox = HIRMutableValueBox(self.valueBoxType, None, self.sourcePosition)
+        if self.type.isReferenceType():
+            allocaValue = HIRReferenceValue(self.type, valueBox, 0, self.sourcePosition)
+        else:
+            allocaValue = HIRPointerValue(self.type, valueBox, 0, self.sourcePosition)
+        
+        context.setCurrentInstructionValue(allocaValue)
+
+class HIRLoadInstruction(HIRInstruction):
+    def __init__(self, type, storage, name=None, sourcePosition=None):
+        super().__init__(type, name, sourcePosition)
+        self.storage = storage
+
+    def fullPrintString(self) -> str:
+        return '%s := load %s' % (str(self), str(self.storage))
+
+    def evaluateInActivationContext(self, context: HIRFunctionActivationContext):
+        storageValue = self.storage.getValueInEvaluationContext(context)
+        context.setCurrentInstructionValue(storageValue.loadValue())
+
+class HIRStoreInstruction(HIRInstruction):
+    def __init__(self, type, storage, valueToStore, name=None, sourcePosition=None):
+        super().__init__(type, name, sourcePosition)
+        self.storage = storage
+        self.valueToStore = valueToStore
+
+    def fullPrintString(self) -> str:
+            return 'store %s in %s' % (str(self.valueToStore), str(self.storage))
+
+    def evaluateInActivationContext(self, context: HIRFunctionActivationContext):
+        storageValue = self.storage.getValueInEvaluationContext(context)
+        valueToStoreValue = self.valueToStore.getValueInEvaluationContext(context)
+        storageValue.storeValue(valueToStoreValue)
 
 class HIRBranchInstruction(HIRInstruction):
     def __init__(self, destination: HIRBasicBlock, type, name=None, sourcePosition=None):
@@ -665,7 +787,7 @@ class HIRCoreTypes:
         def letWith(macroContext: HIRMacroContext, nameExpression: ParseTreeNode, initialValue: ParseTreeNode):
             return ParseTreeVariableDefinitionNode(macroContext.sourcePosition, nameExpression, None, initialValue, False)
         def letMutableWith(macroContext: HIRMacroContext, nameExpression: ParseTreeNode, initialValue: ParseTreeNode):
-            return ParseTreeVariableDefinitionNode(macroContext.sourcePosition, nameExpression, None, initialValue, False)
+            return ParseTreeVariableDefinitionNode(macroContext.sourcePosition, nameExpression, None, initialValue, True)
 
         def ifThenElse(macroContext: HIRMacroContext, conditionExpression: ParseTreeNode, trueExpression: ParseTreeNode, falseExpression: ParseTreeNode):
             return ParseTreeIfSelectionNode(macroContext.sourcePosition, conditionExpression, trueExpression, falseExpression)
@@ -722,6 +844,15 @@ class HIRContext:
 
         return builder
 
+    def getOrCreatePointerType(self, baseType):
+        return HIRPointerType(baseType, self.coreTypes, None)
+
+    def getOrCreateReferenceType(self, baseType):
+        return HIRReferenceType(baseType, self.coreTypes, None)
+
+    def getOrCreateMutableValueBoxType(self, baseType):
+        return HIRMutableValueBoxType(baseType, self.coreTypes, None)
+
 class HIRBuilder:
     def __init__(self, function: HIRFunction, context: HIRContext, basicBlock: HIRBasicBlock, environment: HIRLexicalEnvironment):
         self.function = function
@@ -760,8 +891,24 @@ class HIRBuilder:
     def symbolConstant(self, value: str, type: HIRType, sourcePosition: SourcePosition):
         return HIRConstantLiteralSymbolValue(value, type, sourcePosition)
 
+    def alloca(self, valueType, referenceType, sourcePosition):
+        valueBoxType = self.context.getOrCreateMutableValueBoxType(valueType)
+        instruction = HIRAllocaInstruction(valueType, valueBoxType, referenceType, None, sourcePosition)
+        self.addInstruction(instruction)
+        return instruction
+
     def branch(self, destination, sourcePosition):
         instruction = HIRBranchInstruction(destination, self.context.coreTypes.voidType, None, sourcePosition)
+        self.addInstruction(instruction)
+        return instruction
+    
+    def load(self, type, storage, sourcePosition):
+        instruction = HIRLoadInstruction(type, storage, None, sourcePosition)
+        self.addInstruction(instruction)
+        return instruction
+    
+    def store(self, storage, valueToStore, sourcePosition):
+        instruction = HIRStoreInstruction(self.context.coreTypes.voidType, storage, valueToStore, None, sourcePosition)
         self.addInstruction(instruction)
         return instruction
 

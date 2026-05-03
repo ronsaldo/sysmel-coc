@@ -8,7 +8,11 @@ class AnalysisAndBuildPass(ParseTreeVisitor):
 
     def visitDecayedNode(self, node: ParseTreeNode):
         value = self.visitNode(node)
-        # TODO: Load references.
+        valueType = value.getType()
+
+        # Load references.
+        if valueType.isReferenceType():
+            return self.builder.load(valueType.baseType, value, node.sourcePosition)
         return value
 
     def castValueToExpectedType(self, value: HIRValue, expectedType: HIRType, sourcePosition: SourcePosition):
@@ -157,7 +161,19 @@ class AnalysisAndBuildPass(ParseTreeVisitor):
             initialValue = self.visitNodeWithExpectedType(node.initialValue, typeValue)
 
         if node.isMutable:
-            assert False
+            assert self.builder.allocaBuilder is not None
+            valueType = typeValue
+            if valueType is None:
+                valueType = initialValue.getType()
+
+            referenceType = self.builder.context.getOrCreateReferenceType(valueType)
+            
+            alloca = self.builder.allocaBuilder.alloca(valueType, referenceType, node.sourcePosition)
+            self.builder.store(alloca, initialValue, node.sourcePosition)
+
+            if name is not None:
+                self.builder.environment.setSymbolBinding(name, alloca)
+            return alloca
         else:
             if name is not None:
                 self.builder.environment.setSymbolBinding(name, initialValue)

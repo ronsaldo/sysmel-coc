@@ -27,7 +27,11 @@ class TestAnalysisAndBuild(unittest.TestCase):
 
         builder.finishBuilding()
         return builder.function
-    
+
+    def printTopLevelSourceStringFunction(self, string: str):
+        topLevelFunction = self.buildTopLevelSourceString(string)
+        print(topLevelFunction.fullPrintString())
+
     def evaluateTopLevelSourceString(self, string: str):
         topLevelFunction = self.buildTopLevelSourceString(string)
         return topLevelFunction.evaluateWithArguments([])
@@ -81,11 +85,18 @@ class TestAnalysisAndBuild(unittest.TestCase):
         topLevelResult = self.evaluateTopLevelSourceString('nil')
         self.assertTrue(topLevelResult.isNilConstant())
 
-    def testLetMacro(self):
+    def testLetWithMacro(self):
         topLevelResult = self.evaluateTopLevelSourceString('let: #x with: 42')
         self.assertTrue(topLevelResult.isIntegerConstant())
         self.assertEqual(topLevelResult.value, 42)
 
         topLevelResult = self.evaluateTopLevelSourceString('let: #x with: 42. x')
+        self.assertTrue(topLevelResult.isIntegerConstant())
+        self.assertEqual(topLevelResult.value, 42)
+
+    def testLetMutableWithMacro(self):
+        #self.printTopLevelSourceStringFunction('let: #x mutableWith: 42')
+
+        topLevelResult = self.evaluateTopLevelSourceString('let: #x mutableWith: 42')
         self.assertTrue(topLevelResult.isIntegerConstant())
         self.assertEqual(topLevelResult.value, 42)
