@@ -600,14 +600,17 @@ class HIRFunction(HIRConstant):
         super().__init__(sourcePosition)
         self.name = name
         self.dependentFunctionType = dependentFunctionType
+        self.simplifiedType = dependentFunctionType.asSimplifiedType()
         self.captures = []
         self.firstBasicBlock = None
         self.lastBasicBlock = None
         self.isTopLevel = False
+        self.definitionBody: ParseTreeFunctionNode = None
+        self.definitionContext: HIREvaluationContext = None
         self.enumeratedInstructions = None
 
     def getType(self):
-        return self.dependentFunctionType
+        return self.simplifiedType
     
     def addBasicBlock(self, basicBlock):
         if self.lastBasicBlock is None:
@@ -617,9 +620,45 @@ class HIRFunction(HIRConstant):
             self.lastBasicBlock.nextBlock = basicBlock
             self.lastBasicBlock = basicBlock
 
+    def ensureAnalysis(self):
+        from analysisAndBuild import AnalysisAndBuildPass
+
+        if self.firstBasicBlock is not None:
+            return
+        
+        # Function environment arguments
+        functionEnvironment = HIRFunctionAnalysisEnvironment(self.definitionContext.environment)
+        for argument in self.dependentFunctionType.arguments:
+            if argument.name is not None:
+                functionEnvironment.setNewSymbolBinding(argument.name, argument, argument.sourcePosition)
+
+        # Body environment
+        bodyEnvironment = HIRLexicalEnvironment(functionEnvironment)
+
+        # Alloca block
+        allocaBlock = HIRBasicBlock("alloca", self.sourcePosition)
+        self.addBasicBlock(allocaBlock)
+        allocaBuilder = HIRBuilder(self, self.definitionContext.context, allocaBlock, bodyEnvironment)
+
+        # Entry block
+        entryBlock = HIRBasicBlock("entry", self.sourcePosition)
+        self.addBasicBlock(entryBlock)
+        builder = HIRBuilder(self, self.definitionContext.context, entryBlock, bodyEnvironment)
+        builder.allocaBuilder = allocaBuilder
+        builder.entryBasicBlock = entryBlock
+
+        # Build the body.
+        result = AnalysisAndBuildPass(builder).visitNodeWithExpectedType(self.definitionBody, self.dependentFunctionType.resultType)
+        if not builder.isLastTerminator():
+            builder.returnValue(result, self.sourcePosition)
+
+        builder.finishBuilding()
+
     def enumerateInstruction(self):
         if self.enumeratedInstructions is not None:
             return self.enumeratedInstructions
+        
+        self.ensureAnalysis()
         
         self.enumeratedInstructions = []
         def addLocalValue(localValue):
@@ -646,6 +685,7 @@ class HIRFunction(HIRConstant):
         return self.enumeratedInstructions
 
     def fullPrintString(self) -> str:
+        self.ensureAnalysis()
         self.enumerateInstruction()
         result = "HIRFunction "
         if self.name is not None:
@@ -723,7 +763,7 @@ class HIRFunctionLocalValue(HIRValue):
         self.name = name
         self.index = -1
 
-    def __str__(self):
+    def __repr__(self):
         return '%d|%s' %(self.index, str(self.name))
 
     def getType(self):
@@ -897,6 +937,10 @@ class HIRCallInstruction(HIRInstruction):
         if not self.functional.isCompileTimeFunction():
             return False
 
+        for argument in self.arguments:
+            if not argument.isConstantValue():
+                return False
+
         return True
 
     def simplifyWithBuilder(self, builder):
@@ -963,6 +1007,7 @@ class HIRPackage(HIRValue):
         self.children = []
         self.publicSymbolTable = {}
         self.coreTypes = None
+        self.pendingAnalysisList = []
 
     def addCoreTypes(self, coreTypes):
         self.coreTypes = coreTypes
@@ -975,6 +1020,16 @@ class HIRPackage(HIRValue):
 
         for macro in coreTypes.corePrimitiveMacros:
             self.addSymbolWithBinding(macro.name, macro)
+    
+    def addEntityWithPendingAnalysis(self, entity):
+        self.pendingAnalysisList.append(entity)
+
+    def finishPendingAnalysis(self):
+        while len(self.pendingAnalysisList) != 0:
+            toAnalyze = self.pendingAnalysisList
+            self.pendingAnalysisList = []
+            for entity in toAnalyze:
+                entity.ensureAnalysis()
 
     def addSymbolWithBinding(self, symbol: str, binding: HIRValue):
         self.children.append(binding)
@@ -1048,6 +1103,9 @@ class HIRDependentFunctionTypeAnalysisEnvironment(HIRLexicalEnvironment):
             binding.markDependentUsage()
             return binding
         return self.parent.lookSymbolRecursively(symbol)
+
+class HIRFunctionAnalysisEnvironment(HIRLexicalEnvironment):
+    pass
 
 class HIRCoreTypes:
     def __init__(self):
@@ -1301,6 +1359,12 @@ class HIRContext:
         self.corePackage.addCoreTypes(self.coreTypes)
         self.currentPackage = self.corePackage
 
+    def addEntityWithPendingAnalysis(self, entity):
+        self.currentPackage.addEntityWithPendingAnalysis(entity)
+
+    def finishPendingAnalysis(self):
+        self.currentPackage.finishPendingAnalysis()
+
     def createTopLevelEnvironment(self, sourceCode: SourceCode):
         lexicalEnvironment = HIRLexicalEnvironment(HIRPackageEnvironment(self.currentPackage, HIREmptyEnvironment()))
         if sourceCode.directory is not None:
@@ -1345,6 +1409,9 @@ class HIREvaluationContext:
     def __init__(self, context: HIRContext, environment: HIRLexicalEnvironment):
         self.context = context
         self.environment = environment
+
+    def clone(self):
+        return HIREvaluationContext(self.context, self.environment)
 
 class HIRBuilder:
     def __init__(self, function: HIRFunction, context: HIRContext, basicBlock: HIRBasicBlock, environment: HIRLexicalEnvironment):

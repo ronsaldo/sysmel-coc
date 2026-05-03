@@ -88,7 +88,21 @@ class AnalysisAndEvaluationPass(ParseTreeVisitor):
         return functionType
 
     def visitFunctionNode(self, node: ParseTreeFunctionNode):
-        assert False
+        name = self.visitOptionalSymbolNode(node.nameExpression)
+
+        dependentFunctionType = self.visitNode(node.functionType)
+
+        function = HIRFunction(name, dependentFunctionType, node.sourcePosition)
+        function.definitionBody = node.body
+        function.definitionContext = self.evaluationContext.clone()
+        self.evaluationContext.context.addEntityWithPendingAnalysis(function)
+
+        if name is not None:
+            self.evaluationContext.environment.setNewSymbolBinding(name, function)
+            if node.isPublic:
+                assert False
+
+        return function
 
     def visitCascadeMessageNode(self, node):
         assert False

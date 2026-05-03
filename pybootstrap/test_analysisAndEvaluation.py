@@ -12,6 +12,10 @@ class TestAnalysisAndEvaluation(unittest.TestCase):
         self.context.currentPackage = self.package
         return super().setUp()
     
+    def tearDown(self):
+        self.context.finishPendingAnalysis()
+        return super().tearDown()
+    
     def parseSourceStringWithoutErrors(self, string: str) -> ParseTreeNode:
         ast = parseSourceString(string)
         self.assertTrue(ParseTreeErrorVisitor().checkAndPrintErrors(ast))
@@ -226,5 +230,15 @@ class TestAnalysisAndEvaluation(unittest.TestCase):
         self.assertEqual(simplifiedType.resultType, self.context.coreTypes.integerType)
 
     def testFunction(self):
-        #value = self.evaluateTopLevelSourceString('{:(Integer)x :: Integer | x}')
-        pass
+        functionValue = self.evaluateTopLevelSourceString('{:(Integer)x :: Integer | x}')
+        result = functionValue.evaluateWithArguments([HIRConstantLiteralIntegerValue(42, self.context.coreTypes.integerType, None)])
+        self.assertTrue(result.isIntegerConstant())
+        self.assertEqual(result.value, 42)
+
+        functionValue = self.evaluateTopLevelSourceString('{:(Integer)x :: Integer | x negated}')
+        result = functionValue.evaluateWithArguments([HIRConstantLiteralIntegerValue(42, self.context.coreTypes.integerType, None)])
+        self.assertTrue(result.isIntegerConstant())
+        self.assertEqual(result.value, -42)
+
+if __name__ == '__main__':
+    unittest.main()

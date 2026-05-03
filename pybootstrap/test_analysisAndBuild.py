@@ -11,6 +11,10 @@ class TestAnalysisAndBuild(unittest.TestCase):
         self.package.usePackage(self.context.corePackage)
         self.context.currentPackage = self.package
         return super().setUp()
+        
+    def tearDown(self):
+        self.context.finishPendingAnalysis()
+        return super().tearDown()
     
     def parseSourceStringWithoutErrors(self, string: str) -> ParseTreeNode:
         ast = parseSourceString(string)
