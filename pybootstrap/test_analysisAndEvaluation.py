@@ -110,3 +110,49 @@ class TestAnalysisAndEvaluation(unittest.TestCase):
     def testQuote(self):
         topLevelResult = self.evaluateTopLevelSourceString("`'42")
         self.assertTrue(topLevelResult.isParseTreeConstant())
+
+    def testMessageSend(self):
+        value = self.evaluateTopLevelSourceString('42 negated')
+        self.assertTrue(value.isIntegerConstant())
+        self.assertEqual(-42, value.value)
+
+    def testMessageSend2(self):
+        value = self.evaluateTopLevelSourceString('1 + 2')
+        self.assertTrue(value.isIntegerConstant())
+        self.assertEqual(3, value.value)
+
+        value = self.evaluateTopLevelSourceString('1 - 2')
+        self.assertTrue(value.isIntegerConstant())
+        self.assertEqual(-1, value.value)
+
+        value = self.evaluateTopLevelSourceString('2 * 3')
+        self.assertTrue(value.isIntegerConstant())
+        self.assertEqual(6, value.value)
+
+        value = self.evaluateTopLevelSourceString('6 // 3')
+        self.assertTrue(value.isIntegerConstant())
+        self.assertEqual(2, value.value)
+
+        value = self.evaluateTopLevelSourceString('2 = 2')
+        self.assertTrue(value.isBooleanConstant())
+        self.assertEqual(True, value.value)
+
+        value = self.evaluateTopLevelSourceString('2 ~= 2')
+        self.assertTrue(value.isBooleanConstant())
+        self.assertEqual(False, value.value)
+
+        value = self.evaluateTopLevelSourceString('1 < 2')
+        self.assertTrue(value.isBooleanConstant())
+        self.assertEqual(True, value.value)
+
+        value = self.evaluateTopLevelSourceString('1 <= 2')
+        self.assertTrue(value.isBooleanConstant())
+        self.assertEqual(True, value.value)
+
+        value = self.evaluateTopLevelSourceString('1 > 2')
+        self.assertTrue(value.isBooleanConstant())
+        self.assertEqual(False, value.value)
+
+        value = self.evaluateTopLevelSourceString('1 >= 2')
+        self.assertTrue(value.isBooleanConstant())
+        self.assertEqual(False, value.value)

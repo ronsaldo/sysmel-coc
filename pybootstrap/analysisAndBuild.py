@@ -137,20 +137,20 @@ class AnalysisAndBuildPass(ParseTreeVisitor):
     def visitQuasiQuoteNode(self, node):
         assert False
 
-    def visitQuasiUnquoteNode(self, node):
-        assert False
+    def visitQuasiUnquoteNode(self, node: ParseTreeQuasiUnquoteNode):
+        raise RuntimeError("%s: invalid location for a quasi unquote." % str(node.sourcePosition))
+
+    def visitSpliceNode(self, node):
+        raise RuntimeError("%s: invalid location for a splice." % str(node.sourcePosition))
 
     def visitQuoteNode(self, node):
-        assert False
+        return HIRConstantLiteralParseTree(node.term, self.builder.context.coreTypes.parseTreeNodeType, node.sourcePosition)
 
     def visitSequenceNode(self, node: ParseTreeSequenceNode):
         result = self.builder.context.coreTypes.voidValue
         for element in node.elements:
             result = self.visitNode(element)
         return result
-
-    def visitSpliceNode(self, node):
-        assert False
 
     def visitRuntimeErrorNode(self, node):
         assert False

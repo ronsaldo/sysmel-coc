@@ -119,3 +119,7 @@ class TestAnalysisAndBuild(unittest.TestCase):
     def testWhileDoMacro(self):
         topLevelResult = self.evaluateTopLevelFunctionSourceString('while: false do: {}')
         self.assertTrue(topLevelResult.isVoidConstant())
+
+    def testQuote(self):
+        topLevelResult = self.evaluateTopLevelFunctionSourceString("`'42")
+        self.assertTrue(topLevelResult.isParseTreeConstant())

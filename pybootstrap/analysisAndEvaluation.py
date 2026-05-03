@@ -30,13 +30,15 @@ class AnalysisAndEvaluationPass(ParseTreeVisitor):
         assert evaluatedNode.isBooleanConstant()
         return evaluatedNode.value
 
-    def visitOptionalSymbolNode(self, node: ParseTreeNode):
-        if node is None:
-            return None
-
+    def visitSymbolNode(self, node: ParseTreeNode):
         evaluatedNode = self.visitNodeWithExpectedType(node, self.evaluationContext.context.coreTypes.symbolType)
         assert evaluatedNode.isSymbolConstant()
         return evaluatedNode.value
+
+    def visitOptionalSymbolNode(self, node: ParseTreeNode):
+        if node is None:
+            return None
+        return self.visitSymbolNode(node)
 
     def visitErrorNode(self, node):
         assert False
@@ -58,8 +60,9 @@ class AnalysisAndEvaluationPass(ParseTreeVisitor):
     def visitAssociationNode(self, node):
         assert False
 
-    def visitBinaryExpressionSequenceNode(self, node):
-        assert False
+    def visitBinaryExpressionSequenceNode(self, node: ParseTreeBinaryExpressionSequenceNode):
+        expandedMessageSend = node.expandAsMessageSends()
+        return self.visitNode(expandedMessageSend)
 
     def visitFunctionTypeNode(self, node):
         assert False
@@ -116,8 +119,9 @@ class AnalysisAndEvaluationPass(ParseTreeVisitor):
     def visitMessageCascadeNode(self, node):
         assert False
 
-    def visitMessageSendNode(self, node):
-        assert False
+    def visitMessageSendNode(self, node: ParseTreeMessageSendNode):
+        receiver = self.visitNode(node.receiver)
+        return receiver.analyzeAndEvaluateMessageSendNode(self, node, receiver)
 
     def visitQuasiQuoteNode(self, node):
         assert False

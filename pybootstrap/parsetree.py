@@ -468,6 +468,22 @@ class ParseTreeBinaryExpressionSequenceNode(ParseTreeNode):
         
         receiverSequence = ParseTreeBinaryExpressionSequenceNode(self.sourcePosition, self.elements[:-2])
         return receiverSequence, ParseTreeCascadedMessageNode(self.sourcePosition, self.elements[-2], [self.elements[-1]])
+    
+    def expandAsMessageSends(self):
+        elementCount = len(self.elements)
+        assert elementCount >= 1
+        # TODO: Use an operator precedence parser
+        previous = self.elements[0]
+
+        i = 1
+        while i < elementCount:
+            operator = self.elements[i]
+            operand = self.elements[i + 1]
+            previous = ParseTreeMessageSendNode(operator.sourcePosition.until(operand.sourcePosition),
+                                                previous, operator, [operand])
+            i += 2
+
+        return previous
 
 class ParseTreeArgumentDefinitionNode(ParseTreeNode):
     def __init__(self, sourcePosition: SourcePosition, name: str, typeExpression: ParseTreeNode, isSelf: bool = False) -> None:

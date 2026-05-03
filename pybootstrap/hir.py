@@ -50,6 +50,10 @@ class HIRValue(ABC):
         self.storeValue(valueToStore)
         return self
     
+    def analyzeAndEvaluateMessageSendNode(self, evaluator, node: ParseTreeMessageSendNode, receiver):
+        selfType = self.getType()
+        return selfType.analyzeAndEvaluateMessageSendNode(evaluator, node, receiver)
+    
     @abstractmethod
     def getType(self):
         pass
@@ -142,7 +146,17 @@ class HIRType(HIRValue):
     
     def analyzeAndEvaluateApplicationNode(self, buildPass, node: ParseTreeApplicationNode, functional):
         raise RuntimeError(str(node.sourcePosition) +  ": cannot analyze and evaluate non-functional value.")
-    
+
+    def analyzeAndEvaluateMessageSendNode(self, evaluator, node: ParseTreeMessageSendNode, receiver):
+        selector = evaluator.visitSymbolNode(node.selector)
+        if selector == 'yourself':
+            return receiver
+
+        foundMethod = self.lookupSelector(selector)
+        if foundMethod is None:
+            raise RuntimeError("%s: type '%s' does not have method with selector #%s." % (str(node.sourcePosition), str(self), selector))
+        return foundMethod.analyzeAndEvaluateMessageSendNode(evaluator, node, receiver)
+
     def isSatisfiedByValue(self, value: HIRValue):
         return self.isSatisfiedByType(value.getType())
 
@@ -157,11 +171,18 @@ class HIRType(HIRValue):
 
     def isType(self):
         return True
+    
+    def withSelectorAddMethod(self, selector, method):
+        raise RuntimeError("Cannot add a method to type %s\n" %(str(self)))
+
+    def lookupSelector(self, selector):
+        return None
 
 class HIRNominalType(HIRType):
     def __init__(self, name: str, coreTypes, sourcePosition = None):
         super().__init__(coreTypes, sourcePosition)
         self.name = name
+        self.methodDictionary = {}
 
     def getName(self):
         return self.name
@@ -171,7 +192,14 @@ class HIRNominalType(HIRType):
 
     def __str__(self):
         return self.name
- 
+    
+    def withSelectorAddMethod(self, selector, method):
+        self.methodDictionary[selector] = method
+
+    def lookupSelector(self, selector):
+        if selector in self.methodDictionary:
+            return self.methodDictionary[selector]
+        return None
 
 class HIRDynamicType(HIRType):
     def __init__(self, name: str, coreTypes, sourcePosition = None):
@@ -256,6 +284,9 @@ class HIRReferenceType(HIRPointerLikeType):
     def isReferenceType(self):
         return True
 
+    def analyzeAndEvaluateMessageSendNode(self, evaluator, node: ParseTreeMessageSendNode, receiver):
+        return self.baseType.analyzeAndEvaluateMessageSendNode(evaluator, node, receiver)
+
 class HIRMutableValueBoxType(HIRPointerLikeType):
     def isMutableValueBoxType(self):
         return True
@@ -268,6 +299,17 @@ class HIRSimpleFunctionType(HIRType):
 
     def isSimpleFunctionType(self):
         return True
+    
+    def evaluateAndTypecheckArguments(self, evaluator, arguments, sourcePosition):
+        if len(arguments) != len(self.argumentTypes):
+            raise RuntimeError("%s: expected %d arguments instead of %d." % (str(sourcePosition), len(self.argumentTypes), len(arguments)))
+        
+        typecheckedArguments = []
+        for i in range(len(arguments)):
+            typecheckedArgument = evaluator.visitNodeWithExpectedType(arguments[i], self.argumentTypes[i])
+            typecheckedArguments.append(typecheckedArgument)
+
+        return typecheckedArguments, self.resultType
     
 class HIRDependentFunctionType(HIRType):
     def __init__(self, arguments, resultType: HIRValue, coreTypes, sourcePosition):
@@ -447,6 +489,29 @@ class HIRPrimitiveMacro(HIRConstant):
         macroContext = HIRMacroContext(node.sourcePosition)
         expandedMacro = self.primitiveFunction(macroContext, *node.arguments)
         return evaluationPass.visitNode(expandedMacro)
+
+class HIRPrimitiveFunction(HIRConstant):
+    def __init__(self, name: str, type, primitiveFunction, sourcePosition, isCompileTime = False, isPure = False):
+        super().__init__(sourcePosition)
+        self.name = name
+        self.type = type
+        self.primitiveFunction = primitiveFunction
+        self.isCompileTime = isCompileTime
+        self.isPure = isPure
+
+    def getType(self):
+        return self.type
+
+    def analyzeAndBuildApplicationNode(self, buildPass, node: ParseTreeApplicationNode, functional):
+        assert False
+
+    def analyzeAndEvaluateApplicationNode(self, evaluationPass, node: ParseTreeApplicationNode, functional):
+        assert False
+
+    def analyzeAndEvaluateMessageSendNode(self, evaluationPass, node: ParseTreeMessageSendNode, receiver):
+        receiverNode = ParseTreeLiteralValueNode(node.sourcePosition, receiver)
+        typecheckedArguments, resultType = self.type.evaluateAndTypecheckArguments(evaluationPass, [receiverNode] + node.arguments, node.sourcePosition)
+        return self.primitiveFunction(*typecheckedArguments, resultType)
 
 class HIRFunction(HIRConstant):
     def __init__(self, name: str, dependentFunctionType: HIRDependentFunctionType, sourcePosition):
@@ -911,7 +976,9 @@ class HIRCoreTypes:
             (self.trueValue,  'true'),
             (self.nilValue,   'nil'),
         ]
+        
         self.createCorePrimitiveMacros()
+        self.createCorePrimitiveFunctions()
 
     def createCorePrimitiveMacros(self):
         def letWith(macroContext: HIRMacroContext, nameExpression: ParseTreeNode, initialValue: ParseTreeNode):
@@ -944,6 +1011,84 @@ class HIRCoreTypes:
 
             HIRPrimitiveMacro('return:', self.primitiveMacroType, returnMacro, None),
         ]
+
+    def createCorePrimitiveFunctions(self):
+        self.createIntegerPrimitiveFunctions()
+
+    def getBooleanConstant(self, value):
+        if value:
+            return self.trueValue
+        else:
+            return self.falseValue
+
+    def createIntegerPrimitiveFunctions(self):
+        def integerNegated(operand, resultType):
+            assert operand.isIntegerConstant()
+            return HIRConstantLiteralIntegerValue(-operand.value, resultType, None)
+        def integerBitInvert(operand, resultType):
+            assert operand.isIntegerConstant()
+            return HIRConstantLiteralIntegerValue(1 - operand.value, resultType, None)
+        
+        def integerAdd(leftOperand, rightOperand, resultType):
+            assert leftOperand.isIntegerConstant()
+            assert rightOperand.isIntegerConstant()
+            return HIRConstantLiteralIntegerValue(leftOperand.value + rightOperand.value, resultType, None)
+        def integerSubtract(leftOperand, rightOperand, resultType):
+            assert leftOperand.isIntegerConstant()
+            assert rightOperand.isIntegerConstant()
+            return HIRConstantLiteralIntegerValue(leftOperand.value - rightOperand.value, resultType, None)
+        def integerMultiply(leftOperand, rightOperand, resultType):
+            assert leftOperand.isIntegerConstant()
+            assert rightOperand.isIntegerConstant()
+            return HIRConstantLiteralIntegerValue(leftOperand.value * rightOperand.value, resultType, None)
+        def integerDivide(leftOperand, rightOperand, resultType):
+            assert leftOperand.isIntegerConstant()
+            assert rightOperand.isIntegerConstant()
+            return HIRConstantLiteralIntegerValue(leftOperand.value // rightOperand.value, resultType, None)
+
+        def integerEquals(leftOperand, rightOperand, resultType):
+            assert leftOperand.isIntegerConstant()
+            assert rightOperand.isIntegerConstant()
+            return self.getBooleanConstant(leftOperand.value == rightOperand.value)
+        def integerNotEquals(leftOperand, rightOperand, resultType):
+            assert leftOperand.isIntegerConstant()
+            assert rightOperand.isIntegerConstant()
+            return self.getBooleanConstant(leftOperand.value != rightOperand.value)
+
+        def integerLessThan(leftOperand, rightOperand, resultType):
+            assert leftOperand.isIntegerConstant()
+            assert rightOperand.isIntegerConstant()
+            return self.getBooleanConstant(leftOperand.value < rightOperand.value)
+        def integerLessOrEquals(leftOperand, rightOperand, resultType):
+            assert leftOperand.isIntegerConstant()
+            assert rightOperand.isIntegerConstant()
+            return self.getBooleanConstant(leftOperand.value <= rightOperand.value)
+        def integerGreaterThan(leftOperand, rightOperand, resultType):
+            assert leftOperand.isIntegerConstant()
+            assert rightOperand.isIntegerConstant()
+            return self.getBooleanConstant(leftOperand.value > rightOperand.value)
+        def integerGreaterOrEquals(leftOperand, rightOperand, resultType):
+            assert leftOperand.isIntegerConstant()
+            assert rightOperand.isIntegerConstant()
+            return self.getBooleanConstant(leftOperand.value >= rightOperand.value)
+
+        self.integerType.withSelectorAddMethod('negated', HIRPrimitiveFunction('Integer::negated', self.getOrCreateSimpleFunctionType((self.integerType,), self.integerType), integerNegated, None, isPure = True, isCompileTime = True))
+        self.integerType.withSelectorAddMethod('bitInvert', HIRPrimitiveFunction('Integer::bitInvert', self.getOrCreateSimpleFunctionType((self.integerType,), self.integerType), integerBitInvert, None, isPure = True, isCompileTime = True))
+
+        self.integerType.withSelectorAddMethod('+',  HIRPrimitiveFunction('Integer::+', self.getOrCreateSimpleFunctionType((self.integerType, self.integerType), self.integerType), integerAdd, None, isPure = True, isCompileTime = True))
+        self.integerType.withSelectorAddMethod('-',  HIRPrimitiveFunction('Integer::-', self.getOrCreateSimpleFunctionType((self.integerType, self.integerType), self.integerType), integerSubtract, None, isPure = True, isCompileTime = True))
+        self.integerType.withSelectorAddMethod('*',  HIRPrimitiveFunction('Integer::*', self.getOrCreateSimpleFunctionType((self.integerType, self.integerType), self.integerType), integerMultiply, None, isPure = True, isCompileTime = True))
+        self.integerType.withSelectorAddMethod('//', HIRPrimitiveFunction('Integer:://', self.getOrCreateSimpleFunctionType((self.integerType, self.integerType), self.integerType), integerDivide, None, isPure = True, isCompileTime = True))
+
+        self.integerType.withSelectorAddMethod('=',  HIRPrimitiveFunction('Integer::=',  self.getOrCreateSimpleFunctionType((self.integerType, self.integerType), self.booleanType), integerEquals, None, isPure = True, isCompileTime = True))
+        self.integerType.withSelectorAddMethod('~=', HIRPrimitiveFunction('Integer::~=', self.getOrCreateSimpleFunctionType((self.integerType, self.integerType), self.booleanType), integerNotEquals, None, isPure = True, isCompileTime = True))
+        self.integerType.withSelectorAddMethod('<',  HIRPrimitiveFunction('Integer::<',  self.getOrCreateSimpleFunctionType((self.integerType, self.integerType), self.booleanType), integerLessThan, None, isPure = True, isCompileTime = True))
+        self.integerType.withSelectorAddMethod('<=', HIRPrimitiveFunction('Integer::<=', self.getOrCreateSimpleFunctionType((self.integerType, self.integerType), self.booleanType), integerLessOrEquals, None, isPure = True, isCompileTime = True))
+        self.integerType.withSelectorAddMethod('>',  HIRPrimitiveFunction('Integer::>',  self.getOrCreateSimpleFunctionType((self.integerType, self.integerType), self.booleanType), integerGreaterThan, None, isPure = True, isCompileTime = True))
+        self.integerType.withSelectorAddMethod('>=', HIRPrimitiveFunction('Integer::>=', self.getOrCreateSimpleFunctionType((self.integerType, self.integerType), self.booleanType), integerGreaterOrEquals, None, isPure = True, isCompileTime = True))
+
+    def getOrCreateSimpleFunctionType(self, argumentTypes, resultType):
+        return HIRSimpleFunctionType(argumentTypes, resultType, self, None)
     
     def getUniverseAtLevel(self, level):
         if level in self.universeLevels:
