@@ -33,6 +33,9 @@ class HIRType(HIRValue):
         super().__init__(sourcePosition)
         self.coreTypes = coreTypes
 
+    def getType(self):
+        return self.coreTypes.getUniverseAtLevel(0)
+    
     def isType(self):
         return True
 
@@ -68,12 +71,16 @@ class HIRUniverseType(HIRType):
     def getName(self):
         return self.name
 
+    def getType(self):
+        return self.coreTypes.getUniverseAtLevel(self.level + 1)
+
     def isUniverseType(self):
         return True
 
 class HIRPackage(HIRValue):
     def __init__(self, name: str):
         self.name = name
+        self.usedPackages = []
         self.children = []
         self.publicSymbolTable = {}
         self.coreTypes = None
@@ -88,6 +95,24 @@ class HIRPackage(HIRValue):
         self.children.append(binding)
         self.publicSymbolTable[symbol] = binding
 
+    def getType(self):
+        return self.coreTypes.packageType
+
+    def lookupSymbolRecursivelyOrNone(self, symbol: str):
+        if symbol in self.publicSymbolTable:
+            return self.publicSymbolTable[symbol]
+        
+        for usedPackage in self.usedPackages:
+            usedSymbol = usedPackage.lookupSymbolRecursivelyOrNone(symbol)
+            if usedSymbol is not None:
+                return usedSymbol
+                    
+        return None
+
+    def usePackage(self, package):
+        if package not in self.usedPackages:
+            self.usedPackages.append(package)
+
 class HIRCoreTypes:
     def __init__(self):
         self.pointerSize = 8
@@ -101,9 +126,17 @@ class HIRCoreTypes:
         self.symbolType    = HIRNominalType('Symbol', self, None);
         self.voidType      = HIRNominalType('Void', self, None);
         self.undefinedType = HIRNominalType('Undefined', self, None);
+        
+        self.dynamicType = HIRDynamicType('Dynamic', self, None)
+
+        self.packageType = HIRNominalType('Package', self, None)
 
         self.prop = HIRUniverseType('Prop', self, 0);
         self.type = HIRUniverseType('Type', self, 1);
+        self.universeLevels = {
+            0: self.prop,
+            1: self.type,
+        }
 
         self.coreTypeList = [
             self.integerType,
@@ -115,12 +148,25 @@ class HIRCoreTypes:
             self.voidType,
             self.undefinedType,
 
+            self.dynamicType,
+
             self.prop,
             self.type,
-        ] 
+        ]
+        self.coreValueList = [
+            
+        ]
+    
+    def getUniverseAtLevel(self, level):
+        if level in self.universeLevels:
+            return self.universeLevels[level]
+        newLevel = HIRUniverseType(None, self, level)
+        self.universeLevels[level] = newLevel
+        return newLevel
 
 class HIRContext:
     def __init__(self):
         self.coreTypes = HIRCoreTypes()
-        self.corePackage = HIRPackage()
+        self.corePackage = HIRPackage('CoreLib')
         self.corePackage.addCoreTypes(self.coreTypes)
+        self.currentPackage = self.corePackage
