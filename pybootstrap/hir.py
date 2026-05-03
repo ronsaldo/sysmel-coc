@@ -248,6 +248,9 @@ class HIRFunctionLocalValue(HIRValue):
         self.name = name
         self.index = -1
 
+    def __str__(self):
+        return '%d|%s' %(self.index, str(self.name))
+
     def getType(self):
         return self.type
 
@@ -283,6 +286,7 @@ class HIRBasicBlock(HIRFunctionLocalValue):
 
         instruction = self.firstInstruction
         while instruction is not None:
+            result += '\n  ' + instruction.fullPrintString()
             instruction = instruction.nextInstruction
 
         result += '\n'
@@ -293,6 +297,14 @@ class HIRInstruction(HIRFunctionLocalValue):
         super().__init__(type, name, sourcePosition)
         self.previousInstruction = None
         self.nextInstruction = None
+
+class HIRReturnInstruction(HIRInstruction):
+    def __init__(self, valueToReturn, type, name=None, sourcePosition=None):
+        super().__init__(type, name, sourcePosition)
+        self.valueToReturn = valueToReturn
+    
+    def fullPrintString(self) -> str:
+        return "return " + str(self.valueToReturn)
 
 class HIRPackage(HIRValue):
     def __init__(self, name: str):
@@ -331,6 +343,19 @@ class HIRPackage(HIRValue):
     def usePackage(self, package):
         if package not in self.usedPackages:
             self.usedPackages.append(package)
+
+class HIREnvironment:
+    def __init__(self):
+        pass
+
+class HIREmptyEnvironment(HIREnvironment):
+    pass
+
+class HIRLexicalEnvironment(HIREnvironment):
+    def __init__(self, parent):
+        super().__init__()
+        self.parent = parent
+        self.symbolTable = {}
 
 class HIRCoreTypes:
     def __init__(self):
@@ -399,5 +424,16 @@ class HIRContext:
         self.currentPackage = self.corePackage
 
 class HIRBuilder:
-    def __init__(self):
-        pass
+    def __init__(self, function: HIRFunction, context: HIRContext, basicBlock: HIRBasicBlock, environment: HIRLexicalEnvironment):
+        self.function = function
+        self.context = context
+        self.basicBlock = basicBlock
+        self.environment = environment
+
+    def addInstruction(self, instruction):
+        self.basicBlock.addInstruction(instruction)
+
+    def returnValue(self, valueToReturn, sourcePosition):
+        instruction = HIRReturnInstruction(valueToReturn, self.context.coreTypes.voidType, None, sourcePosition)
+        self.addInstruction(instruction)
+        return instruction

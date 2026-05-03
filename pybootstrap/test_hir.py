@@ -20,6 +20,9 @@ class HIRTest(unittest.TestCase):
         entryBlock = HIRBasicBlock('entry', None)
         identity.addBasicBlock(entryBlock)
 
+        builder = HIRBuilder(identity, self.context, entryBlock, HIREmptyEnvironment())
+        builder.returnValue(argument, None)
+
         print(identity.fullPrintString())
 
 if __name__ == '__main__':
