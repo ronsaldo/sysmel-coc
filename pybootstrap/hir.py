@@ -95,6 +95,9 @@ class HIRValue(ABC):
     def isVoidConstant(self):
         return False
 
+    def isVoidType(self):
+        return False
+
     def isNilConstant(self):
         return False
 
@@ -137,7 +140,7 @@ class HIRNominalType(HIRType):
 
     def isNominalType(self):
         return True
-    
+
     def __str__(self):
         return self.name
  
@@ -156,6 +159,20 @@ class HIRDynamicType(HIRType):
     def __str__(self):
         return self.name
 
+class HIRVoidType(HIRType):
+    def __init__(self, name: str, coreTypes, sourcePosition = None):
+        super().__init__(coreTypes, sourcePosition)
+        self.name = name
+
+    def getName(self):
+        return self.name
+
+    def isVoidType(self):
+        return True
+    
+    def __str__(self):
+        return self.name
+    
 class HIRUniverseType(HIRType):
     def __init__(self, name: str, coreTypes, level: int):
         super().__init__(coreTypes, None)
@@ -559,6 +576,7 @@ class HIRBasicBlock(HIRFunctionLocalValue):
         result = '$' + str(self.index)
         if self.name is not None:
             result += '|' + self.name
+        result += ':'
 
         instruction = self.firstInstruction
         while instruction is not None:
@@ -638,6 +656,50 @@ class HIRBranchInstruction(HIRInstruction):
 
     def evaluateInActivationContext(self, context):
         context.pc = self.destination.index
+
+class HIRConditionalBranchInstruction(HIRInstruction):
+    def __init__(self, condition: HIRValue, trueDestination: HIRBasicBlock, falseDestination: HIRBasicBlock, type, name=None, sourcePosition=None):
+        super().__init__(type, name, sourcePosition)
+        self.condition = condition
+        self.trueDestination = trueDestination
+        self.falseDestination = falseDestination
+    
+    def isTerminator(self):
+        return True
+
+    def fullPrintString(self) -> str:
+        return "onCondition %s ifTrue: %s ifFalse: %s" % (str(self.condition), str(self.trueDestination), str(self.falseDestination))
+
+    def evaluateInActivationContext(self, context):
+        condition = self.condition.getValueInEvaluationContext(context).value
+        if condition:
+            context.pc = self.trueDestination.index
+        else:
+            context.pc = self.falseDestination.index
+
+class HIRPhiInstrucion(HIRInstruction):
+    def __init__(self, type, name=None, sourcePosition=None):
+        super().__init__(type, name, sourcePosition)
+
+    def fullPrintString(self):
+        return "%s := phi %s" % (str(self), str(self.type))
+
+    def evaluateInActivationContext(self, context):
+        # Nothing is required here
+        pass
+
+class HIRPhiSourceInstruction(HIRInstruction):
+    def __init__(self, targetPhi: HIRPhiInstrucion, sourceValue: HIRValue, type, name=None, sourcePosition=None):
+        super().__init__(type, name, sourcePosition)
+        self.targetPhi = targetPhi
+        self.sourceValue = sourceValue
+
+    def fullPrintString(self):
+        return "phi: %s source: %s" % (str(self.targetPhi), str(self.sourceValue))
+
+    def evaluateInActivationContext(self, context):
+        sourceEvaluatedValue = self.sourceValue.getValueInEvaluationContext(context)
+        context.atPCSetValue(self.targetPhi.index, sourceEvaluatedValue)
 
 class HIRReturnInstruction(HIRInstruction):
     def __init__(self, valueToReturn, type, name=None, sourcePosition=None):
@@ -753,10 +815,10 @@ class HIRCoreTypes:
         self.booleanType   = HIRNominalType('Boolean', self, None);
         self.stringType    = HIRNominalType('String', self, None);
         self.symbolType    = HIRNominalType('Symbol', self, None);
-        self.voidType      = HIRNominalType('Void', self, None);
         self.undefinedType = HIRNominalType('Undefined', self, None);
         
         self.dynamicType = HIRDynamicType('Dynamic', self, None)
+        self.voidType      = HIRVoidType('Void', self, None);
 
         self.packageType = HIRNominalType('Package', self, None)
         self.primitiveMacroType = HIRNominalType('PrimitiveMacro', self, None)
@@ -780,10 +842,10 @@ class HIRCoreTypes:
             self.booleanType,
             self.stringType,
             self.symbolType,
-            self.voidType,
             self.undefinedType,
 
             self.dynamicType,
+            self.voidType,
 
             self.packageType,
             self.primitiveMacroType,
@@ -881,6 +943,12 @@ class HIRBuilder:
     def addInstruction(self, instruction):
         self.basicBlock.addInstruction(instruction)
 
+    def copyWithBasicBlock(self, basicBlock):
+        result = HIRBuilder(self.function, self.context, basicBlock, self.environment)
+        result.allocaBuilder = self.allocaBuilder
+        result.entryBasicBlock = self.entryBasicBlock
+        return result
+
     def isLastTerminator(self):
         if self.basicBlock is None or self.basicBlock.lastInstruction is None:
             return False
@@ -918,6 +986,11 @@ class HIRBuilder:
         self.addInstruction(instruction)
         return instruction
     
+    def conditionalBranch(self, condition, trueDestination, falseDestination, sourcePosition):
+        instruction = HIRConditionalBranchInstruction(condition, trueDestination, falseDestination, self.context.coreTypes.voidType, None, sourcePosition)
+        self.addInstruction(instruction)
+        return instruction
+
     def load(self, type, storage, sourcePosition):
         instruction = HIRLoadInstruction(type, storage, None, sourcePosition)
         self.addInstruction(instruction)
@@ -925,6 +998,16 @@ class HIRBuilder:
     
     def store(self, storage, valueToStore, sourcePosition):
         instruction = HIRStoreInstruction(self.context.coreTypes.voidType, storage, valueToStore, None, sourcePosition)
+        self.addInstruction(instruction)
+        return instruction
+    
+    def phi(self, type, sourcePosition):
+        instruction = HIRPhiInstrucion(type, None, sourcePosition)
+        self.addInstruction(instruction)
+        return instruction
+    
+    def phiSource(self, targetPhi, sourceValue, sourcePosition):
+        instruction = HIRPhiSourceInstruction(targetPhi, sourceValue, self.context.coreTypes.voidType, None, sourcePosition)
         self.addInstruction(instruction)
         return instruction
 

@@ -102,3 +102,12 @@ class TestAnalysisAndBuild(unittest.TestCase):
         topLevelResult = self.evaluateTopLevelSourceString('let: #x mutableWith: 42. x := 5. x')
         self.assertTrue(topLevelResult.isIntegerConstant())
         self.assertEqual(topLevelResult.value, 5)
+
+    def testIfThenElseMacro(self):
+        topLevelResult = self.evaluateTopLevelSourceString('if: true then: 1 else: 2')
+        self.assertTrue(topLevelResult.isIntegerConstant())
+        self.assertEqual(topLevelResult.value, 1)
+
+        topLevelResult = self.evaluateTopLevelSourceString('if: false then: 1 else: 2')
+        self.assertTrue(topLevelResult.isIntegerConstant())
+        self.assertEqual(topLevelResult.value, 2)

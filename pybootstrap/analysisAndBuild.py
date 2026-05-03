@@ -36,6 +36,9 @@ class AnalysisAndBuildPass(ParseTreeVisitor):
     def visitNodeWithExpectedType(self, node: ParseTreeNode, expectedType: HIRType):
         decayedValue = self.visitDecayedNode(node)
         return self.castValueToExpectedType(decayedValue, expectedType, node.sourcePosition)
+    
+    def visitBooleanCondition(self, node: ParseTreeNode):
+        return self.visitNodeWithExpectedType(node, self.builder.context.coreTypes.booleanType)
 
     def evaluateSymbolNode(self, symbolNode: ParseTreeNode):
         symbolValue = self.visitDecayedNode(symbolNode)
@@ -69,6 +72,9 @@ class AnalysisAndBuildPass(ParseTreeVisitor):
         assert False
 
     def visitBinaryExpressionSequenceNode(self, node):
+        assert False
+
+    def visitFunctionTypeNode(self, node):
         assert False
 
     def visitFunctionNode(self, node):
@@ -182,8 +188,48 @@ class AnalysisAndBuildPass(ParseTreeVisitor):
                 self.builder.environment.setSymbolBinding(name, initialValue)
             return initialValue
 
-    def visitIfSelectionNode(self, node):
-        assert False
+    def visitIfSelectionNode(self, node: ParseTreeIfSelectionNode):
+        trueDestination = HIRBasicBlock("ifTrue", node.sourcePosition)
+        falseDestination = HIRBasicBlock("ifFalse", node.sourcePosition)
+        mergeDestination = HIRBasicBlock("ifMerge", node.sourcePosition)
+
+        conditionValue = self.visitBooleanCondition(node.condition)
+        self.builder.conditionalBranch(conditionValue, trueDestination, falseDestination, node.sourcePosition)
+
+        # True destination
+        self.builder.function.addBasicBlock(trueDestination)
+        trueBuildPass = AnalysisAndBuildPass(self.builder.copyWithBasicBlock(trueDestination))
+
+        trueResult = None
+        if node.trueExpression is not None:
+            trueResult = trueBuildPass.visitDecayedNode(node.trueExpression)
+
+        # False destination
+        self.builder.function.addBasicBlock(falseDestination)
+        falseBuildPass = AnalysisAndBuildPass(self.builder.copyWithBasicBlock(falseDestination))
+
+        falseResult = None
+        if node.falseExpression is not None:
+            falseResult = falseBuildPass.visitDecayedNode(node.falseExpression)
+
+        # Merge
+        self.builder.function.addBasicBlock(mergeDestination)
+        self.builder.basicBlock = mergeDestination
+
+        mergedResult = self.builder.context.coreTypes.voidValue
+        if trueResult is not None and falseResult is not None:
+            trueType = trueResult.getType()
+            falseType = falseResult.getType()
+            if not trueType.isVoidType() and trueType == falseType:
+                phiNode = self.builder.phi(trueType, node.sourcePosition)
+                trueBuildPass.builder.phiSource(phiNode, trueResult, node.sourcePosition)
+                falseBuildPass.builder.phiSource(phiNode, falseResult, node.sourcePosition)
+                mergedResult = phiNode
+        
+        trueBuildPass.builder.branch(mergeDestination, node.sourcePosition)
+        falseBuildPass.builder.branch(mergeDestination, node.sourcePosition)
+
+        return mergedResult
 
     def visitSwitchSelectionNode(self, node):
         assert False
