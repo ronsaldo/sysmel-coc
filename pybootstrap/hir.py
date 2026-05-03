@@ -76,6 +76,56 @@ class HIRUniverseType(HIRType):
 
     def isUniverseType(self):
         return True
+    
+class HIRConstant(HIRValue):
+    def __init__(self, sourcePosition):
+        super().__init__(sourcePosition)
+
+class HIRConstantLiteralValue(HIRConstant):
+    def __init__(self, type: HIRType, sourcePosition):
+        super().__init__(sourcePosition)
+        self.type = type
+
+    def getType(self):
+        return self.type
+
+class HIRConstantLiteralIntegerValue(HIRConstantLiteralValue):
+    def __init__(self, value: int, type: HIRType, sourcePosition):
+        super().__init__(type, sourcePosition)
+        self.value = value
+
+class HIRConstantLiteralFloatValue(HIRConstantLiteralValue):
+    def __init__(self, value: float, type: HIRType, sourcePosition):
+        super().__init__(type, sourcePosition)
+        self.value = value
+
+class HIRConstantLiteralBooleanValue(HIRConstantLiteralValue):
+    def __init__(self, value: bool, type: HIRType, sourcePosition):
+        super().__init__(type, sourcePosition)
+        self.value = value
+
+class HIRConstantLiteralCharacterValue(HIRConstantLiteralValue):
+    def __init__(self, value: int, type: HIRType, sourcePosition):
+        super().__init__(type, sourcePosition)
+        self.value = value
+
+class HIRConstantLiteralStringValue(HIRConstantLiteralValue):
+    def __init__(self, value: str, type: HIRType, sourcePosition):
+        super().__init__(type, sourcePosition)
+        self.value = value
+
+class HIRConstantLiteralSymbolValue(HIRConstantLiteralValue):
+    def __init__(self, value: str, type: HIRType, sourcePosition):
+        super().__init__(type, sourcePosition)
+        self.value = value
+
+class HIRConstantLiteralVoidValue(HIRConstantLiteralValue):
+    def __init__(self, type: HIRType, sourcePosition):
+        super().__init__(type, sourcePosition)
+
+class HIRConstantLiteralNilValue(HIRConstantLiteralValue):
+    def __init__(self, type: HIRType, sourcePosition):
+        super().__init__(type, sourcePosition)
 
 class HIRPackage(HIRValue):
     def __init__(self, name: str):
@@ -138,6 +188,11 @@ class HIRCoreTypes:
             1: self.type,
         }
 
+        self.voidValue = HIRConstantLiteralVoidValue(self.booleanType, None)
+        self.falseValue = HIRConstantLiteralBooleanValue(False, self.booleanType, None)
+        self.trueValue = HIRConstantLiteralBooleanValue(True, self.booleanType, None)
+        self.nilValue = HIRConstantLiteralNilValue(self.undefinedType, None)
+
         self.coreTypeList = [
             self.integerType,
             self.characterType,
@@ -154,7 +209,10 @@ class HIRCoreTypes:
             self.type,
         ]
         self.coreValueList = [
-            
+            (self.voidValue,  'void'),
+            (self.falseValue, 'false'),
+            (self.trueValue,  'true'),
+            (self.nilValue,   'nil'),
         ]
     
     def getUniverseAtLevel(self, level):
