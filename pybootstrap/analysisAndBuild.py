@@ -237,8 +237,45 @@ class AnalysisAndBuildPass(ParseTreeVisitor):
     def visitReturnNode(self, node):
         assert False
 
-    def visitWhileDoNode(self, node):
-        assert False
+    def visitWhileDoNode(self, node: ParseTreeWhileDoNode):
+        loopHeader = HIRBasicBlock("loopHeader", node.sourcePosition)
+        loopBody = HIRBasicBlock("loopBody", node.sourcePosition)
+        loopContinueWith = HIRBasicBlock("loopContinueWith", node.sourcePosition)
+        loopMerge = HIRBasicBlock("loopMerge", node.sourcePosition)
+
+        # Loop header
+        self.builder.branch(loopHeader, node.sourcePosition)
+        self.builder.basicBlock = loopHeader
+        self.builder.function.addBasicBlock(loopHeader)
+
+        conditionValue = self.visitBooleanCondition(node.condition)
+        self.builder.conditionalBranch(conditionValue, loopBody, loopMerge, node.sourcePosition)
+
+        # Loop body.
+        self.builder.basicBlock = loopBody
+        self.builder.function.addBasicBlock(loopBody)
+
+        if node.bodyExpression is not None:
+            self.visitNode(node.bodyExpression)
+
+        if not self.builder.isLastTerminator():
+            self.builder.branch(loopContinueWith, node.sourcePosition)
+
+        # Loop continue with
+        self.builder.basicBlock = loopContinueWith
+        self.builder.function.addBasicBlock(loopContinueWith)
+        
+        if node.continueExpression is not None:
+            self.visitNode(node.continueExpression)
+
+        if not self.builder.isLastTerminator():
+            self.builder.branch(loopHeader, node.sourcePosition)
+
+        # Loop merge.
+        self.builder.basicBlock = loopMerge
+        self.builder.function.addBasicBlock(loopMerge)
+
+        return self.builder.context.coreTypes.voidValue
 
     def visitDoWhileNode(self, node):
         assert False

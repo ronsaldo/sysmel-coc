@@ -111,3 +111,11 @@ class TestAnalysisAndBuild(unittest.TestCase):
         topLevelResult = self.evaluateTopLevelSourceString('if: false then: 1 else: 2')
         self.assertTrue(topLevelResult.isIntegerConstant())
         self.assertEqual(topLevelResult.value, 2)
+
+    def testIfThenMacro(self):
+        topLevelResult = self.evaluateTopLevelSourceString('if: true then: 1')
+        self.assertTrue(topLevelResult.isVoidConstant())
+
+    def testWhileDoMacro(self):
+        topLevelResult = self.evaluateTopLevelSourceString('while: false do: {}')
+        self.assertTrue(topLevelResult.isVoidConstant())

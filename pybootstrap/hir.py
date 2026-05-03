@@ -872,6 +872,11 @@ class HIRCoreTypes:
         def ifThen(macroContext: HIRMacroContext, conditionExpression: ParseTreeNode, trueExpression: ParseTreeNode):
             return ParseTreeIfSelectionNode(macroContext.sourcePosition, conditionExpression, trueExpression, None)
 
+        def whileDoContinueWith(macroContext: HIRMacroContext, conditionExpression: ParseTreeNode, bodyExpression: ParseTreeNode, continueExpression: ParseTreeNode):
+            return ParseTreeWhileDoNode(macroContext.sourcePosition, conditionExpression, bodyExpression, continueExpression)
+        def whileDo(macroContext: HIRMacroContext, conditionExpression: ParseTreeNode, bodyExpression: ParseTreeNode):
+            return ParseTreeWhileDoNode(macroContext.sourcePosition, conditionExpression, bodyExpression, None)
+
         def returnMacro(macroContext: HIRMacroContext, valueExpression: ParseTreeNode):
             return ParseTreeReturnNode(macroContext.sourcePosition, valueExpression)
 
@@ -881,6 +886,9 @@ class HIRCoreTypes:
 
             HIRPrimitiveMacro('if:then:else:', self.primitiveMacroType, ifThenElse, None),
             HIRPrimitiveMacro('if:then:', self.primitiveMacroType, ifThen, None),
+
+            HIRPrimitiveMacro('while:do:continueWith:', self.primitiveMacroType, whileDoContinueWith, None),
+            HIRPrimitiveMacro('while:do:', self.primitiveMacroType, whileDo, None),
 
             HIRPrimitiveMacro('return:', self.primitiveMacroType, returnMacro, None),
         ]
