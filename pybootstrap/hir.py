@@ -54,7 +54,11 @@ class HIRValue(ABC):
     def analyzeAndEvaluateMessageSendNode(self, evaluator, node: ParseTreeMessageSendNode, receiver):
         selfType = self.getType()
         return selfType.analyzeAndEvaluateMessageSendNode(evaluator, node, receiver)
-    
+
+    def analyzeAndBuildMessageSendNode(self, buildPass, node: ParseTreeMessageSendNode, receiver):
+        selfType = self.getType()
+        return selfType.analyzeAndBuildMessageSendNode(buildPass, node, receiver)
+
     @abstractmethod
     def getType(self):
         pass
@@ -99,6 +103,15 @@ class HIRValue(ABC):
         return False
 
     def isSimpleFunctionType(self):
+        return False
+    
+    def isCompileTimeFunction(self):
+        return False
+
+    def isPureFunction(self):
+        return False
+
+    def isConstantValue(self):
         return False
 
     def isIntegerConstant(self):
@@ -150,6 +163,8 @@ class HIRType(HIRValue):
 
     def analyzeAndEvaluateMessageSendNode(self, evaluator, node: ParseTreeMessageSendNode, receiver):
         selector = evaluator.visitSymbolNode(node.selector)
+
+        # FIXME: remove this hack.
         if selector == 'yourself':
             return receiver
 
@@ -157,6 +172,18 @@ class HIRType(HIRValue):
         if foundMethod is None:
             raise RuntimeError("%s: type '%s' does not have method with selector #%s." % (str(node.sourcePosition), str(self), selector))
         return foundMethod.analyzeAndEvaluateMessageSendNode(evaluator, node, receiver)
+    
+    def analyzeAndBuildMessageSendNode(self, buildPass, node: ParseTreeMessageSendNode, receiver):
+        selector = buildPass.evaluateSymbolNode(node.selector)
+
+        # FIXME: remove this hack.
+        if selector == 'yourself':
+            return receiver
+
+        foundMethod = self.lookupSelector(selector)
+        if foundMethod is None:
+            raise RuntimeError("%s: type '%s' does not have method with selector #%s." % (str(node.sourcePosition), str(self), selector))
+        return foundMethod.analyzeAndBuildMessageSendNode(buildPass, node, receiver)
 
     def isSatisfiedByValue(self, value: HIRValue):
         return self.isSatisfiedByType(value.getType())
@@ -287,6 +314,9 @@ class HIRReferenceType(HIRPointerLikeType):
 
     def analyzeAndEvaluateMessageSendNode(self, evaluator, node: ParseTreeMessageSendNode, receiver):
         return self.baseType.analyzeAndEvaluateMessageSendNode(evaluator, node, receiver)
+    
+    def analyzeAndBuildMessageSendNode(self, buildPass, node: ParseTreeMessageSendNode, receiver):
+        return self.baseType.analyzeAndBuildMessageSendNode(buildPass, node, receiver)
 
 class HIRMutableValueBoxType(HIRPointerLikeType):
     def isMutableValueBoxType(self):
@@ -311,6 +341,17 @@ class HIRSimpleFunctionType(HIRType):
             typecheckedArguments.append(typecheckedArgument)
 
         return typecheckedArguments, self.resultType
+
+    def analyzeBuildAndTypecheckArguments(self, buildPass, arguments, sourcePosition):
+        if len(arguments) != len(self.argumentTypes):
+            raise RuntimeError("%s: expected %d arguments instead of %d." % (str(sourcePosition), len(self.argumentTypes), len(arguments)))
+        
+        typecheckedArguments = []
+        for i in range(len(arguments)):
+            typecheckedArgument = buildPass.visitNodeWithExpectedType(arguments[i], self.argumentTypes[i])
+            typecheckedArguments.append(typecheckedArgument)
+
+        return typecheckedArguments, self.resultType
     
 class HIRDependentFunctionType(HIRType):
     def __init__(self, arguments, resultType: HIRValue, coreTypes, sourcePosition):
@@ -325,6 +366,9 @@ class HIRConstant(HIRValue):
     def __init__(self, sourcePosition):
         super().__init__(sourcePosition)
 
+    def isConstantValue(self):
+        return True
+    
     def getValueInEvaluationContext(self, context):
         return self
 
@@ -341,7 +385,7 @@ class HIRConstantLiteralIntegerValue(HIRConstantLiteralValue):
         super().__init__(type, sourcePosition)
         self.value = value
 
-    def __str__(self):
+    def __repr__(self):
         return 'integer %d' % self.value
 
     def isIntegerConstant(self):
@@ -352,7 +396,7 @@ class HIRConstantLiteralFloatValue(HIRConstantLiteralValue):
         super().__init__(type, sourcePosition)
         self.value = value
 
-    def __str__(self):
+    def __repr__(self):
         return 'float %f' % self.value
 
     def isFloatConstant(self):
@@ -363,7 +407,7 @@ class HIRConstantLiteralBooleanValue(HIRConstantLiteralValue):
         super().__init__(type, sourcePosition)
         self.value = value
 
-    def __str__(self):
+    def __repr__(self):
         if self.value:
             return 'true'
         else:
@@ -503,6 +547,12 @@ class HIRPrimitiveFunction(HIRConstant):
     def getType(self):
         return self.type
 
+    def isCompileTimeFunction(self):
+        return self.isCompileTime
+
+    def isPureFunction(self):
+        return self.isPure
+
     def analyzeAndBuildApplicationNode(self, buildPass, node: ParseTreeApplicationNode, functional):
         assert False
 
@@ -513,6 +563,17 @@ class HIRPrimitiveFunction(HIRConstant):
         receiverNode = ParseTreeLiteralValueNode(node.sourcePosition, receiver)
         typecheckedArguments, resultType = self.type.evaluateAndTypecheckArguments(evaluationPass, [receiverNode] + node.arguments, node.sourcePosition)
         return self.primitiveFunction(*typecheckedArguments, resultType)
+    
+    def analyzeAndBuildMessageSendNode(self, buildPass, node: ParseTreeMessageSendNode, receiver):
+        receiverNode = ParseTreeLiteralValueNode(node.sourcePosition, receiver)
+        typecheckedArguments, resultType = self.type.analyzeBuildAndTypecheckArguments(buildPass, [receiverNode] + node.arguments, node.sourcePosition)
+        return buildPass.builder.call(self, typecheckedArguments, resultType, node.sourcePosition)
+    
+    def evaluateWithArgumentsAndResultType(self, arguments, resultType):
+        return self.primitiveFunction(*arguments, resultType)
+    
+    def __str__(self):
+        return 'primitiveFunction(%s)' % self.name
 
 class HIRFunction(HIRConstant):
     def __init__(self, name: str, dependentFunctionType: HIRDependentFunctionType, sourcePosition):
@@ -787,6 +848,34 @@ class HIRConditionalBranchInstruction(HIRInstruction):
             context.pc = self.trueDestination.index
         else:
             context.pc = self.falseDestination.index
+
+class HIRCallInstruction(HIRInstruction):
+    def __init__(self, functional, arguments, type, name=None, sourcePosition=None):
+        super().__init__(type, name, sourcePosition)
+        self.functional = functional
+        self.arguments = arguments
+
+    def fullPrintString(self):
+        return "%s := call %s with %s :: %s" % (str(self), str(self.functional), str(self.arguments), str(self.type))
+
+    def evaluateInActivationContext(self, context):
+        functional = self.functional.getValueInEvaluationContext(context)
+        arguments = list(map(lambda arg: arg.getValueInEvaluationContext(context), self.arguments))
+        result = functional.evaluateWithArgumentsAndResultType(arguments, self.type)
+        context.setCurrentInstructionValue(result)
+
+    def canSimplify(self):
+        if not self.functional.isCompileTimeFunction():
+            return False
+
+        return True
+
+    def simplifyWithBuilder(self, builder):
+        if not self.canSimplify():
+            return self
+        
+        simplified = self.functional.evaluateWithArgumentsAndResultType(self.arguments, self.type)
+        return simplified
 
 class HIRPhiInstrucion(HIRInstruction):
     def __init__(self, type, name=None, sourcePosition=None):
@@ -1276,6 +1365,13 @@ class HIRBuilder:
         instruction = HIRConditionalBranchInstruction(condition, trueDestination, falseDestination, self.context.coreTypes.voidType, None, sourcePosition)
         self.addInstruction(instruction)
         return instruction
+    
+    def call(self, functional, arguments, resultType, sourcePosition):
+        instruction = HIRCallInstruction(functional, arguments, resultType, None, sourcePosition)
+        simplified = instruction.simplifyWithBuilder(self)
+        if instruction == simplified:
+            self.addInstruction(instruction)
+        return simplified
 
     def load(self, type, storage, sourcePosition):
         instruction = HIRLoadInstruction(type, storage, None, sourcePosition)

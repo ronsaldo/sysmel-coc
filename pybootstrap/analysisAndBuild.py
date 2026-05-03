@@ -71,8 +71,8 @@ class AnalysisAndBuildPass(ParseTreeVisitor):
     def visitAssociationNode(self, node):
         assert False
 
-    def visitBinaryExpressionSequenceNode(self, node):
-        assert False
+    def visitBinaryExpressionSequenceNode(self, node: ParseTreeBinaryExpressionSequenceNode):
+        return self.visitNode(node.expandAsMessageSends())
 
     def visitFunctionTypeNode(self, node):
         assert False
@@ -128,11 +128,19 @@ class AnalysisAndBuildPass(ParseTreeVisitor):
     def visitLiteralValueNode(self, node: ParseTreeLiteralValueNode):
         return node.value
 
-    def visitMessageCascadeNode(self, node):
-        assert False
+    def visitMessageCascadeNode(self, node: ParseTreeMessageCascadeNode):
+        receiver = self.visitNode(node.receiver)
+        receiverValueNode = ParseTreeLiteralValueNode(node.receiver, receiver)
 
-    def visitMessageSendNode(self, node):
-        assert False
+        result = receiver
+        for cascadedMessage in node.messages:
+            cascadedMessageWithReceiver = cascadedMessage.asMessageSendWithReceiver(receiverValueNode)
+            result = self.visitNode(cascadedMessageWithReceiver)
+        return result
+
+    def visitMessageSendNode(self, node: ParseTreeMessageSendNode):
+        receiver = self.visitNode(node.receiver)
+        return receiver.analyzeAndBuildMessageSendNode(self, node, receiver)
 
     def visitQuasiQuoteNode(self, node):
         assert False

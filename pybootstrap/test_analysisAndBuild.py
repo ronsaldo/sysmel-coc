@@ -123,3 +123,103 @@ class TestAnalysisAndBuild(unittest.TestCase):
     def testQuote(self):
         topLevelResult = self.evaluateTopLevelFunctionSourceString("`'42")
         self.assertTrue(topLevelResult.isParseTreeConstant())
+
+    def testMessageSend(self):
+        value = self.evaluateTopLevelFunctionSourceString('42 negated')
+        self.assertTrue(value.isIntegerConstant())
+        self.assertEqual(-42, value.value)
+
+    def testMessageSend2(self):
+        value = self.evaluateTopLevelFunctionSourceString('1 + 2')
+        self.assertTrue(value.isIntegerConstant())
+        self.assertEqual(3, value.value)
+
+        value = self.evaluateTopLevelFunctionSourceString('1 - 2')
+        self.assertTrue(value.isIntegerConstant())
+        self.assertEqual(-1, value.value)
+
+        value = self.evaluateTopLevelFunctionSourceString('2 * 3')
+        self.assertTrue(value.isIntegerConstant())
+        self.assertEqual(6, value.value)
+
+        value = self.evaluateTopLevelFunctionSourceString('6 // 3')
+        self.assertTrue(value.isIntegerConstant())
+        self.assertEqual(2, value.value)
+
+        value = self.evaluateTopLevelFunctionSourceString('2 = 2')
+        self.assertTrue(value.isBooleanConstant())
+        self.assertEqual(True, value.value)
+
+        value = self.evaluateTopLevelFunctionSourceString('2 ~= 2')
+        self.assertTrue(value.isBooleanConstant())
+        self.assertEqual(False, value.value)
+
+        value = self.evaluateTopLevelFunctionSourceString('1 < 2')
+        self.assertTrue(value.isBooleanConstant())
+        self.assertEqual(True, value.value)
+
+        value = self.evaluateTopLevelFunctionSourceString('1 <= 2')
+        self.assertTrue(value.isBooleanConstant())
+        self.assertEqual(True, value.value)
+
+        value = self.evaluateTopLevelFunctionSourceString('1 > 2')
+        self.assertTrue(value.isBooleanConstant())
+        self.assertEqual(False, value.value)
+
+        value = self.evaluateTopLevelFunctionSourceString('1 >= 2')
+        self.assertTrue(value.isBooleanConstant())
+        self.assertEqual(False, value.value)
+
+    def testMessageSend3(self):
+        value = self.evaluateTopLevelFunctionSourceString('42.0 negated')
+        self.assertTrue(value.isFloatConstant())
+        self.assertEqual(-42.0, value.value)
+
+        value = self.evaluateTopLevelFunctionSourceString('9.0 sqrt')
+        self.assertTrue(value.isFloatConstant())
+        self.assertEqual(3.0, value.value)
+
+        value = self.evaluateTopLevelFunctionSourceString('1.0 + 2.0')
+        self.assertTrue(value.isFloatConstant())
+        self.assertEqual(3.0, value.value)
+
+        value = self.evaluateTopLevelFunctionSourceString('1.0 - 2.0')
+        self.assertTrue(value.isFloatConstant())
+        self.assertEqual(-1.0, value.value)
+
+        value = self.evaluateTopLevelFunctionSourceString('2.0 * 3.0')
+        self.assertTrue(value.isFloatConstant())
+        self.assertEqual(6.0, value.value)
+
+        value = self.evaluateTopLevelFunctionSourceString('6.0 / 3.0')
+        self.assertTrue(value.isFloatConstant())
+        self.assertEqual(2.0, value.value)
+
+        value = self.evaluateTopLevelFunctionSourceString('2.0 = 2.0')
+        self.assertTrue(value.isBooleanConstant())
+        self.assertEqual(True, value.value)
+
+        value = self.evaluateTopLevelFunctionSourceString('2.0 ~= 2.0')
+        self.assertTrue(value.isBooleanConstant())
+        self.assertEqual(False, value.value)
+
+        value = self.evaluateTopLevelFunctionSourceString('1.0 < 2.0')
+        self.assertTrue(value.isBooleanConstant())
+        self.assertEqual(True, value.value)
+
+        value = self.evaluateTopLevelFunctionSourceString('1.0 <= 2.0')
+        self.assertTrue(value.isBooleanConstant())
+        self.assertEqual(True, value.value)
+
+        value = self.evaluateTopLevelFunctionSourceString('1.0 > 2.0')
+        self.assertTrue(value.isBooleanConstant())
+        self.assertEqual(False, value.value)
+
+        value = self.evaluateTopLevelFunctionSourceString('1.0 >= 2.0')
+        self.assertTrue(value.isBooleanConstant())
+        self.assertEqual(False, value.value)
+
+    def testMessageSendCascade(self):
+        value = self.evaluateTopLevelFunctionSourceString('1.0 + 2.0; yourself')
+        self.assertTrue(value.isFloatConstant())
+        self.assertEqual(1.0, value.value)
