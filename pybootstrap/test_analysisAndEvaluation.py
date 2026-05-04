@@ -447,7 +447,32 @@ class TestAnalysisAndEvaluation(unittest.TestCase):
         self.assertEqual(None, enumValue.name)
         self.assertEqual(2, enumValue.value.value)
         
+    def testEnumFunctionAccess(self):
+        enumValue = self.evaluateTopLevelSourceString("""
+        enum MyEnum baseType: Integer values: #{First: 1. Second: 2. Third:}.
+        {:: MyEnum | MyEnum First} ()
+        """)
+        self.assertTrue(enumValue.isEnumConstant())
+        self.assertEqual(1, enumValue.value.value)
 
+    def testEnumFunctionValueAccess(self):
+        enumValue = self.evaluateTopLevelSourceString("""
+        enum MyEnum baseType: Integer values: #{First: 1. Second: 2. Third:}.
+        {:(MyEnum)e :: Integer | e value} (MyEnum Second)
+        """)
+
+        self.assertTrue(enumValue.isIntegerConstant())
+        self.assertEqual(2, enumValue.value)
+
+    def testEnumMakeValueAccess(self):
+        enumValue = self.evaluateTopLevelSourceString("""
+        enum MyEnum baseType: Integer values: #{First: 1. Second: 2. Third:}.
+        {:(Integer)x :: MyEnum | MyEnum value: x} (2)
+        """)
+
+        self.assertTrue(enumValue.isEnumConstant())
+        self.assertTrue(enumValue.value.isIntegerConstant())
+        self.assertEqual(2, enumValue.value.value)
 
 if __name__ == '__main__':
     unittest.main()

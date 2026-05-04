@@ -199,7 +199,7 @@ class HIRType(HIRValue):
         raise RuntimeError(str(node.sourcePosition) +  ": cannot analyze and build non-functional value.")
     
     def analyzeAndEvaluateApplicationNode(self, buildPass, node: ParseTreeApplicationNode, functional):
-        raise RuntimeError(str(node.sourcePosition) +  ": cannot analyze and evaluate non-functional value.")
+        raise RuntimeError(str(node.sourcePosition) +  ": cannot analyze and evaluate non-functional value "+ str(self))
 
     def analyzeAndEvaluateMessageSendNodeOnType(self, evaluator, node: ParseTreeMessageSendNode, receiver):
         selector = evaluator.visitSymbolNode(node.selector)
@@ -432,6 +432,24 @@ class HIREnumType(HIRType):
 
     def isEnumType(self):
         return True
+    
+    def analyzeAndBuildMessageSendNode(self, buildPass, node: ParseTreeMessageSendNode, receiver):
+        selector = buildPass.evaluateSymbolNode(node.selector)
+        if selector in self.valueTable:
+            return self.valueTable[selector]
+        
+        if selector == 'value:':
+            assert len(node.arguments) == 1
+            value = buildPass.visitNodeWithExpectedType(node.arguments[0], self.baseType)
+            return buildPass.builder.enumBoxValue(value, self, node.sourcePosition)
+
+        return super().analyzeAndBuildMessageSendNode(buildPass, node, receiver)
+    
+    def analyzeAndBuildMessageSendNodeOnType(self, buildPass, node, receiver):
+        selector = buildPass.evaluateSymbolNode(node.selector)
+        if selector == 'value':
+            return buildPass.builder.enumUnboxValue(receiver, self.baseType, node.sourcePosition)
+        return super().analyzeAndBuildMessageSendNodeOnType(buildPass, node, receiver)
     
     def analyzeAndEvaluateMessageSendNode(self, evaluator, node: ParseTreeMessageSendNode, receiver):
         selector = evaluator.visitSymbolNode(node.selector)
@@ -1090,6 +1108,10 @@ class HIRFunction(HIRConstant):
     def evaluateWithArguments(self, arguments):
         return self.evaluateWithArgumentsAndCaptures(arguments, [])
     
+    def analyzeAndEvaluateApplicationNode(self, evaluationPass, node: ParseTreeApplicationNode, functional):
+        typecheckedArguments, resultType = self.simplifiedType.evaluateAndTypecheckArguments(evaluationPass, node.arguments, node.sourcePosition)
+        return self.evaluateWithArguments(typecheckedArguments)
+    
     def __repr__(self):
         return 'HIRFunction(%s)' % self.name
 
@@ -1393,6 +1415,30 @@ class HIRSendInstruction(HIRInstruction):
         arguments = list(map(lambda arg: arg.getValueInEvaluationContext(context), self.arguments))
         result = receiver.performWithArguments(selector, arguments, self.sourcePosition)
         context.setCurrentInstructionValue(result)
+
+class HIREnumBoxValueInstruction(HIRInstruction):
+    def __init__(self, value, type, name=None, sourcePosition=None):
+        super().__init__(type, name, sourcePosition)
+        self.value = value
+
+    def evaluateInActivationContext(self, context):
+        value = self.value.getValueInEvaluationContext(context)
+        context.setCurrentInstructionValue(HIRConstantEnum(None, value, self.type, self.sourcePosition))
+
+    def fullPrintString(self):
+        return "%s := enumBoxValue %s :: %s" % (str(self), str(self.value), str(self.type))
+
+class HIREnumUnboxValueInstruction(HIRInstruction):
+    def __init__(self, enumValue, type, name=None, sourcePosition=None):
+        super().__init__(type, name, sourcePosition)
+        self.enumValue = enumValue
+
+    def evaluateInActivationContext(self, context):
+        enumValue = self.enumValue.getValueInEvaluationContext(context)
+        context.setCurrentInstructionValue(enumValue.value)
+
+    def fullPrintString(self):
+        return "%s := enumUnboxValue %s :: %s" % (str(self), str(self.enumValue), str(self.type))
 
 class HIRDynamicUnboxInstruction(HIRInstruction):
     def __init__(self, boxedValue, type, name=None, sourcePosition=None):
@@ -2272,6 +2318,16 @@ class HIRBuilder:
     
     def dynamicUnbox(self, boxedValue, type, sourcePosition):
         instruction = HIRDynamicUnboxInstruction(boxedValue, type, None, sourcePosition)
+        self.addInstruction(instruction)
+        return instruction
+
+    def enumBoxValue(self, value, type, sourcePosition):
+        instruction = HIREnumBoxValueInstruction(value, type, None, sourcePosition)
+        self.addInstruction(instruction)
+        return instruction
+
+    def enumUnboxValue(self, enumValue, type, sourcePosition):
+        instruction = HIREnumUnboxValueInstruction(enumValue, type, None, sourcePosition)
         self.addInstruction(instruction)
         return instruction
 
