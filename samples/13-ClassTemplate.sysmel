@@ -1,0 +1,8 @@
+template GenericPair(F: Type. S: Type) := public class definition: {
+    public field first type: F.
+    public field second type: S.
+}.
+
+printLine(GenericPair).
+printLine(GenericPair(Integer. Character)).
+printLine(GenericPair(Integer. Character)).

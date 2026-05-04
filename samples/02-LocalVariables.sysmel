@@ -1,0 +1,16 @@
+## Immutable variable
+let: #number with: 42.
+printLine(number).
+
+## Mutable variable
+let: #mutableNumber mutableWith: 5.
+printLine(mutableNumber).
+
+mutableNumber := 7.
+printLine(mutableNumber).
+
+let string := "Hello World".
+printLine(string).
+
+let stringMutable mutable := "Foo Bar".
+writeLine(stringMutable)

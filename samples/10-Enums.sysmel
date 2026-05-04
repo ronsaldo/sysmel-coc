@@ -1,0 +1,14 @@
+enum TestEnum baseType: Integer values: #{
+    First: 1.
+    Second: 2.
+    Third:.
+}.
+
+printLine(TestEnum).
+printLine(TestEnum First).
+printLine(TestEnum First value).
+printLine(TestEnum Second).
+printLine(TestEnum Second value).
+printLine(TestEnum Third).
+printLine(TestEnum Third value).
+

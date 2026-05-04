@@ -1,0 +1,24 @@
+switch: 3 withCases: #{
+    1: writeLine("One").
+    2: writeLine("Two").
+    3: writeLine("Three").
+    4: writeLine("Four").
+    5: writeLine("Five").
+    _: writeLine("Something").
+}.
+
+let: #functionWithSwitch with:{:(Integer)n :: Void |
+    switch: n withCases: #{
+        1: writeLine("One").
+        2: writeLine("Two").
+        3: writeLine("Three").
+        4: writeLine("Four").
+        5: writeLine("Five").
+        _: writeLine("Something").
+    }.
+}.
+
+##functionWithSwitch dump.
+functionWithSwitch(4).
+functionWithSwitch(1).
+functionWithSwitch(42).

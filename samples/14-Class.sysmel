@@ -1,0 +1,17 @@
+class TestPair definition: {
+    public field first type: Integer.
+    public field second type: Integer.
+
+    method sumExplicit => Integer := self first + self second.
+    method sumImplicit => Integer := first + second.
+}.
+
+printLine(TestPair).
+printLine(TestPair()).
+printLine(TestPair(1 . 2)).
+
+printLine(TestPair(1 . 2) first).
+printLine(TestPair(1 . 2) first: 5).
+
+printLine(TestPair(1 . 2) sumExplicit).
+printLine(TestPair(1 . 2) sumImplicit).

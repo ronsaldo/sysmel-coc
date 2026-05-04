@@ -652,6 +652,9 @@ class HIRConstantLiteralIntegerValue(HIRConstantLiteralValue):
 
         return self.type == other.type and self.value == other.value
 
+    def __str__(self):
+        return str(self.value)
+
     def __repr__(self):
         return 'integer(%d)' % self.value
 
@@ -2047,9 +2050,14 @@ class HIRCoreTypes:
             print(str(operand))
             return self.voidValue
 
+        def writeLinePrimitive(operand, resultType):
+            print(str(operand))
+            return self.voidValue
+
         self.coreValueList += [
             (HIRPrimitiveFunction('IO::print', self.getOrCreateSimpleFunctionType((self.dynamicType,), self.voidType), printPrimitive, None), 'print'),
             (HIRPrimitiveFunction('IO::printLine', self.getOrCreateSimpleFunctionType((self.dynamicType,), self.voidType), printLinePrimitive, None), 'printLine'),
+            (HIRPrimitiveFunction('IO::writeLine', self.getOrCreateSimpleFunctionType((self.dynamicType,), self.voidType), writeLinePrimitive, None), 'writeLine'),
         ]
 
     def createIntegerPrimitiveFunctions(self):

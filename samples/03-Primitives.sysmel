@@ -1,0 +1,9 @@
+writeLine("Hello" -- " World").
+printLine("Hello World" size).
+printLine("Hello" = " World").
+printLine("Hello" = "Hello").
+
+##printLine(#[1 . 2. 3. 4]).
+##printLine([1 . 2. 3. 4]).
+
+printLine(1, 2, 3).

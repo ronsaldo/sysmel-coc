@@ -1,0 +1,3 @@
+let: #block with: {:(Integer)x :: Integer | x }.
+printLine(block).
+printLine(block(45)).

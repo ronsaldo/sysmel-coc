@@ -1,0 +1,33 @@
+let: #whileCountTo with: {:(Integer)n :: Void |
+    let: #x mutableWith: 0.
+    printLine(x + 4).
+    while: (x < n) do: {
+        printLine("While: ") . printLine(x)
+    } continueWith: (x := x + 1).
+}.
+
+## whileCountTo dump.
+whileCountTo(10).
+
+let: #doContinueWhileCountTo with: {:(Integer)n :: Void |
+    let: #x mutableWith: 0.
+
+    do: {
+        printLine("Do continue while: "). printLine(x)
+    } continueWith: (x := x + 1) while: (x < n)
+}.
+
+##doContinueWhileCountTo dump.
+doContinueWhileCountTo(10).
+
+let: #doWhileCountTo with: {:(Integer)n :: Void |
+    let: #x mutableWith: 0.
+
+    do: {
+        printLine("Do while: "). printLine(x).
+        x := x + 1.
+    } while: (x < n)
+}.
+
+##doWhileCountTo dump.
+doWhileCountTo(10)
