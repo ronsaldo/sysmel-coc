@@ -406,5 +406,16 @@ class TestAnalysisAndEvaluation(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             self.evaluateTopLevelSourceString('error: "test message"')
 
+    def testEmptyDictionary(self):
+        dictionary = self.evaluateTopLevelSourceString("#{}")
+        self.assertTrue(dictionary.isDictionaryConstant())
+        self.assertEqual(0, len(dictionary.elements))
+
+    def testDictionary(self):
+        dictionary = self.evaluateTopLevelSourceString("#{First: 1. Second: 2. Third:}")
+        self.assertTrue(dictionary.isDictionaryConstant())
+        self.assertEqual(3, len(dictionary.elements))
+
+
 if __name__ == '__main__':
     unittest.main()

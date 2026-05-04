@@ -125,7 +125,9 @@ class AnalysisAndEvaluationPass(ParseTreeVisitor):
         assert False
 
     def visitDictionaryNode(self, node: ParseTreeDictionaryNode):
-        assert False
+        associations = list(map(self.visitNode, node.elements))
+        dictionaryType = self.evaluationContext.context.coreTypes.dynamicDictionaryType
+        return HIRConstantDictionary(associations, dictionaryType, node.sourcePosition)
 
     def visitIdentifierReferenceNode(self, node: ParseTreeIdentifierReferenceNode):
         bindingOrNone = self.evaluationContext.environment.lookSymbolRecursively(node.value)

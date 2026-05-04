@@ -89,6 +89,9 @@ class HIRValue(ABC):
 
     def isAssociationType(self):
         return False
+    
+    def isDictionaryType(self):
+        return False
 
     def isTupleType(self):
         return False
@@ -160,6 +163,9 @@ class HIRValue(ABC):
         return False
     
     def isAssociationConstant(self):
+        return False
+
+    def isDictionaryConstant(self):
         return False
 
     def isTupleConstant(self):
@@ -381,6 +387,23 @@ class HIRAssociationType(HIRType):
     def __str__(self):
         return '(%s : %s)' % (self.keyType, self.valueType)
 
+class HIRDictionaryType(HIRType):
+    def __init__(self, associationType: HIRAssociationType, coreTypes, sourcePosition = None):
+        super().__init__(coreTypes, sourcePosition)
+        self.associationType = associationType
+
+    def isDictionaryType(self):
+        return True
+    
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            return False
+
+        return self.associationType == other.associationType
+
+    def __str__(self):
+        return 'Dictionary(%s : %s)' % (self.associationType.keyType, self.associationType.valueType)
+    
 class HIRTupleType(HIRType):
     def __init__(self, elements: list[HIRType], coreTypes, sourcePosition = None):
         super().__init__(coreTypes, sourcePosition)
@@ -709,6 +732,27 @@ class HIRConstantAssociation(HIRConstant):
 
     def __str__(self):
         return 'association(%s : %s)' % (str(self.key), str(self.value))
+
+class HIRConstantDictionary(HIRConstant):
+    def __init__(self, elements, type, sourcePosition):
+        super().__init__(sourcePosition)
+        self.elements = elements
+        self.type = type
+
+    def getType(self):
+        return self.type
+    
+    def isDictionaryConstant(self):
+        return True
+
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            return False
+
+        return self.type == other.type and self.elements == other.elements
+
+    def __str__(self):
+        return 'dictionary(%s)' % (str(self.elements))
 
 class HIRConstantTuple(HIRConstant):
     def __init__(self, elements, type, sourcePosition):
@@ -1714,7 +1758,10 @@ class HIRCoreTypes:
         
         self.dynamicType = HIRDynamicType('Dynamic', self, None)
         self.voidType    = HIRVoidType('Void', self, None);
-        
+
+        self.dynamicAssociationType = HIRAssociationType(self.dynamicType, self.dynamicType, self)
+        self.dynamicDictionaryType = HIRDictionaryType(self.dynamicAssociationType, self)
+
         self.controlFlowEscapeType = HIRControlFlowEscapeType('ControlFlowEscape', self, None);
 
         self.packageType = HIRNominalType('Package', self, None)
