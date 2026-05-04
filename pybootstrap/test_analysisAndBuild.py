@@ -292,7 +292,7 @@ class TestAnalysisAndBuild(unittest.TestCase):
         self.assertEqual(result.value, 42)
 
     def testFunctionCapture(self):
-        functionValue = self.evaluateTopLevelFunctionSourceString('{:(Integer)x :: Dynamic | {:(Integer)y :: Integer | x + y}}')
+        functionValue = self.evaluateTopLevelFunctionSourceString('{:(Integer)x :: ((Integer) => Integer) | {:(Integer)y :: Integer | x + y}}')
         #print(functionValue.fullPrintString())
 
         blockClosureValue = functionValue.evaluateWithArguments([HIRConstantLiteralIntegerValue(42, self.context.coreTypes.integerType, None)])
@@ -301,3 +301,17 @@ class TestAnalysisAndBuild(unittest.TestCase):
         result = blockClosureValue.evaluateWithArguments([HIRConstantLiteralIntegerValue(5, self.context.coreTypes.integerType, None)])
         self.assertTrue(result.isIntegerConstant())
         self.assertEqual(result.value, 47)
+    
+    def testSimpleFunctionType(self):
+        simpleFunctionType = self.evaluateTopLevelFunctionSourceString('(Integer) => Integer')
+        self.assertTrue(simpleFunctionType.isSimpleFunctionType())
+        
+        self.assertEqual(len(simpleFunctionType.argumentTypes), 1)
+        self.assertEqual(simpleFunctionType.argumentTypes[0], self.context.coreTypes.integerType)
+
+        simpleFunctionType = self.evaluateTopLevelFunctionSourceString('(Integer, Integer) => Integer')
+        self.assertTrue(simpleFunctionType.isSimpleFunctionType())
+        
+        self.assertEqual(len(simpleFunctionType.argumentTypes), 2)
+        self.assertEqual(simpleFunctionType.argumentTypes[1], self.context.coreTypes.integerType)
+        self.assertEqual(simpleFunctionType.argumentTypes[0], self.context.coreTypes.integerType)

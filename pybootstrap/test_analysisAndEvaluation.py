@@ -310,5 +310,19 @@ class TestAnalysisAndEvaluation(unittest.TestCase):
         self.assertTrue(result.isIntegerConstant())
         self.assertEqual(result.value, 3)
 
+    def testSimpleFunctionType(self):
+        simpleFunctionType = self.evaluateTopLevelSourceString('(Integer) => Integer')
+        self.assertTrue(simpleFunctionType.isSimpleFunctionType())
+        
+        self.assertEqual(len(simpleFunctionType.argumentTypes), 1)
+        self.assertEqual(simpleFunctionType.argumentTypes[0], self.context.coreTypes.integerType)
+
+        simpleFunctionType = self.evaluateTopLevelSourceString('(Integer, Integer) => Integer')
+        self.assertTrue(simpleFunctionType.isSimpleFunctionType())
+        
+        self.assertEqual(len(simpleFunctionType.argumentTypes), 2)
+        self.assertEqual(simpleFunctionType.argumentTypes[1], self.context.coreTypes.integerType)
+        self.assertEqual(simpleFunctionType.argumentTypes[0], self.context.coreTypes.integerType)
+
 if __name__ == '__main__':
     unittest.main()

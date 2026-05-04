@@ -53,11 +53,11 @@ class HIRValue(ABC):
     
     def analyzeAndEvaluateMessageSendNode(self, evaluator, node: ParseTreeMessageSendNode, receiver):
         selfType = self.getType()
-        return selfType.analyzeAndEvaluateMessageSendNode(evaluator, node, receiver)
+        return selfType.analyzeAndEvaluateMessageSendNodeOnType(evaluator, node, receiver)
 
     def analyzeAndBuildMessageSendNode(self, buildPass, node: ParseTreeMessageSendNode, receiver):
         selfType = self.getType()
-        return selfType.analyzeAndBuildMessageSendNode(buildPass, node, receiver)
+        return selfType.analyzeAndBuildMessageSendNodeOnType(buildPass, node, receiver)
     
     def performWithArguments(self, selector, arguments, sourcePosition):
         # FIXME: Remove this hack
@@ -186,7 +186,7 @@ class HIRType(HIRValue):
     def analyzeAndEvaluateApplicationNode(self, buildPass, node: ParseTreeApplicationNode, functional):
         raise RuntimeError(str(node.sourcePosition) +  ": cannot analyze and evaluate non-functional value.")
 
-    def analyzeAndEvaluateMessageSendNode(self, evaluator, node: ParseTreeMessageSendNode, receiver):
+    def analyzeAndEvaluateMessageSendNodeOnType(self, evaluator, node: ParseTreeMessageSendNode, receiver):
         selector = evaluator.visitSymbolNode(node.selector)
 
         # FIXME: remove this hack.
@@ -198,7 +198,7 @@ class HIRType(HIRValue):
             raise RuntimeError("%s: type '%s' does not have method with selector #%s." % (str(node.sourcePosition), str(self), selector))
         return foundMethod.analyzeAndEvaluateMessageSendNode(evaluator, node, receiver)
     
-    def analyzeAndBuildMessageSendNode(self, buildPass, node: ParseTreeMessageSendNode, receiver):
+    def analyzeAndBuildMessageSendNodeOnType(self, buildPass, node: ParseTreeMessageSendNode, receiver):
         selector = buildPass.evaluateSymbolNode(node.selector)
 
         # FIXME: remove this hack.
@@ -230,6 +230,9 @@ class HIRType(HIRValue):
 
     def lookupSelector(self, selector):
         return None
+    
+    def asArrowArguments(self):
+        return (self,)
 
 class HIRNominalType(HIRType):
     def __init__(self, name: str, coreTypes, sourcePosition = None):
@@ -243,7 +246,7 @@ class HIRNominalType(HIRType):
     def isNominalType(self):
         return True
 
-    def __str__(self):
+    def __repr__(self):
         return self.name
     
     def withSelectorAddMethod(self, selector, method):
@@ -268,7 +271,7 @@ class HIRDynamicType(HIRType):
     def isSatisfiedByValue(self, value):
         return True
 
-    def analyzeAndBuildMessageSendNode(self, buildPass, node: ParseTreeMessageSendNode, receiver):
+    def analyzeAndBuildMessageSendNodeOnType(self, buildPass, node: ParseTreeMessageSendNode, receiver):
         selector = buildPass.evaluateSymbolNode(node.selector)
 
         # FIXME: remove this hack.
@@ -313,6 +316,27 @@ class HIRUniverseType(HIRType):
     def isUniverseType(self):
         return True
 
+    def analyzeAndEvaluateMessageSendNodeOnType(self, evaluator, node, receiver):
+        selector = evaluator.visitSymbolNode(node.selector)
+        
+        # FIXME: Remove this hack by using a method dictionary
+        if selector == '=>':
+            arguments = tuple(receiver.asArrowArguments())
+            resultType = evaluator.visitNodeExpectingType(node.arguments[0])
+            return self.coreTypes.getOrCreateSimpleFunctionType(arguments, resultType, node.sourcePosition)
+        
+        return super().analyzeAndEvaluateMessageSendNodeOnType(evaluator, node, receiver)
+
+    def analyzeAndBuildMessageSendNodeOnType(self, buildPass, node, receiver):
+        selector = buildPass.evaluateSymbolNode(node.selector)
+        
+        # FIXME: Remove this hack by using a method dictionary
+        if selector == '=>':
+            arguments = tuple(receiver.asArrowArguments())
+            resultType = buildPass.visitNodeExpectingType(node.arguments[0])
+            return self.coreTypes.getOrCreateSimpleFunctionType(arguments, resultType, node.sourcePosition)
+
+        return super().analyzeAndBuildMessageSendNodeOnType(buildPass, node, receiver)
     def __eq__(self, other):
         if not isinstance(other, self.__class__):
             return False
@@ -347,6 +371,9 @@ class HIRTupleType(HIRType):
 
     def isTupleType(self):
         return True
+
+    def asArrowArguments(self):
+        return self.elements
 
     def __str__(self):
         result = '('
@@ -449,6 +476,7 @@ class HIRSimpleFunctionType(HIRType):
             return False
 
         return self.argumentTypes == other.argumentTypes and self.resultType == other.resultType
+
     def __str__(self):
         result = '('
         for argumentType in self.argumentTypes:
@@ -484,7 +512,7 @@ class HIRDependentFunctionType(HIRType):
         for argument in self.arguments:
             argumentTypes.append(argument.type)
         
-        return HIRSimpleFunctionType(argumentTypes, self.resultType, self.coreTypes, self.sourcePosition)
+        return HIRSimpleFunctionType(tuple(argumentTypes), self.resultType, self.coreTypes, self.sourcePosition)
     
 class HIRConstant(HIRValue):
     def __init__(self, sourcePosition):
@@ -1644,8 +1672,8 @@ class HIRCoreTypes:
         self.floatType.withSelectorAddMethod('>',  HIRPrimitiveFunction('Float::>',  self.getOrCreateSimpleFunctionType((self.floatType, self.floatType), self.booleanType), floatGreaterThan, None, isPure = True, isCompileTime = True))
         self.floatType.withSelectorAddMethod('>=', HIRPrimitiveFunction('Float::>=', self.getOrCreateSimpleFunctionType((self.floatType, self.floatType), self.booleanType), floatGreaterOrEquals, None, isPure = True, isCompileTime = True))
 
-    def getOrCreateSimpleFunctionType(self, argumentTypes, resultType):
-        return HIRSimpleFunctionType(argumentTypes, resultType, self, None)
+    def getOrCreateSimpleFunctionType(self, argumentTypes, resultType, sourcePosition = None):
+        return HIRSimpleFunctionType(argumentTypes, resultType, self, sourcePosition)
     
     def getUniverseAtLevel(self, level):
         if level in self.universeLevels:
