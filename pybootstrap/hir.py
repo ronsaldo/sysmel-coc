@@ -180,7 +180,7 @@ class HIRValue(ABC):
     def isEnumConstant(self):
         return False
 
-    def isStructConstant(self):
+    def isStructValue(self):
         return False
 
     def isTupleConstant(self):
@@ -543,6 +543,16 @@ class HIRField(HIRValue):
     def isField(self):
         return True
 
+    def analyzeAndEvaluateMessageSendNode(self, evaluator, node: ParseTreeMessageSendNode, receiver):
+        if len(node.arguments) == 0:
+            return receiver.loadValueAtIndex(self.index)
+        elif len(node.arguments) == 1:
+            newValue = evaluator.visitNodeWithExpectedType(node.arguments[0], self.type)
+            receiver.storeValueAtIndex(newValue, self.index)
+            return newValue
+
+        return super().analyzeAndEvaluateMessageSendNode(evaluator, node, receiver)
+
     def __str__(self):
         return 'field %s (index: %d offset: %d)' %(str(self.name), self.getValidIndex(), self.getValidOffset())
 
@@ -561,6 +571,14 @@ class HIRStructType(HIRNominalType):
     def invalidateLayout(self):
         self.valueSize = None
         self.valueAlignment = None
+
+    def lookupSelector(self, selector):
+        self.ensureAnalysis()
+        if selector in self.methodDictionary:
+            return self.methodDictionary[selector]
+        if selector in self.publicFields:
+            return self.publicFields[selector]
+        return None
 
     def addField(self, field):
         self.fields.append(field)
@@ -604,7 +622,21 @@ class HIRStructType(HIRNominalType):
 
         self.valueSize = alignedTo(self.valueSize, self.valueAlignment)
 
+    def analyzeAndBuildApplicationNode(self, buildPass, node: ParseTreeApplicationNode, functional):
+        assert False
     
+    def analyzeAndEvaluateApplicationNode(self, evaluationPass, node: ParseTreeApplicationNode, functional):
+        self.ensureLayout()
+        if len(node.arguments) > len(self.fields):
+            raise RuntimeError("%s: struct construction can have at most %d arguments." %(str(node.sourcePosition), len(self.fields)))
+
+        structElements = list(map(lambda f: f.type.getDefaultValue(), self.fields))
+        for i in range(len(node.arguments)):
+            element = evaluationPass.visitNodeWithExpectedType(node.arguments[i], self.fields[i].type)
+            structElements[i] = element
+
+        return HIRStructValue(self, structElements, node.sourcePosition)
+
     def __str__(self):
         return self.name
 
@@ -1020,7 +1052,26 @@ class HIRConstantTuple(HIRConstant):
 
     def __str__(self):
         return 'tupe(%s)' % (str(self.elements))
+class HIRStructValue(HIRValue):
+    def __init__(self, type, fields, sourcePosition):
+        super().__init__(sourcePosition)
+        self.type = type
+        self.fields = fields
 
+    def getType(self):
+        return self.type
+
+    def isStructValue(self):
+        return True
+    
+    def storeValueAtIndex(self, valueToStore, index):
+        assert index < len(self.fields)
+        self.fields[index] = valueToStore
+
+    def loadValueAtIndex(self, index):
+        assert index < len(self.fields)
+        return self.fields[index]
+    
 class HIRMutableValueBox(HIRValue):
     def __init__(self, type, initialValue, sourcePosition):
         super().__init__(sourcePosition)
@@ -2128,6 +2179,7 @@ class HIRCoreTypes:
         self.controlFlowEscapeType = HIRControlFlowEscapeType('ControlFlowEscape', self, None);
 
         self.packageType = HIRNominalType('Package', self, None)
+        self.fieldType = HIRNominalType('Field', self, None)
         self.parseTreeNodeType = HIRNominalType('ParseTreeNode', self, None)
         self.primitiveMacroType = HIRNominalType('PrimitiveMacro', self, None)
 

@@ -541,6 +541,32 @@ class TestAnalysisAndEvaluation(unittest.TestCase):
         self.assertEqual(8, result.getValueSize())
         self.assertEqual(8, result.getValueAlignment())
 
+    def testInstantiateStruct(self):
+        result = self.evaluateTopLevelSourceString('struct MyStruct definition: {}. MyStruct()')
+        self.assertTrue(result.isStructValue())
+        self.assertEqual(0, len(result.fields))
+
+    def testInstantiateStructWithField(self):
+        result = self.evaluateTopLevelSourceString('struct MyStruct definition: {public field f => Integer}. MyStruct()')
+        self.assertTrue(result.isStructValue())
+        self.assertTrue(result.fields[0].isIntegerConstant())
+        self.assertEqual(0, result.fields[0].value)
+
+    def testInstantiateStructWithField2(self):
+        result = self.evaluateTopLevelSourceString('struct MyStruct definition: {public field f => Integer}. MyStruct(42)')
+        self.assertTrue(result.isStructValue())
+        self.assertTrue(result.fields[0].isIntegerConstant())
+        self.assertEqual(42, result.fields[0].value)
+
+    def testStructFieldGetter(self):
+        result = self.evaluateTopLevelSourceString('struct MyStruct definition: {public field first => Integer}. MyStruct(42) first')
+        self.assertTrue(result.isIntegerConstant())
+        self.assertEqual(42, result.value)
+
+    def testStructFieldSetter(self):
+        result = self.evaluateTopLevelSourceString('struct MyStruct definition: {public field first => Integer}. MyStruct() first: 5; first')
+        self.assertTrue(result.isIntegerConstant())
+        self.assertEqual(5, result.value)
 
 if __name__ == '__main__':
     unittest.main()
