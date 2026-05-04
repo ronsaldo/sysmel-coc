@@ -116,7 +116,8 @@ class AnalysisAndEvaluationPass(ParseTreeVisitor):
         if name is not None:
             self.evaluationContext.environment.setNewSymbolBinding(name, function, node.sourcePosition)
             if node.isPublic:
-                assert False
+                owner = self.evaluationContext.environment.lookupProgramEntityOwner()
+                owner.addPublicNamedElement(name, function, node.sourcePosition)
 
         return function
 

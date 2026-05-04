@@ -968,6 +968,9 @@ class HIRFunction(HIRConstant):
 
     def evaluateWithArguments(self, arguments):
         return self.evaluateWithArgumentsAndCaptures(arguments, [])
+    
+    def __repr__(self):
+        return 'HIRFunction(%s)' % self.name
 
 class HIRFunctionClosure(HIRConstant):
     def __init__(self, function: HIRFunction, captureVector: list[HIRValue], sourcePosition):
@@ -1419,6 +1422,11 @@ class HIRPackage(HIRValue):
     def addEntityWithPendingAnalysis(self, entity):
         self.pendingAnalysisList.append(entity)
 
+    def addPublicNamedElement(self, name, binding, sourcePosition):
+        if name in self.publicSymbolTable:
+            raise RuntimeError(str(sourcePosition) +  " a binding for public symbol #'" + name + "'already exists.")
+        self.addSymbolWithBinding(name, binding)
+
     def finishPendingAnalysis(self):
         while len(self.pendingAnalysisList) != 0:
             toAnalyze = self.pendingAnalysisList
@@ -1456,11 +1464,17 @@ class HIREmptyEnvironment(HIREnvironment):
     def lookSymbolRecursively(self, symbol):
         return None
 
+    def lookupProgramEntityOwner(self):
+        return None
+
 class HIRPackageEnvironment(HIREnvironment):
     def __init__(self, package, parent):
         super().__init__()
         self.package = package
         self.parent = parent
+
+    def lookupProgramEntityOwner(self):
+        return self.package
 
     def lookSymbolRecursively(self, symbol):
         packageSymbolBinding = self.package.lookupSymbolRecursivelyOrNone(symbol)
@@ -1483,6 +1497,9 @@ class HIRLexicalEnvironment(HIREnvironment):
             raise RuntimeError(str(sourcePosition) +  " a binding for symbol '" + symbol + "'already exists.")
         self.setSymbolBinding(symbol, binding)
 
+    def lookupProgramEntityOwner(self):
+        return self.parent.lookupProgramEntityOwner()
+
     def lookSymbolRecursively(self, symbol):
         if symbol in self.symbolTable:
             return self.symbolTable[symbol]
@@ -1493,6 +1510,9 @@ class HIRDependentFunctionTypeAnalysisEnvironment(HIRLexicalEnvironment):
         super().__init__(parent)
         self.captureTable = {}
         self.captureList = []
+
+    def lookupProgramEntityOwner(self):
+        return self.parent.lookupProgramEntityOwner()
 
     def lookSymbolRecursively(self, symbol):
         if symbol in self.symbolTable:
@@ -1521,6 +1541,9 @@ class HIRFunctionAnalysisEnvironment(HIRLexicalEnvironment):
         for capture in captureList:
             self.captureTable[capture.name] = capture
             self.captureList.append(capture)
+
+    def lookupProgramEntityOwner(self):
+        return self.parent.lookupProgramEntityOwner()
 
     def lookSymbolRecursively(self, symbol):
         if symbol in self.symbolTable:
@@ -1662,6 +1685,20 @@ class HIRFunctionMetaBuilder(HIRNamedMetaBuilder):
         functionNode = ParseTreeFunctionNode(node.sourcePosition, self.nameExpression, self.makeFunctionType(), node.value, self.isPublic)
         return buildPass.visitNode(functionNode)
 
+class HIRPublicMetaBuilder(HIRMetaBuilder):
+    def __init__(self, coreTypes, sourcePosition):
+        super().__init__(coreTypes, sourcePosition)
+
+    def supportsSelector(self, selector):
+        return selector in ('function',)
+    
+    def expandMessageSend(self, evaluator, node: ParseTreeMessageSendNode, selector: str, receiver):
+        if selector == 'function':
+            metabuilder = HIRFunctionMetaBuilder(self.coreTypes, node.sourcePosition)
+            metabuilder.isPublic = True
+            return metabuilder
+        return self
+
 class HIRCoreTypes:
     def __init__(self):
         self.pointerSize = 8
@@ -1785,6 +1822,7 @@ class HIRCoreTypes:
         self.coreValueList += [
             (HIRMetaBuilderFactory(HIRFunctionMetaBuilder, self, None), 'function'),
             (HIRMetaBuilderFactory(HIRLetMetaBuilder, self, None), 'let'),
+            (HIRMetaBuilderFactory(HIRPublicMetaBuilder, self, None), 'public'),
         ]
         pass
 

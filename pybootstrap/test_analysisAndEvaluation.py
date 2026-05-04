@@ -304,6 +304,15 @@ class TestAnalysisAndEvaluation(unittest.TestCase):
         self.assertTrue(result.isIntegerConstant())
         self.assertEqual(result.value, 3)
 
+    def testPublicFunctionMetaBuilder(self):
+        functionValue = self.evaluateTopLevelSourceString('public function two() => Integer := 2')
+        result = functionValue.evaluateWithArguments([])
+        self.assertTrue(result.isIntegerConstant())
+        self.assertEqual(result.value, 2)
+
+        functionGlobalValue = self.context.currentPackage.publicSymbolTable['two']
+        self.assertEqual(functionValue, functionGlobalValue)
+
     def testAssociationType(self):
         type = self.evaluateTopLevelSourceString('Symbol : Integer')
         self.assertTrue(type.isAssociationType())
