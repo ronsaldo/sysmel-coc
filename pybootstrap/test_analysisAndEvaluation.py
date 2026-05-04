@@ -600,5 +600,18 @@ class TestAnalysisAndEvaluation(unittest.TestCase):
         self.assertTrue(value.isIntegerConstant())
         self.assertEqual(47, value.value)
 
+    def testStructImplicitFieldAccess(self):
+        value = self.evaluateTopLevelSourceString("""
+        struct TestPair definition: {
+            public field first type: Integer.
+            public field second type: Integer.
+
+            method sumImplicit => Integer := first + second.
+        }.
+        TestPair(1. 2) sumImplicit
+        """)
+        self.assertTrue(value.isIntegerConstant())
+        self.assertEqual(3, value.value)
+
 if __name__ == '__main__':
     unittest.main()

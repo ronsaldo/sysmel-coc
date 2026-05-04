@@ -252,6 +252,9 @@ class HIRType(HIRValue):
     def withSelectorAddMethod(self, selector, method):
         raise RuntimeError("Cannot add a method to type %s\n" %(str(self)))
 
+    def lookupField(self, selector):
+        return None
+
     def lookupSelector(self, selector):
         return None
     
@@ -603,6 +606,11 @@ class HIRStructType(HIRNominalType):
         if field.isPublic and field.name is not None:
             self.publicFields[field.name] = field # Getter
             self.publicFields[field.name + ':'] = field #Setter
+
+    def lookupField(self, selector):
+        if selector in self.fieldMap:
+            return self.fieldMap[selector]
+        return None
 
     def getValueSize(self):
         self.ensureLayout()
@@ -1248,7 +1256,13 @@ class HIRFunction(HIRConstant):
             return
         
         # Function environment arguments
-        functionEnvironment = HIRFunctionAnalysisEnvironment(self.definitionEnvironment)
+        selfArgument = None
+        if len(self.dependentFunctionType.arguments) >= 1:
+            firstArgument = self.dependentFunctionType.arguments[0]
+            if firstArgument.isSelf:
+                selfArgument = firstArgument
+
+        functionEnvironment = HIRFunctionAnalysisEnvironment(self.definitionEnvironment, self.dependentFunctionType.resultType, selfArgument, self.definitionContext)
         functionEnvironment.addDependentFunctionTypeCaptures(self.dependentFunctionType.captures)
         for argument in self.dependentFunctionType.arguments:
             if argument.name is not None:
@@ -1968,11 +1982,27 @@ class HIRDependentFunctionTypeAnalysisEnvironment(HIRLexicalEnvironment):
                 assert False
         return parentBinding
 
+class HIRImplicitFieldAccess(HIRValue):
+    def __init__(self, type, aggregate, field, sourcePosition):
+        super().__init__(sourcePosition)
+        self.type = type
+        self.aggregate = aggregate
+        self.field = field
+
+    def getType(self):
+        return self.type
+
+    def analyzeAndBuildIdentifierReferenceNode(self, buildPass, node):
+        return buildPass.builder.extractFieldReference(self.type, self.aggregate, self.field, node.sourcePosition)
+
 class HIRFunctionAnalysisEnvironment(HIRLexicalEnvironment):
-    def __init__(self, parent):
+    def __init__(self, parent, returnType, receiverValue, context):
         super().__init__(parent)
         self.captureTable = {}
         self.captureList = []
+        self.receiverValue = receiverValue
+        self.returnType = returnType
+        self.context = context
 
     def addDependentFunctionTypeCaptures(self, captureList):
         for capture in captureList:
@@ -1986,6 +2016,12 @@ class HIRFunctionAnalysisEnvironment(HIRLexicalEnvironment):
         if symbol in self.symbolTable:
             binding = self.symbolTable[symbol]
             return binding
+        
+        if self.receiverValue is not None:
+            field = self.receiverValue.getType().lookupField(symbol)
+            if field is not None:
+                fieldReferenceType = self.context.getOrCreateReferenceType(field.type)
+                return HIRImplicitFieldAccess(fieldReferenceType, self.receiverValue, field, None)
 
         # Captures
         if symbol in self.captureTable:

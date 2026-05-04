@@ -150,7 +150,7 @@ class AnalysisAndBuildPass(ParseTreeVisitor):
     def visitIdentifierReferenceNode(self, node: ParseTreeIdentifierReferenceNode):
         bindingOrNone = self.builder.environment.lookSymbolRecursively(node.value)
         if bindingOrNone is None:
-            raise RuntimeError("%s: %s identifier is not found." % (str(node.sourcePosition), node.value))    
+            raise RuntimeError("%s: #%s identifier is not found." % (str(node.sourcePosition), node.value))    
 
         return bindingOrNone.analyzeAndBuildIdentifierReferenceNode(self, node)
 
