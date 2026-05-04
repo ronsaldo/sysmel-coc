@@ -353,7 +353,15 @@ class AnalysisAndEvaluationPass(ParseTreeVisitor):
         return enumType
 
     def visitFieldDefinitionNode(self, node: ParseTreeFieldDefinitionNode):
-        assert False
+        name = self.visitOptionalSymbolNode(node.nameExpression)
+        type = self.evaluationContext.context.coreTypes.dynamicType
+        if node.typeExpression is not None:
+            type = self.visitNodeExpectingType(node.typeExpression)
+
+        owner = self.evaluationContext.environment.lookupProgramEntityOwner()
+        field = HIRField(name, type, node.isPublic, self.evaluationContext.context.coreTypes, node.sourcePosition)
+        owner.addField(field)
+        return field
 
     def visitLoadFileOnceNode(self, node: ParseTreeLoadFileOnceNode):
         relativePath = self.visitNodeWithExpectedType(node.pathExpression, self.evaluationContext.context.coreTypes.stringType).value

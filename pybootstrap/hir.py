@@ -2,6 +2,9 @@ from parsetree import *
 from abc import ABC, abstractmethod
 import math
 
+def alignedTo(offset, alignment):
+    return (offset + alignment - 1) & (-alignment)
+
 class HIRVisitor(ABC):
     def visitValue(self, value):
         pass
@@ -254,6 +257,12 @@ class HIRType(HIRValue):
     
     def asArrowArguments(self):
         return (self,)
+    
+    def getValueAlignment(self):
+        return self.coreTypes.pointerAlignment
+
+    def getValueSize(self):
+        return self.coreTypes.pointerSize
 
 class PendingDefinitionBody:
     def __init__(self, evaluationContext, definitionBody):
@@ -501,6 +510,42 @@ class HIREnumType(HIRType):
     def __str__(self):
         return 'EnumType(%s %s)' % (self.name, str(self.baseType))
 
+class HIRField(HIRValue):
+    def __init__(self, name, type, isPublic, coreTypes, sourcePosition):
+        super().__init__(sourcePosition)
+        self.name = name
+        self.type = type
+        self.coreTypes = coreTypes
+        self.isPublic = isPublic
+        self.offset = None
+        self.size = 0
+        self.index = None
+        self.owner = None
+
+    def getType(self):
+        return self.coreTypes.fieldType
+
+    def getValidIndex(self):
+        if self.index is None:
+            self.owner.ensureLayout()
+            if self.index is None:
+                self.owner.ensureLayout()
+                assert False
+        assert self.index is not None
+        return self.index
+
+    def getValidOffset(self):
+        if self.offset is None:
+            self.owner.ensureLayout()
+        assert self.offset is not None
+        return self.offset
+    
+    def isField(self):
+        return True
+
+    def __str__(self):
+        return 'field %s (index: %d offset: %d)' %(str(self.name), self.getValidIndex(), self.getValidOffset())
+
 class HIRStructType(HIRNominalType):
     def __init__(self, name, coreTypes, sourcePosition):
         super().__init__(name, coreTypes, sourcePosition)
@@ -517,6 +562,18 @@ class HIRStructType(HIRNominalType):
         self.valueSize = None
         self.valueAlignment = None
 
+    def addField(self, field):
+        self.fields.append(field)
+        self.invalidateLayout()
+        field.owner = self
+
+        if field.name is not None:
+            self.fieldMap[field.name] = field
+
+        if field.isPublic and field.name is not None:
+            self.publicFields[field.name] = field # Getter
+            self.publicFields[field.name + ':'] = field #Setter
+
     def getValueSize(self):
         self.ensureLayout()
         return self.valueSize
@@ -528,10 +585,25 @@ class HIRStructType(HIRNominalType):
     def ensureLayout(self):
         if self.valueSize is not None:
             return
-
+        self.ensureAnalysis()
         self.valueSize = 0
         self.valueAlignment = 1
-    
+        
+        fieldCount = 0
+        for field in self.fields:
+            field.index = fieldCount
+            fieldAlignment = field.type.getValueAlignment()
+            fieldSize = field.type.getValueSize()
+            
+            self.valueSize = alignedTo(self.valueSize, fieldAlignment)
+            field.offset = self.valueSize
+            self.valueSize += fieldSize
+
+            self.valueAlignment = max(self.valueAlignment, fieldAlignment)
+            fieldCount += 1
+
+        self.valueSize = alignedTo(self.valueSize, self.valueAlignment)
+
     
     def __str__(self):
         return self.name
@@ -1938,6 +2010,22 @@ class HIREnumMetaBuilder(HIRNamedMetaBuilder):
             return evaluator.visitNode(enumNode)
         return super().expandMessageSend(evaluator, node, selector, receiver)
 
+class HIRFieldMetaBuilder(HIRNamedMetaBuilder):
+    def __init__(self, coreTypes, sourcePosition):
+        super().__init__(coreTypes, sourcePosition)
+        self.typeExpression = None
+        self.isPublic = False
+
+    def supportsSelector(self, selector):
+        return selector in ('=>', 'type:')
+
+    def expandMessageSend(self, evaluator, node, selector, receiver):
+        if (selector == '=>') or (selector == 'type:'):
+            self.typeExpression = node.arguments[0]
+            fieldDefinition = ParseTreeFieldDefinitionNode(node.sourcePosition, self.nameExpression, self.typeExpression, self.isPublic)
+            return evaluator.visitNode(fieldDefinition)
+        return super().expandMessageSend(evaluator, node, selector, receiver)
+
 class HIRFunctionMetaBuilder(HIRNamedMetaBuilder):
     def __init__(self, coreTypes, sourcePosition):
         super().__init__(coreTypes, sourcePosition)
@@ -1995,11 +2083,15 @@ class HIRPublicMetaBuilder(HIRMetaBuilder):
         super().__init__(coreTypes, sourcePosition)
 
     def supportsSelector(self, selector):
-        return selector in ('enum', 'function', 'struct')
+        return selector in ('enum', 'field', 'function', 'struct')
     
     def expandMessageSend(self, evaluator, node: ParseTreeMessageSendNode, selector: str, receiver):
         if selector == 'enum':
             metabuilder = HIREnumMetaBuilder(self.coreTypes, node.sourcePosition)
+            metabuilder.isPublic = True
+            return metabuilder
+        elif selector == 'field':
+            metabuilder = HIRFieldMetaBuilder(self.coreTypes, node.sourcePosition)
             metabuilder.isPublic = True
             return metabuilder
         elif selector == 'function':
@@ -2144,6 +2236,7 @@ class HIRCoreTypes:
     def createCorePrimitiveMetaBuilders(self):
         self.coreValueList += [
             (HIRMetaBuilderFactory(HIREnumMetaBuilder, self, None), 'enum'),
+            (HIRMetaBuilderFactory(HIRFieldMetaBuilder, self, None), 'field'),
             (HIRMetaBuilderFactory(HIRFunctionMetaBuilder, self, None), 'function'),
             (HIRMetaBuilderFactory(HIRLetMetaBuilder, self, None), 'let'),
             (HIRMetaBuilderFactory(HIRPublicMetaBuilder, self, None), 'public'),

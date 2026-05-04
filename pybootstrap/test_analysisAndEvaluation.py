@@ -535,5 +535,12 @@ class TestAnalysisAndEvaluation(unittest.TestCase):
         self.assertEqual(0, result.getValueSize())
         self.assertEqual(1, result.getValueAlignment())
 
+    def testStructWithField(self):
+        result = self.evaluateTopLevelSourceString('struct MyStruct definition: {public field f => Integer}')
+        self.assertTrue(result.isStructType())
+        self.assertEqual(8, result.getValueSize())
+        self.assertEqual(8, result.getValueAlignment())
+
+
 if __name__ == '__main__':
     unittest.main()
