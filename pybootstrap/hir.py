@@ -96,6 +96,9 @@ class HIRValue(ABC):
     def isEnumType(self):
         return False
 
+    def isStructType(self):
+        return False
+
     def isTupleType(self):
         return False
 
@@ -174,6 +177,9 @@ class HIRValue(ABC):
     def isEnumConstant(self):
         return False
 
+    def isStructConstant(self):
+        return False
+
     def isTupleConstant(self):
         return False
     
@@ -249,13 +255,35 @@ class HIRType(HIRValue):
     def asArrowArguments(self):
         return (self,)
 
+class PendingDefinitionBody:
+    def __init__(self, evaluationContext, definitionBody):
+        self.evaluationContext = evaluationContext
+        self.definitionBody = definitionBody
+
+    def evaluateForOwner(self, owner):
+        from analysisAndEvaluation import AnalysisAndEvaluationPass
+        bodyContext = self.evaluationContext.clone()
+        bodyContext.environment = HIRLexicalEnvironment(HIROwnerEnvironment(self.evaluationContext.environment, owner))
+        return AnalysisAndEvaluationPass(bodyContext).visitDecayedNode(self.definitionBody)
+
 class HIRNominalType(HIRType):
     def __init__(self, name: str, coreTypes, sourcePosition = None):
         super().__init__(coreTypes, sourcePosition)
         self.name = name
         self.methodDictionary = {}
         self.defaultValue = None
+        self.pendingDefinitionBodies = []
 
+    def addPendingDefinitionBody(self, evaluationContext, definitionBody):
+        self.pendingDefinitionBodies.append(PendingDefinitionBody(evaluationContext, definitionBody))
+
+    def ensureAnalysis(self):
+        while len(self.pendingDefinitionBodies) != 0:
+            bodiesToAnalyze = self.pendingDefinitionBodies
+            self.pendingDefinitionBodies = []
+            for body in bodiesToAnalyze:
+                body.evaluateForOwner(self)
+    
     def getDefaultValue(self):
         if self.defaultValue is None:
             raise RuntimeError('Nominal type %s does not have a default value.' % (self))
@@ -472,6 +500,41 @@ class HIREnumType(HIRType):
 
     def __str__(self):
         return 'EnumType(%s %s)' % (self.name, str(self.baseType))
+
+class HIRStructType(HIRNominalType):
+    def __init__(self, name, coreTypes, sourcePosition):
+        super().__init__(name, coreTypes, sourcePosition)
+        self.fields = []
+        self.fieldMap = {}
+        self.publicFields = {}
+        self.valueSize = None
+        self.valueAlignment = None
+
+    def isStructType(self):
+        return True
+
+    def invalidateLayout(self):
+        self.valueSize = None
+        self.valueAlignment = None
+
+    def getValueSize(self):
+        self.ensureLayout()
+        return self.valueSize
+
+    def getValueAlignment(self):
+        self.ensureLayout()
+        return self.valueAlignment
+
+    def ensureLayout(self):
+        if self.valueSize is not None:
+            return
+
+        self.valueSize = 0
+        self.valueAlignment = 1
+    
+    
+    def __str__(self):
+        return self.name
 
 class HIRTupleType(HIRType):
     def __init__(self, elements: list[HIRType], coreTypes, sourcePosition = None):
@@ -1683,6 +1746,18 @@ class HIRPackageEnvironment(HIREnvironment):
 
         return self.parent.lookSymbolRecursively(symbol)
 
+class HIROwnerEnvironment(HIREnvironment):
+    def __init__(self, parent, owner):
+        super().__init__()
+        self.parent = parent
+        self.owner = owner
+
+    def lookupProgramEntityOwner(self):
+        return self.owner
+
+    def lookSymbolRecursively(self, symbol):
+        return self.parent.lookSymbolRecursively(symbol)
+
 class HIRLexicalEnvironment(HIREnvironment):
     def __init__(self, parent):
         super().__init__()
@@ -1901,16 +1976,38 @@ class HIRFunctionMetaBuilder(HIRNamedMetaBuilder):
         functionNode = ParseTreeFunctionNode(node.sourcePosition, self.nameExpression, self.makeFunctionType(), node.value, self.isPublic)
         return buildPass.visitNode(functionNode)
 
+class HIRStructMetaBuilder(HIRNamedMetaBuilder):
+    def __init__(self, coreTypes, sourcePosition):
+        super().__init__(coreTypes, sourcePosition)
+        self.isPublic = False
+
+    def supportsSelector(self, selector):
+        return selector in ('definition:')
+
+    def expandMessageSend(self, evaluator, node: ParseTreeMessageSendNode, selector, receiver):
+        if selector == 'definition:':
+            structNode = ParseTreeStructDefinitionNode(node.sourcePosition, self.nameExpression, node.arguments[0], self.isPublic )
+            return evaluator.visitNode(structNode)
+        return super().expandMessageSend(evaluator, node, selector, receiver)
+
 class HIRPublicMetaBuilder(HIRMetaBuilder):
     def __init__(self, coreTypes, sourcePosition):
         super().__init__(coreTypes, sourcePosition)
 
     def supportsSelector(self, selector):
-        return selector in ('enum', 'function',)
+        return selector in ('enum', 'function', 'struct')
     
     def expandMessageSend(self, evaluator, node: ParseTreeMessageSendNode, selector: str, receiver):
-        if selector == 'function':
+        if selector == 'enum':
+            metabuilder = HIREnumMetaBuilder(self.coreTypes, node.sourcePosition)
+            metabuilder.isPublic = True
+            return metabuilder
+        elif selector == 'function':
             metabuilder = HIRFunctionMetaBuilder(self.coreTypes, node.sourcePosition)
+            metabuilder.isPublic = True
+            return metabuilder
+        elif selector == 'struct':
+            metabuilder = HIRStructMetaBuilder(self.coreTypes, node.sourcePosition)
             metabuilder.isPublic = True
             return metabuilder
         return self
@@ -2050,6 +2147,7 @@ class HIRCoreTypes:
             (HIRMetaBuilderFactory(HIRFunctionMetaBuilder, self, None), 'function'),
             (HIRMetaBuilderFactory(HIRLetMetaBuilder, self, None), 'let'),
             (HIRMetaBuilderFactory(HIRPublicMetaBuilder, self, None), 'public'),
+            (HIRMetaBuilderFactory(HIRStructMetaBuilder, self, None), 'struct'),
         ]
 
     def createCorePrimitiveFunctions(self):

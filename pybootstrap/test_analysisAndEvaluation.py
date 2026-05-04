@@ -529,5 +529,11 @@ class TestAnalysisAndEvaluation(unittest.TestCase):
         self.assertTrue(value.isBooleanConstant())
         self.assertTrue(value.value)
 
+    def testEmptyStruct(self):
+        result = self.evaluateTopLevelSourceString('struct MyStruct definition: {}')
+        self.assertTrue(result.isStructType())
+        self.assertEqual(0, result.getValueSize())
+        self.assertEqual(1, result.getValueAlignment())
+
 if __name__ == '__main__':
     unittest.main()

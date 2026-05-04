@@ -306,7 +306,18 @@ class AnalysisAndEvaluationPass(ParseTreeVisitor):
         assert False
 
     def visitStructDefinitionNode(self, node: ParseTreeStructDefinitionNode):
-        assert False
+        name = self.visitOptionalSymbolNode(node.nameExpression)
+
+        structType = HIRStructType(name, self.evaluationContext.context.coreTypes, node.sourcePosition)
+        self.evaluationContext.context.addEntityWithPendingAnalysis(structType)
+        if name is not None:
+            self.evaluationContext.environment.setNewSymbolBinding(name, structType, node.sourcePosition)
+        if node.isPublic:
+            owner = self.evaluationContext.environment.lookupProgramEntityOwner()
+            owner.addPublicNamedElement(name, structType, node.sourcePosition)
+
+        structType.addPendingDefinitionBody(self.evaluationContext, node.definitionBody)
+        return structType
 
     def visitEnumDefinitionNode(self, node: ParseTreeEnumDefinitionNode):
         name = self.visitSymbolNode(node.nameExpression)
