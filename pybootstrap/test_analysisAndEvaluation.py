@@ -283,5 +283,32 @@ class TestAnalysisAndEvaluation(unittest.TestCase):
         self.assertEqual(tupleType.elements[1], self.context.coreTypes.floatType)
         self.assertEqual(tupleType.elements[2], self.context.coreTypes.characterType)
 
+    def testDynamicSend(self):
+        sendFunction = self.evaluateTopLevelSourceString("{:(Dynamic)x :(Dynamic)y :: Dynamic | x + y}")
+        result = sendFunction.evaluateWithArguments([
+            HIRConstantLiteralIntegerValue(1, self.context.coreTypes.integerType, None),
+            HIRConstantLiteralIntegerValue(2, self.context.coreTypes.integerType, None),
+        ])
+        self.assertTrue(result.isIntegerConstant())
+        self.assertEqual(result.value, 3)
+
+    def testDynamicSend2(self):
+        sendFunction = self.evaluateTopLevelSourceString("{:(Dynamic)x :(Integer)y :: Dynamic | x + y}")
+        result = sendFunction.evaluateWithArguments([
+            HIRConstantLiteralIntegerValue(1, self.context.coreTypes.integerType, None),
+            HIRConstantLiteralIntegerValue(2, self.context.coreTypes.integerType, None),
+        ])
+        self.assertTrue(result.isIntegerConstant())
+        self.assertEqual(result.value, 3)
+
+    def testDynamicSend3(self):
+        sendFunction = self.evaluateTopLevelSourceString("{:(Integer)x :(Dynamic)y :: Dynamic | x + y}")
+        result = sendFunction.evaluateWithArguments([
+            HIRConstantLiteralIntegerValue(1, self.context.coreTypes.integerType, None),
+            HIRConstantLiteralIntegerValue(2, self.context.coreTypes.integerType, None),
+        ])
+        self.assertTrue(result.isIntegerConstant())
+        self.assertEqual(result.value, 3)
+
 if __name__ == '__main__':
     unittest.main()

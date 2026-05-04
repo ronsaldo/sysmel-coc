@@ -21,12 +21,10 @@ class AnalysisAndBuildPass(ParseTreeVisitor):
 
         #if value.getType().isControlFlowEscapeType():
         #    return value
-        #if value.getType().isDynamicType():
-        #    ## TODO: Unbox with an instruction.
-        #    return value
+        if value.getType().isDynamicType():
+            return self.builder.dynamicUnbox(value, expectedType, sourcePosition)
         #if expectedType.isVoidType() and not value.isVoidValue():
         #    return self.builder.getVoidLiteral(sourcePosition)
-
         if not expectedType.isSatisfiedByValue(value):
             raise RuntimeError("%s: expected a value of type %s instead of %s." % (str(sourcePosition), str(expectedType), str(value.getType())))
 

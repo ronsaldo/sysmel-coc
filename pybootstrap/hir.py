@@ -58,6 +58,18 @@ class HIRValue(ABC):
     def analyzeAndBuildMessageSendNode(self, buildPass, node: ParseTreeMessageSendNode, receiver):
         selfType = self.getType()
         return selfType.analyzeAndBuildMessageSendNode(buildPass, node, receiver)
+    
+    def performWithArguments(self, selector, arguments, sourcePosition):
+        # FIXME: Remove this hack
+        if selector == 'yourself':
+            return self
+        
+        selfType = self.getType()
+
+        foundMethod = selfType.lookupSelector(selector)
+        if foundMethod is None:
+            raise RuntimeError("%s: %s [%s] doesNotUnderstand %s" % (str(sourcePosition), str(self), str(selfType), selector))
+        return foundMethod.evaluateWithArgumentsAt([self] + arguments, sourcePosition)
 
     @abstractmethod
     def getType(self):
@@ -250,6 +262,22 @@ class HIRDynamicType(HIRType):
     def isDynamicType(self):
         return True
     
+    def isSatisfiedByValue(self, value):
+        return True
+
+    def analyzeAndBuildMessageSendNode(self, buildPass, node: ParseTreeMessageSendNode, receiver):
+        selector = buildPass.evaluateSymbolNode(node.selector)
+
+        # FIXME: remove this hack.
+        if selector == 'yourself':
+            return receiver
+        
+        arguments = []
+        for argumentNode in node.arguments:
+            arguments.append(buildPass.visitNodeWithExpectedType(argumentNode, self))
+
+        return buildPass.builder.send(receiver, selector, arguments, self, node.sourcePosition)
+
     def __str__(self):
         return self.name
 
@@ -388,6 +416,20 @@ class HIRSimpleFunctionType(HIRType):
 
         return typecheckedArguments, self.resultType
 
+    def typecheckArguments(self, arguments, sourcePosition):
+        if len(arguments) != len(self.argumentTypes):
+            raise RuntimeError("%s: expected %d arguments instead of %d." % (str(sourcePosition), len(self.argumentTypes), len(arguments)))
+        
+        typecheckedArguments = []
+        for i in range(len(arguments)):
+            argument = arguments[i]
+            expectedType = self.argumentTypes[i]
+            if not expectedType.isSatisfiedByValue(argument):
+                raise RuntimeError("%s: argument of type %s instead of %s." % (str(sourcePosition), len(expectedType), len(argument.getType())))
+            typecheckedArguments.append(argument)
+
+        return typecheckedArguments, self.resultType
+    
     def analyzeBuildAndTypecheckArguments(self, buildPass, arguments, sourcePosition):
         if len(arguments) != len(self.argumentTypes):
             raise RuntimeError("%s: expected %d arguments instead of %d." % (str(sourcePosition), len(self.argumentTypes), len(arguments)))
@@ -676,6 +718,10 @@ class HIRPrimitiveFunction(HIRConstant):
     
     def evaluateWithArgumentsAndResultType(self, arguments, resultType):
         return self.primitiveFunction(*arguments, resultType)
+    
+    def evaluateWithArgumentsAt(self, arguments, sourcePosition):
+        typecheckedArguments, resultType = self.type.typecheckArguments(arguments, sourcePosition)
+        return self.evaluateWithArgumentsAndResultType(typecheckedArguments, resultType)
     
     def __str__(self):
         return 'primitiveFunction(%s)' % self.name
@@ -1034,6 +1080,37 @@ class HIRCallInstruction(HIRInstruction):
         
         simplified = self.functional.evaluateWithArgumentsAndResultType(self.arguments, self.type)
         return simplified
+
+class HIRSendInstruction(HIRInstruction):
+    def __init__(self, receiver, selector, arguments, type, name=None, sourcePosition=None):
+        super().__init__(type, name, sourcePosition)
+        self.receiver = receiver
+        self.selector = selector
+        self.arguments = arguments
+
+    def fullPrintString(self):
+        return "%s := send %s to %s with: %s :: %s" % (str(self), str(self.selector), str(self.receiver), str(self.arguments), str(self.type))
+
+    def evaluateInActivationContext(self, context):
+        receiver = self.receiver.getValueInEvaluationContext(context)
+        selector = self.selector
+        arguments = list(map(lambda arg: arg.getValueInEvaluationContext(context), self.arguments))
+        result = receiver.performWithArguments(selector, arguments, self.sourcePosition)
+        context.setCurrentInstructionValue(result)
+
+class HIRDynamicUnboxInstruction(HIRInstruction):
+    def __init__(self, boxedValue, type, name=None, sourcePosition=None):
+        super().__init__(type, name, sourcePosition)
+        self.boxedValue = boxedValue
+
+    def evaluateInActivationContext(self, context):
+        boxedValue = self.boxedValue.getValueInEvaluationContext(context)
+        if not self.type.isSatisfiedByValue(boxedValue):
+            raise RuntimeError('%s: Expected a value with type %s instead of %s.' %(str(self.sourcePosition), str(self.type), str(boxedValue.getType())))
+        context.setCurrentInstructionValue(boxedValue)
+
+    def fullPrintString(self):
+        return "%s := dynamicUnbox %s :: %s" % (str(self), str(self.boxedValue), str(self.type))
 
 class HIRMakeAssociationInstruction(HIRInstruction):
     def __init__(self, key: HIRValue, value: HIRValue, type, name=None, sourcePosition=None):
@@ -1616,6 +1693,16 @@ class HIRBuilder:
         if instruction == simplified:
             self.addInstruction(instruction)
         return simplified
+    
+    def send(self, receiver, selector, arguments, resultTyoe, sourcePosition):
+        instruction = HIRSendInstruction(receiver, selector, arguments, resultTyoe, None, sourcePosition)
+        self.addInstruction(instruction)
+        return instruction
+    
+    def dynamicUnbox(self, boxedValue, type, sourcePosition):
+        instruction = HIRDynamicUnboxInstruction(boxedValue, type, None, sourcePosition)
+        self.addInstruction(instruction)
+        return instruction
 
     def load(self, type, storage, sourcePosition):
         instruction = HIRLoadInstruction(type, storage, None, sourcePosition)
