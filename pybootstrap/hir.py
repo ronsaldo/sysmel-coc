@@ -432,6 +432,14 @@ class HIREnumType(HIRType):
 
     def isEnumType(self):
         return True
+    
+    def analyzeAndEvaluateMessageSendNode(self, evaluator, node: ParseTreeMessageSendNode, receiver):
+        selector = evaluator.visitSymbolNode(node.selector)
+        if selector in self.valueTable:
+            return self.valueTable[selector]
+        
+        return super().analyzeAndEvaluateMessageSendNode(evaluator, node, receiver)
+
 
     def __str__(self):
         return 'EnumType(%s %s)' % (self.name, str(self.self.baseType))
@@ -798,6 +806,9 @@ class HIRConstantEnum(HIRConstant):
 
     def getType(self):
         return self.type
+
+    def isEnumConstant(self):
+        return True
 
     def __eq__(self, other):
         if not isinstance(other, self.__class__):
