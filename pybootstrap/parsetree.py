@@ -1063,3 +1063,9 @@ class ParseTreeErrorVisitor(ParseTreeSequentialVisitor):
             sys.stderr.write('%s: %s\n' % (str(errorNode.sourcePosition), errorNode.message))
         return len(self.errorNodes) == 0
     
+    def checkPrintErrorsAndRaiseException(self, node):
+        self.visitNode(node)
+        for errorNode in self.errorNodes:
+            sys.stderr.write('%s: %s\n' % (str(errorNode.sourcePosition), errorNode.message))
+        if len(self.errorNodes) != 0:
+            raise RuntimeError("Parse errors found")

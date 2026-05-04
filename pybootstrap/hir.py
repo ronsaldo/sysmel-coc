@@ -653,7 +653,7 @@ class HIRConstantLiteralIntegerValue(HIRConstantLiteralValue):
         return self.type == other.type and self.value == other.value
 
     def __repr__(self):
-        return 'integer %d' % self.value
+        return 'integer(%d)' % self.value
 
     def isIntegerConstant(self):
         return True
@@ -673,7 +673,7 @@ class HIRConstantLiteralFloatValue(HIRConstantLiteralValue):
         return self.type == other.type and self.value == other.value
 
     def __repr__(self):
-        return 'float %f' % self.value
+        return 'float(%f)' % self.value
 
     def isFloatConstant(self):
         return True
@@ -710,7 +710,7 @@ class HIRConstantLiteralCharacterValue(HIRConstantLiteralValue):
         return self.type == other.type and self.value == other.value
 
     def __repr__(self):
-        return 'character %d' % self.value
+        return 'character(%d)' % self.value
 
     def isCharacterConstant(self):
         return True
@@ -725,6 +725,9 @@ class HIRConstantLiteralStringValue(HIRConstantLiteralValue):
             return False
 
         return self.type == other.type and self.value == other.value
+
+    def __repr__(self):
+        return 'string(%s)' % self.value
 
     def isStringConstant(self):
         return True
@@ -741,7 +744,7 @@ class HIRConstantLiteralSymbolValue(HIRConstantLiteralValue):
         return self.type == other.type and self.value == other.value
 
     def __repr__(self):
-        return 'symbol #"%s"' % self.value
+        return 'symbol(#"%s")' % self.value
     
     def isSymbolConstant(self):
         return True
@@ -962,7 +965,8 @@ class HIRPrimitiveFunction(HIRConstant):
         assert False
 
     def analyzeAndEvaluateApplicationNode(self, evaluationPass, node: ParseTreeApplicationNode, functional):
-        assert False
+        typecheckedArguments, resultType = self.type.evaluateAndTypecheckArguments(evaluationPass, node.arguments, node.sourcePosition)
+        return self.primitiveFunction(*typecheckedArguments, resultType)
 
     def analyzeAndEvaluateMessageSendNode(self, evaluationPass, node: ParseTreeMessageSendNode, receiver):
         receiverNode = ParseTreeLiteralValueNode(node.sourcePosition, receiver)
@@ -2013,9 +2017,9 @@ class HIRCoreTypes:
             (HIRMetaBuilderFactory(HIRLetMetaBuilder, self, None), 'let'),
             (HIRMetaBuilderFactory(HIRPublicMetaBuilder, self, None), 'public'),
         ]
-        pass
 
     def createCorePrimitiveFunctions(self):
+        self.createGlobalPrimitives()
         self.createIntegerPrimitiveFunctions()
         self.createFloatPrimitiveFunctions()
 
@@ -2024,6 +2028,20 @@ class HIRCoreTypes:
             return self.trueValue
         else:
             return self.falseValue
+    
+    def createGlobalPrimitives(self):
+        def printPrimitive(operand, resultType):
+            print(str(operand), end='')
+            return self.voidValue
+
+        def printLinePrimitive(operand, resultType):
+            print(str(operand))
+            return self.voidValue
+
+        self.coreValueList += [
+            (HIRPrimitiveFunction('IO::print', self.getOrCreateSimpleFunctionType((self.dynamicType,), self.voidType), printPrimitive, None), 'print'),
+            (HIRPrimitiveFunction('IO::printLine', self.getOrCreateSimpleFunctionType((self.dynamicType,), self.voidType), printLinePrimitive, None), 'printLine'),
+        ]
 
     def createIntegerPrimitiveFunctions(self):
         def integerNegated(operand, resultType):

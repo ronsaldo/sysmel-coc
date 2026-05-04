@@ -1,6 +1,0 @@
-
-Integer !{
-negated :: Integer.
-    <primitive: #Integer_negated>
-    primitiveFailed()
-}.

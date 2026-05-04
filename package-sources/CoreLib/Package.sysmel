@@ -1,1 +1,2 @@
-loadFileOnce: "Arithmetic.sysmel".
+##loadFileOnce: "Arithmetic.sysmel".
+printLine(1+2)
