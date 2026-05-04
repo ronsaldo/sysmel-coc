@@ -552,6 +552,15 @@ class HIRField(HIRValue):
             return newValue
 
         return super().analyzeAndEvaluateMessageSendNode(evaluator, node, receiver)
+    
+    def analyzeAndBuildMessageSendNode(self, buildPass, node, receiver):
+        fieldReferenceType = buildPass.builder.context.getOrCreateReferenceType(self.type)
+        if len(node.arguments) == 0:
+            fieldReference = buildPass.builder.extractFieldReference(fieldReferenceType, receiver, self, node.sourcePosition)
+            return buildPass.builder.load(self.type, fieldReference, node.sourcePosition)
+        elif len(node.arguments) == 1:
+            assert False
+        return super().analyzeAndBuildMessageSendNode(buildPass, node, receiver)
 
     def __str__(self):
         return 'field %s (index: %d offset: %d)' %(str(self.name), self.getValidIndex(), self.getValidOffset())
@@ -777,6 +786,9 @@ class HIRDependentFunctionType(HIRType):
         self.captures = captures
         self.arguments = arguments
         self.resultType = resultType
+
+    def copyWithImplicitArgument(self, implicitArgument):
+        return HIRDependentFunctionType(self.captures, [implicitArgument] + self.arguments, self.resultType, self.coreTypes, self.sourcePosition)
 
     def isDependentFunctionType(self):
         return True
@@ -1100,10 +1112,10 @@ class HIRPointerLikeValue(HIRValue):
         return self.type
 
     def storeValue(self, valueToStore):
-        self.storage.storeValueAtIndex(valueToStore, 0)
+        self.storage.storeValueAtIndex(valueToStore, self.index)
 
     def loadValue(self):
-        return self.storage.loadValueAtIndex(0)
+        return self.storage.loadValueAtIndex(self.index)
 
     def __eq__(self, other):
         if not isinstance(other, self.__class__):
@@ -1330,6 +1342,11 @@ class HIRFunction(HIRConstant):
     def analyzeAndEvaluateApplicationNode(self, evaluationPass, node: ParseTreeApplicationNode, functional):
         typecheckedArguments, resultType = self.simplifiedType.evaluateAndTypecheckArguments(evaluationPass, node.arguments, node.sourcePosition)
         return self.evaluateWithArguments(typecheckedArguments)
+    
+    def analyzeAndEvaluateMessageSendNode(self, evaluationPass, node: ParseTreeMessageSendNode, receiver):
+        receiverNode = ParseTreeLiteralValueNode(node.sourcePosition, receiver)
+        typecheckedArguments, resultType = self.simplifiedType.evaluateAndTypecheckArguments(evaluationPass, [receiverNode] + node.arguments, node.sourcePosition)
+        return self.evaluateWithArgumentsAndResultType(typecheckedArguments, resultType)
     
     def __repr__(self):
         return 'HIRFunction(%s)' % self.name
@@ -1658,6 +1675,25 @@ class HIREnumUnboxValueInstruction(HIRInstruction):
 
     def fullPrintString(self):
         return "%s := enumUnboxValue %s :: %s" % (str(self), str(self.enumValue), str(self.type))
+
+class HIRExtractFieldReferenceInstruction(HIRInstruction):
+    def __init__(self, type, aggregate, field, name=None, sourcePosition=None):
+        super().__init__(type, name, sourcePosition)
+        self.aggregate = aggregate
+        self.field = field
+
+    def evaluateInActivationContext(self, context):
+        aggregateValue = self.aggregate.getValueInEvaluationContext(context)
+
+        if self.type.isReferenceType():
+            fieldReference = HIRReferenceValue(self.type, aggregateValue, self.field.getValidIndex(), self.sourcePosition)
+        else:
+            fieldReference = HIRPointerValue(self.type, aggregateValue, self.field.getValidIndex(), self.sourcePosition)
+
+        context.setCurrentInstructionValue(fieldReference)
+
+    def fullPrintString(self):
+        return "%s := extractFieldReference %s.%s :: %s" % (str(self), str(self.aggregate), str(self.field), str(self.type))
 
 class HIRDynamicUnboxInstruction(HIRInstruction):
     def __init__(self, boxedValue, type, name=None, sourcePosition=None):
@@ -2115,6 +2151,36 @@ class HIRFunctionMetaBuilder(HIRNamedMetaBuilder):
         functionNode = ParseTreeFunctionNode(node.sourcePosition, self.nameExpression, self.makeFunctionType(), node.value, self.isPublic)
         return buildPass.visitNode(functionNode)
 
+class HIRMethodMetaBuilder(HIRMetaBuilder):
+    def __init__(self, coreTypes, sourcePosition):
+        super().__init__(coreTypes, sourcePosition)
+        self.selectorExpression = None
+        self.argumentDefinitions = None
+        self.resultTypeExpression = None
+        self.isPublic = False
+
+    def analyzeAndEvaluateMessageSendNode(self, evaluator, node, receiver):
+        if self.argumentDefinitions is None:
+            self.selectorExpression = node.selector
+            self.argumentDefinitions = list(map(lambda each: each.parseAsArgumentDefinition(), node.arguments))
+            return self
+        return super().analyzeAndEvaluateMessageSendNode(evaluator, node, receiver)
+
+    def supportsSelector(self, selector):
+        return selector in ('=>')
+
+    def expandMessageSend(self, evaluator, node: ParseTreeMessageSendNode, selector: str, receiver):
+        if selector == '=>':
+            self.resultTypeExpression = node.arguments[0]
+        return self
+        
+    def makeFunctionType(self):
+        return ParseTreeFunctionTypeNode(self.sourcePosition, self.argumentDefinitions, self.resultTypeExpression)
+
+    def analyzeAndEvaluateAssignment(self, evaluationPass, node):
+        functionNode = ParseTreeFunctionNode(node.sourcePosition, self.selectorExpression, self.makeFunctionType(), node.value, self.isPublic, True)
+        return evaluationPass.visitNode(functionNode)
+
 class HIRStructMetaBuilder(HIRNamedMetaBuilder):
     def __init__(self, coreTypes, sourcePosition):
         super().__init__(coreTypes, sourcePosition)
@@ -2291,6 +2357,7 @@ class HIRCoreTypes:
             (HIRMetaBuilderFactory(HIRFieldMetaBuilder, self, None), 'field'),
             (HIRMetaBuilderFactory(HIRFunctionMetaBuilder, self, None), 'function'),
             (HIRMetaBuilderFactory(HIRLetMetaBuilder, self, None), 'let'),
+            (HIRMetaBuilderFactory(HIRMethodMetaBuilder, self, None), 'method'),
             (HIRMetaBuilderFactory(HIRPublicMetaBuilder, self, None), 'public'),
             (HIRMetaBuilderFactory(HIRStructMetaBuilder, self, None), 'struct'),
         ]
@@ -2643,6 +2710,10 @@ class HIRBuilder:
 
     def enumUnboxValue(self, enumValue, type, sourcePosition):
         instruction = HIREnumUnboxValueInstruction(enumValue, type, None, sourcePosition)
+        self.addInstruction(instruction)
+        return instruction
+    def extractFieldReference(self, referenceType, aggregate, field, sourcePosition):
+        instruction = HIRExtractFieldReferenceInstruction(referenceType, aggregate, field, None, sourcePosition)
         self.addInstruction(instruction)
         return instruction
 

@@ -503,12 +503,13 @@ class ParseTreeFunctionTypeNode(ParseTreeNode):
         return True    
 
 class ParseTreeFunctionNode(ParseTreeNode):
-    def __init__(self, sourcePosition: SourcePosition, nameExpression: ParseTreeNode, functionType: ParseTreeFunctionTypeNode, body: ParseTreeNode, isPublic: bool) -> None:
+    def __init__(self, sourcePosition: SourcePosition, nameExpression: ParseTreeNode, functionType: ParseTreeFunctionTypeNode, body: ParseTreeNode, isPublic: bool, isMethod: bool = False) -> None:
         super().__init__(sourcePosition)
         self.nameExpression = nameExpression
         self.functionType = functionType
         self.body = body
         self.isPublic = isPublic
+        self.isMethod = isMethod
     
     def accept(self, visitor: ParseTreeVisitor):
         return visitor.visitFunctionNode(self)

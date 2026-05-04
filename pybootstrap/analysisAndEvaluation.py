@@ -109,6 +109,13 @@ class AnalysisAndEvaluationPass(ParseTreeVisitor):
 
         dependentFunctionType = self.visitNode(node.functionType)
 
+        if node.isMethod:
+            owner = self.evaluationContext.environment.lookupProgramEntityOwner()
+            if owner.isType():
+                selfArgument = HIRArgument(owner, 'self', node.sourcePosition)
+                selfArgument.isSelf = True
+                dependentFunctionType = dependentFunctionType.copyWithImplicitArgument(selfArgument)
+
         function = HIRFunction(name, dependentFunctionType, node.sourcePosition)
         function.definitionBody = node.body
         function.definitionContext = self.evaluationContext.context
@@ -117,7 +124,9 @@ class AnalysisAndEvaluationPass(ParseTreeVisitor):
 
         if name is not None:
             self.evaluationContext.environment.setNewSymbolBinding(name, function, node.sourcePosition)
-            if node.isPublic:
+            if node.isMethod:
+                owner.withSelectorAddMethod(name, function)
+            elif node.isPublic:
                 owner = self.evaluationContext.environment.lookupProgramEntityOwner()
                 owner.addPublicNamedElement(name, function, node.sourcePosition)
 
