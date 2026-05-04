@@ -544,6 +544,10 @@ class HIRSimpleFunctionType(HIRType):
     def isSimpleFunctionType(self):
         return True
     
+    def analyzeAndBuildApplicationNode(self, buildPass, node: ParseTreeApplicationNode, functional):
+        typecheckArguments, resultType = self.analyzeBuildAndTypecheckArguments(buildPass, node.arguments, node.sourcePosition)
+        return buildPass.builder.call(functional, typecheckArguments, resultType, node.sourcePosition)
+    
     def evaluateAndTypecheckArguments(self, evaluator, arguments, sourcePosition):
         if len(arguments) != len(self.argumentTypes):
             raise RuntimeError("%s: expected %d arguments instead of %d." % (str(sourcePosition), len(self.argumentTypes), len(arguments)))
@@ -1118,6 +1122,9 @@ class HIRFunction(HIRConstant):
 
     def evaluateWithArguments(self, arguments):
         return self.evaluateWithArgumentsAndCaptures(arguments, [])
+    
+    def evaluateWithArgumentsAndResultType(self, arguments, resultType):
+        return self.evaluateWithArguments(arguments)
     
     def analyzeAndEvaluateApplicationNode(self, evaluationPass, node: ParseTreeApplicationNode, functional):
         typecheckedArguments, resultType = self.simplifiedType.evaluateAndTypecheckArguments(evaluationPass, node.arguments, node.sourcePosition)

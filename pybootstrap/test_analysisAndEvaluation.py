@@ -304,6 +304,18 @@ class TestAnalysisAndEvaluation(unittest.TestCase):
         self.assertTrue(result.isIntegerConstant())
         self.assertEqual(result.value, 3)
 
+    def testRecursiveFunctionMetaBuilder(self):
+        result = self.evaluateTopLevelSourceString("""
+        function factorial(n: Integer) => Integer := {
+            if: n <= 0
+            then: 1
+            else: factorial(n - 1) *n     
+        }.
+                                                          
+        factorial(10)""")
+        self.assertTrue(result.isIntegerConstant())
+        self.assertEqual(result.value, 3628800)
+
     def testPublicFunctionMetaBuilder(self):
         functionValue = self.evaluateTopLevelSourceString('public function two() => Integer := 2')
         result = functionValue.evaluateWithArguments([])
