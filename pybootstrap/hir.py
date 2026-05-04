@@ -553,13 +553,16 @@ class HIRField(HIRValue):
 
         return super().analyzeAndEvaluateMessageSendNode(evaluator, node, receiver)
     
-    def analyzeAndBuildMessageSendNode(self, buildPass, node, receiver):
+    def analyzeAndBuildMessageSendNode(self, buildPass, node: ParseTreeMessageSendNode, receiver):
         fieldReferenceType = buildPass.builder.context.getOrCreateReferenceType(self.type)
         if len(node.arguments) == 0:
             fieldReference = buildPass.builder.extractFieldReference(fieldReferenceType, receiver, self, node.sourcePosition)
             return buildPass.builder.load(self.type, fieldReference, node.sourcePosition)
         elif len(node.arguments) == 1:
-            assert False
+            fieldValue = buildPass.visitNodeWithExpectedType(node.arguments[0], self.type)
+            fieldReference = buildPass.builder.extractFieldReference(fieldReferenceType, receiver, self, node.sourcePosition)
+            buildPass.builder.store(fieldReference, fieldValue, node.sourcePosition)
+            return fieldReference
         return super().analyzeAndBuildMessageSendNode(buildPass, node, receiver)
 
     def __str__(self):
