@@ -282,6 +282,12 @@ class HIRUniverseType(HIRType):
     def isUniverseType(self):
         return True
 
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            return False
+
+        return self.level == other.level
+    
     def __str__(self):
         return self.name
 
@@ -292,7 +298,13 @@ class HIRAssociationType(HIRType):
         self.valueType = valueType
 
     def isAssociationType(self):
-        return True    
+        return True
+    
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            return False
+
+        return self.keyType == other.keyType and self.valueType == other.valueType
 
     def __str__(self):
         return '(%s : %s)' % (self.keyType, self.valueType)
@@ -314,6 +326,12 @@ class HIRTupleType(HIRType):
         result += ')'
         return result
 
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            return False
+
+        return self.elements == other.elements
+    
 class HIRDerivedType(HIRType):
     def __init__(self, baseType, coreTypes, sourcePosition):
         super().__init__(coreTypes, sourcePosition)
@@ -321,6 +339,12 @@ class HIRDerivedType(HIRType):
 
     def isDerivedType(self):
         return True
+
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            return False
+
+        return self.baseType == other.baseType
 
 class HIRPointerLikeType(HIRDerivedType):
     def isPointerLikeType(self):
@@ -374,7 +398,13 @@ class HIRSimpleFunctionType(HIRType):
             typecheckedArguments.append(typecheckedArgument)
 
         return typecheckedArguments, self.resultType
-    
+
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            return False
+
+        return self.argumentTypes == other.argumentTypes and self.resultType == other.resultType
+
 class HIRDependentFunctionType(HIRType):
     def __init__(self, arguments, resultType: HIRValue, coreTypes, sourcePosition):
         super().__init__(coreTypes, sourcePosition)
