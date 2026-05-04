@@ -333,3 +333,12 @@ class TestAnalysisAndBuild(unittest.TestCase):
         self.assertEqual(len(simpleFunctionType.argumentTypes), 2)
         self.assertEqual(simpleFunctionType.argumentTypes[0], self.context.coreTypes.integerType)
         self.assertEqual(simpleFunctionType.argumentTypes[1], self.context.coreTypes.integerType)
+
+    def testAssert(self):
+        self.evaluateTopLevelFunctionSourceString("assert: true")
+        with self.assertRaises(AssertionError):
+            self.evaluateTopLevelFunctionSourceString("assert: false")
+
+    def testRuntimeError(self):
+        with self.assertRaises(RuntimeError):
+            self.evaluateTopLevelFunctionSourceString('error: "test message"')

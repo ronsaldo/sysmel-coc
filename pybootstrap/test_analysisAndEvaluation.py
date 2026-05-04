@@ -367,5 +367,14 @@ class TestAnalysisAndEvaluation(unittest.TestCase):
         self.assertEqual(simpleFunctionType.argumentTypes[1], self.context.coreTypes.integerType)
         self.assertEqual(simpleFunctionType.argumentTypes[0], self.context.coreTypes.integerType)
 
+    def testAssert(self):
+        self.evaluateTopLevelSourceString("assert: true")
+        with self.assertRaises(AssertionError):
+            self.evaluateTopLevelSourceString("assert: false")
+
+    def testRuntimeError(self):
+        with self.assertRaises(RuntimeError):
+            self.evaluateTopLevelSourceString('error: "test message"')
+
 if __name__ == '__main__':
     unittest.main()

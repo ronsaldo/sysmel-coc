@@ -150,6 +150,9 @@ class HIRValue(ABC):
     def isVoidType(self):
         return False
 
+    def isControlFlowEscapeType(self):
+        return False
+
     def isNilConstant(self):
         return False
 
@@ -300,7 +303,21 @@ class HIRVoidType(HIRType):
     
     def __str__(self):
         return self.name
+
+class HIRControlFlowEscapeType(HIRType):
+    def __init__(self, name: str, coreTypes, sourcePosition = None):
+        super().__init__(coreTypes, sourcePosition)
+        self.name = name
+
+    def getName(self):
+        return self.name
+
+    def isControlFlowEscapeType(self):
+        return True
     
+    def __str__(self):
+        return self.name
+
 class HIRUniverseType(HIRType):
     def __init__(self, name: str, coreTypes, level: int):
         super().__init__(coreTypes, None)
@@ -1116,6 +1133,35 @@ class HIRAllocaInstruction(HIRInstruction):
         
         context.setCurrentInstructionValue(allocaValue)
 
+class HIRAssertInstruction(HIRInstruction):
+    def __init__(self, condition, errorMessage, type, name=None, sourcePosition=None):
+        super().__init__(type, name, sourcePosition)
+        self.condition = condition
+        self.errorMessage = errorMessage
+
+    def fullPrintString(self) -> str:
+        return 'assert %s : %s' % (str(self.condition), str(self.errorMessage))
+
+    def evaluateInActivationContext(self, context: HIRFunctionActivationContext):
+        conditionValue = self.condition.getValueInEvaluationContext(context)
+        if not conditionValue.value:
+            messageValue = self.errorMessage.getValueInEvaluationContext(context)
+            raise AssertionError(str(self.sourcePosition) + ": " + messageValue.value)
+
+
+class HIRRuntimeErrorInstruction(HIRInstruction):
+    def __init__(self, errorMessage, type, name=None, sourcePosition=None):
+        super().__init__(type, name, sourcePosition)
+        self.errorMessage = errorMessage
+
+    def fullPrintString(self) -> str:
+        return 'runtimeError %s' % str(self.errorMessage)
+
+    def evaluateInActivationContext(self, context: HIRFunctionActivationContext):
+        messageValue = self.errorMessage.getValueInEvaluationContext(context)
+        assert messageValue.isStringConstant()
+        raise RuntimeError(messageValue.value)
+
 class HIRLoadInstruction(HIRInstruction):
     def __init__(self, type, storage, name=None, sourcePosition=None):
         super().__init__(type, name, sourcePosition)
@@ -1593,7 +1639,9 @@ class HIRCoreTypes:
         self.undefinedType = HIRNominalType('Undefined', self, None);
         
         self.dynamicType = HIRDynamicType('Dynamic', self, None)
-        self.voidType      = HIRVoidType('Void', self, None);
+        self.voidType    = HIRVoidType('Void', self, None);
+        
+        self.controlFlowEscapeType = HIRControlFlowEscapeType('ControlFlowEscape', self, None);
 
         self.packageType = HIRNominalType('Package', self, None)
         self.parseTreeNodeType = HIRNominalType('ParseTreeNode', self, None)
@@ -1645,6 +1693,12 @@ class HIRCoreTypes:
         self.createCorePrimitiveFunctions()
 
     def createCorePrimitiveMacros(self):
+
+        def assertMacro(macroContext: HIRMacroContext, expression: ParseTreeNode):
+            return ParseTreeAssertNode(macroContext.sourcePosition, expression)
+        def errorMacro(macroContext: HIRMacroContext, messageExpression: ParseTreeNode):
+            return ParseTreeRuntimeErrorNode(macroContext.sourcePosition, messageExpression)
+
         def letWith(macroContext: HIRMacroContext, nameExpression: ParseTreeNode, initialValue: ParseTreeNode):
             return ParseTreeVariableDefinitionNode(macroContext.sourcePosition, nameExpression, None, initialValue, False)
         def letMutableWith(macroContext: HIRMacroContext, nameExpression: ParseTreeNode, initialValue: ParseTreeNode):
@@ -1671,6 +1725,9 @@ class HIRCoreTypes:
             return ParseTreeReturnNode(macroContext.sourcePosition, valueExpression)
 
         self.corePrimitiveMacros = [
+            HIRPrimitiveMacro('assert:', self.primitiveMacroType, assertMacro, None),
+            HIRPrimitiveMacro('error:', self.primitiveMacroType, errorMacro, None),
+
             HIRPrimitiveMacro('let:with:', self.primitiveMacroType, letWith, None),
             HIRPrimitiveMacro('let:mutableWith:', self.primitiveMacroType, letMutableWith, None),
 
@@ -1959,6 +2016,16 @@ class HIRBuilder:
     def alloca(self, valueType, referenceType, sourcePosition):
         valueBoxType = self.context.getOrCreateMutableValueBoxType(valueType)
         instruction = HIRAllocaInstruction(valueType, valueBoxType, referenceType, None, sourcePosition)
+        self.addInstruction(instruction)
+        return instruction
+
+    def assertCondition(self, condition, errorMessage, sourcePosition):
+        instruction = HIRAssertInstruction(condition, errorMessage, self.context.coreTypes.voidType, None, sourcePosition)
+        self.addInstruction(instruction)
+        return instruction
+
+    def runtimeError(self, errorMessage, sourcePosition):
+        instruction = HIRRuntimeErrorInstruction(errorMessage, self.context.coreTypes.controlFlowEscapeType, None, sourcePosition)
         self.addInstruction(instruction)
         return instruction
 

@@ -41,7 +41,7 @@ class AnalysisAndEvaluationPass(ParseTreeVisitor):
         return self.visitSymbolNode(node)
 
     def visitErrorNode(self, node):
-        assert False
+        raise RuntimeError("%s: %s" % (str(node.sourcePosition), node.message))
 
     def visitApplicationNode(self, node):
         functional = self.visitDecayedNode(node.functional)
@@ -56,8 +56,12 @@ class AnalysisAndEvaluationPass(ParseTreeVisitor):
         argument.isSelf = node.isSelf
         return argument
 
-    def visitAssertNode(self, node):
-        assert False
+    def visitAssertNode(self, node: ParseTreeAssertNode):
+        expressionValue = self.visitBooleanNode(node.expression)
+        if not expressionValue:
+            raise AssertionError('%s: assertion failed: %s' % (str(node.sourcePosition), node.sourcePosition.getStringValue())) 
+        
+        return self.evaluationContext.context.coreTypes.voidValue
 
     def visitAssignmentNode(self, node: ParseTreeAssignmentNode):
         storeValue = self.visitNode(node.store)
@@ -188,8 +192,9 @@ class AnalysisAndEvaluationPass(ParseTreeVisitor):
             result = self.visitNode(element)
         return result
 
-    def visitRuntimeErrorNode(self, node):
-        assert False
+    def visitRuntimeErrorNode(self, node: ParseTreeRuntimeErrorNode):
+        message = self.visitNodeWithExpectedType(node.messageExpression, self.evaluationContext.context.coreTypes.stringType)
+        raise RuntimeError(message.value)
 
     def visitTupleNode(self, node: ParseTreeTupleNode):
         tupleElements = []

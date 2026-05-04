@@ -62,7 +62,7 @@ class AnalysisAndBuildPass(ParseTreeVisitor):
         return typeValue
 
     def visitErrorNode(self, node):
-        assert False
+        raise RuntimeError("%s: %s" % (str(node.sourcePosition), node.message))
 
     def visitApplicationNode(self, node: ParseTreeApplicationNode):
         functional = self.visitDecayedNode(node.functional)
@@ -77,8 +77,10 @@ class AnalysisAndBuildPass(ParseTreeVisitor):
         argument.isSelf = node.isSelf
         return argument
 
-    def visitAssertNode(self, node):
-        assert False
+    def visitAssertNode(self, node: ParseTreeAssertNode):
+        condition = self.visitBooleanCondition(node.expression)
+        message = HIRConstantLiteralStringValue(node.sourcePosition.getStringValue(), self.builder.context.coreTypes.stringType, node.sourcePosition)
+        return self.builder.assertCondition(condition, message, node.sourcePosition)
 
     def visitAssignmentNode(self, node: ParseTreeAssignmentNode):
         storeValue = self.visitNode(node.store)
@@ -213,8 +215,9 @@ class AnalysisAndBuildPass(ParseTreeVisitor):
             result = self.visitNode(element)
         return result
 
-    def visitRuntimeErrorNode(self, node):
-        assert False
+    def visitRuntimeErrorNode(self, node: ParseTreeRuntimeErrorNode):
+        message = self.visitNodeWithExpectedType(node.messageExpression, self.builder.context.coreTypes.stringType)
+        return self.builder.runtimeError(message, node.sourcePosition)
 
     def visitTupleNode(self, node: ParseTreeTupleNode):
         tupleElements = []
@@ -306,10 +309,10 @@ class AnalysisAndBuildPass(ParseTreeVisitor):
 
         return mergedResult
 
-    def visitSwitchSelectionNode(self, node):
+    def visitSwitchSelectionNode(self, node: ParseTreeSwitchSelectionNode):
         assert False
 
-    def visitReturnNode(self, node):
+    def visitReturnNode(self, node: ParseTreeReturnNode):
         assert False
 
     def visitWhileDoNode(self, node: ParseTreeWhileDoNode):
@@ -356,19 +359,19 @@ class AnalysisAndBuildPass(ParseTreeVisitor):
         assert False
 
     def visitNamespaceNode(self, node):
-        assert False
+        raise RuntimeError("%s: unsupported location for parse tree node." % str(node.sourcePosition))
 
     def visitClassDefinitionNode(self, node):
-        assert False
+        raise RuntimeError("%s: unsupported location for parse tree node." % str(node.sourcePosition))
 
     def visitStructDefinitionNode(self, node):
-        assert False
+        raise RuntimeError("%s: unsupported location for parse tree node." % str(node.sourcePosition))
 
     def visitEnumDefinitionNode(self, node):
-        assert False
+        raise RuntimeError("%s: unsupported location for parse tree node." % str(node.sourcePosition))
 
     def visitFieldDefinitionNode(self, node):
-        assert False
+        raise RuntimeError("%s: unsupported location for parse tree node." % str(node.sourcePosition))
 
     def visitLoadFileOnceNode(self, node):
-        assert False
+        raise RuntimeError("%s: unsupported location for parse tree node." % str(node.sourcePosition))
