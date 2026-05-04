@@ -107,6 +107,24 @@ class TestAnalysisAndBuild(unittest.TestCase):
         self.assertTrue(topLevelResult.isIntegerConstant())
         self.assertEqual(topLevelResult.value, 5)
 
+    def testLetMetaBuilder(self):
+        topLevelResult = self.evaluateTopLevelFunctionSourceString('let x := 42')
+        self.assertTrue(topLevelResult.isIntegerConstant())
+        self.assertEqual(topLevelResult.value, 42)
+
+        topLevelResult = self.evaluateTopLevelFunctionSourceString('let x := 42. x')
+        self.assertTrue(topLevelResult.isIntegerConstant())
+        self.assertEqual(topLevelResult.value, 42)
+
+    def testLetMutableMetaBuilder(self):
+        topLevelResult = self.evaluateTopLevelFunctionSourceString('let x mutable := 42')
+        self.assertTrue(topLevelResult.isIntegerConstant())
+        self.assertEqual(topLevelResult.value, 42)
+
+        topLevelResult = self.evaluateTopLevelFunctionSourceString('let x mutable := 42. x := 5. x')
+        self.assertTrue(topLevelResult.isIntegerConstant())
+        self.assertEqual(topLevelResult.value, 5)
+
     def testIfThenElseMacro(self):
         topLevelResult = self.evaluateTopLevelFunctionSourceString('if: true then: 1 else: 2')
         self.assertTrue(topLevelResult.isIntegerConstant())
@@ -313,5 +331,5 @@ class TestAnalysisAndBuild(unittest.TestCase):
         self.assertTrue(simpleFunctionType.isSimpleFunctionType())
         
         self.assertEqual(len(simpleFunctionType.argumentTypes), 2)
-        self.assertEqual(simpleFunctionType.argumentTypes[1], self.context.coreTypes.integerType)
         self.assertEqual(simpleFunctionType.argumentTypes[0], self.context.coreTypes.integerType)
+        self.assertEqual(simpleFunctionType.argumentTypes[1], self.context.coreTypes.integerType)

@@ -1437,6 +1437,88 @@ class HIRFunctionAnalysisEnvironment(HIRLexicalEnvironment):
                 return capture
         return parentBinding
 
+class HIRMetaBuilderFactory(HIRValue):
+    def __init__(self, clazz, coreTypes, sourcePosition):
+        super().__init__(sourcePosition)
+        self.coreTypes = coreTypes
+        self.clazz = clazz
+
+    def analyzeAndEvaluateIdentifierReferenceNode(self, evaluator, node: ParseTreeIdentifierReferenceNode):
+        return self.clazz(self.coreTypes, node.sourcePosition).analyzeAndEvaluateIdentifierReferenceNode(evaluator, node)
+
+    def analyzeAndBuildIdentifierReferenceNode(self, analyzer, node: ParseTreeIdentifierReferenceNode):
+        return self.clazz(self.coreTypes, node.sourcePosition).analyzeAndBuildIdentifierReferenceNode(analyzer, node)
+
+    def getType(self):
+        return self.coreTypes.metaBuilderFactoryType
+
+class HIRMetaBuilder(HIRValue):
+    def __init__(self, coreTypes, sourcePosition):
+        super().__init__(sourcePosition)
+        self.coreTypes = coreTypes
+
+    def supportsSelector(self, selector):
+        return False
+
+    def expandMessageSend(self, evaluator, node: ParseTreeMessageSendNode, selector: str, receiver):
+        return self
+
+    def analyzeAndEvaluateMessageSendNode(self, evaluator, node, receiver):
+        selectorValue = evaluator.visitOptionalSymbolNode(node.selector)
+        if self.supportsSelector(selectorValue):
+            return self.expandMessageSend(evaluator, node, selectorValue, receiver)
+        return super().analyzeAndEvaluateMessageSendNode(evaluator, node, receiver)
+
+    def analyzeAndBuildMessageSendNode(self, buildPass, node, receiver):
+        selectorValue = buildPass.evaluateSymbolNode(node.selector)
+        if self.supportsSelector(selectorValue):
+            return self.expandMessageSend(buildPass, node, selectorValue, receiver)
+        return super().analyzeAndBuildMessageSendNode(buildPass, node, receiver)
+
+    def getType(self):
+        return self.coreTypes.metaBuilderType
+
+class HIRNamedMetaBuilder(HIRMetaBuilder):
+    def __init__(self, coreTypes, sourcePosition):
+        super().__init__(coreTypes, sourcePosition)
+        self.nameExpression = None
+
+    def analyzeAndEvaluateMessageSendNode(self, evaluator, node: ParseTreeMessageSendNode, receiver):
+        if self.nameExpression is None and len(node.arguments) == 0:
+            self.nameExpression = node.selector
+            return self
+        return super().analyzeAndEvaluateMessageSendNode(evaluator, node, receiver)
+    
+    def analyzeAndBuildMessageSendNode(self, buildPass, node: ParseTreeMessageSendNode, receiver):
+        if self.nameExpression is None and len(node.arguments) == 0:
+            self.nameExpression = node.selector
+            return self
+        return super().analyzeAndBuildMessageSendNode(buildPass, node, receiver)
+
+class HIRLetMetaBuilder(HIRNamedMetaBuilder):
+    def __init__(self, coreTypes, sourcePosition):
+        super().__init__(coreTypes, sourcePosition)
+        self.isMutable = False
+        self.typeExpression = None
+
+    def supportsSelector(self, selector):
+        return selector in ('mutable', 'type:')
+
+    def expandMessageSend(self, evaluator, node: ParseTreeMessageSendNode, selector: str, receiver):
+        if selector == 'mutable':
+            self.isMutable = True
+        elif selector == 'type:':
+            self.typeExpression = node.arguments[0]
+        return self
+    
+    def analyzeAndEvaluateAssignment(self, evaluationPass, node: ParseTreeAssignmentNode):
+        variableDefinition = ParseTreeVariableDefinitionNode(node.sourcePosition, self.nameExpression, self.typeExpression, node.value, self.isMutable)
+        return evaluationPass.visitNode(variableDefinition)
+    
+    def analyzeAndBuildAssignment(self, buildPass, node):
+        variableDefinition = ParseTreeVariableDefinitionNode(node.sourcePosition, self.nameExpression, self.typeExpression, node.value, self.isMutable)
+        return buildPass.visitNode(variableDefinition)
+
 class HIRCoreTypes:
     def __init__(self):
         self.pointerSize = 8
@@ -1463,6 +1545,9 @@ class HIRCoreTypes:
             0: self.prop,
             1: self.type,
         }
+
+        self.metaBuilderFactoryType = HIRNominalType('MetaBuilderFactory', self, None)
+        self.metaBuilderType = HIRNominalType('MetaBuilder', self, None)
 
         self.voidValue = HIRConstantLiteralVoidValue(self.voidType, None)
         self.falseValue = HIRConstantLiteralBooleanValue(False, self.booleanType, None)
@@ -1496,6 +1581,7 @@ class HIRCoreTypes:
         ]
         
         self.createCorePrimitiveMacros()
+        self.createCorePrimitiveMetaBuilders()
         self.createCorePrimitiveFunctions()
 
     def createCorePrimitiveMacros(self):
@@ -1529,6 +1615,12 @@ class HIRCoreTypes:
 
             HIRPrimitiveMacro('return:', self.primitiveMacroType, returnMacro, None),
         ]
+
+    def createCorePrimitiveMetaBuilders(self):
+        self.coreValueList += [
+            (HIRMetaBuilderFactory(HIRLetMetaBuilder, self, None), 'let'),
+        ]
+        pass
 
     def createCorePrimitiveFunctions(self):
         self.createIntegerPrimitiveFunctions()
