@@ -105,7 +105,8 @@ class AnalysisAndEvaluationPass(ParseTreeVisitor):
 
         function = HIRFunction(name, dependentFunctionType, node.sourcePosition)
         function.definitionBody = node.body
-        function.definitionContext = self.evaluationContext.clone()
+        function.definitionContext = self.evaluationContext.context
+        function.definitionEnvironment = self.evaluationContext.environment
         self.evaluationContext.context.addEntityWithPendingAnalysis(function)
 
         if name is not None:

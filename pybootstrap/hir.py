@@ -741,7 +741,8 @@ class HIRFunction(HIRConstant):
         self.lastBasicBlock = None
         self.isTopLevel = False
         self.definitionBody: ParseTreeFunctionNode = None
-        self.definitionContext: HIREvaluationContext = None
+        self.definitionContext: HIRContext = None
+        self.definitionEnvironment: HIRContext = None
         self.enumeratedInstructions = None
 
     def getType(self):
@@ -762,7 +763,7 @@ class HIRFunction(HIRConstant):
             return
         
         # Function environment arguments
-        functionEnvironment = HIRFunctionAnalysisEnvironment(self.definitionContext.environment)
+        functionEnvironment = HIRFunctionAnalysisEnvironment(self.definitionEnvironment)
         for argument in self.dependentFunctionType.arguments:
             if argument.name is not None:
                 functionEnvironment.setNewSymbolBinding(argument.name, argument, argument.sourcePosition)
@@ -773,12 +774,12 @@ class HIRFunction(HIRConstant):
         # Alloca block
         allocaBlock = HIRBasicBlock("alloca", self.sourcePosition)
         self.addBasicBlock(allocaBlock)
-        allocaBuilder = HIRBuilder(self, self.definitionContext.context, allocaBlock, bodyEnvironment)
+        allocaBuilder = HIRBuilder(self, self.definitionContext, allocaBlock, bodyEnvironment)
 
         # Entry block
         entryBlock = HIRBasicBlock("entry", self.sourcePosition)
         self.addBasicBlock(entryBlock)
-        builder = HIRBuilder(self, self.definitionContext.context, entryBlock, bodyEnvironment)
+        builder = HIRBuilder(self, self.definitionContext, entryBlock, bodyEnvironment)
         builder.allocaBuilder = allocaBuilder
         builder.entryBasicBlock = entryBlock
 

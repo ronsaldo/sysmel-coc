@@ -118,8 +118,26 @@ class AnalysisAndBuildPass(ParseTreeVisitor):
         self.builder.environment = oldEnvironment
         return functionType
 
-    def visitFunctionNode(self, node):
-        assert False
+    def visitFunctionNode(self, node: ParseTreeFunctionNode):
+        name = self.evaluateOptionalSymbolNode(node.nameExpression)
+
+        dependentFunctionType = self.visitNode(node.functionType)
+
+        function = HIRFunction(name, dependentFunctionType, node.sourcePosition)
+        function.definitionBody = node.body
+        function.definitionContext = self.builder.context
+        function.definitionEnvironment = self.builder.environment
+        function.ensureAnalysis()
+        
+        functionValue = function
+        if len(function.captures) != 0:
+            #TODO: Make closure
+            assert False
+        
+        if name is not None:
+           self.builder.environment.setNewSymbolBinding(name, functionValue)
+
+        return functionValue
 
     def visitCascadeMessageNode(self, node):
         assert False

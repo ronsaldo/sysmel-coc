@@ -284,3 +284,9 @@ class TestAnalysisAndBuild(unittest.TestCase):
         self.assertEqual(len(simplifiedType.argumentTypes), 1)
         self.assertEqual(simplifiedType.argumentTypes[0], self.context.coreTypes.integerType)
         self.assertEqual(simplifiedType.resultType, self.context.coreTypes.integerType)
+
+    def testFunction(self):
+        functionValue = self.evaluateTopLevelFunctionSourceString('{:(Integer)x :: Integer | x}')
+        result = functionValue.evaluateWithArguments([HIRConstantLiteralIntegerValue(42, self.context.coreTypes.integerType, None)])
+        self.assertTrue(result.isIntegerConstant())
+        self.assertEqual(result.value, 42)
