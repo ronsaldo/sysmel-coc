@@ -34,7 +34,13 @@ class AnalysisAndBuildPass(ParseTreeVisitor):
     def visitNodeWithExpectedType(self, node: ParseTreeNode, expectedType: HIRType):
         decayedValue = self.visitDecayedNode(node)
         return self.castValueToExpectedType(decayedValue, expectedType, node.sourcePosition)
-    
+
+    def visitNodeExpectingType(self, node):
+        value = self.visitDecayedNode(node)
+        if not value.isType():
+            raise RuntimeError(str(node.sourcePosition) +  " Error: Expected a type instead of  " + str(value))
+        return value
+
     def visitBooleanCondition(self, node: ParseTreeNode):
         return self.visitNodeWithExpectedType(node, self.builder.context.coreTypes.booleanType)
 
@@ -62,8 +68,14 @@ class AnalysisAndBuildPass(ParseTreeVisitor):
         functional = self.visitDecayedNode(node.functional)
         return functional.analyzeAndBuildApplicationNode(self, node, functional)
 
-    def visitArgumentDefinitionNode(self, node):
-        assert False
+    def visitArgumentDefinitionNode(self, node: ParseTreeArgumentDefinitionNode):
+        argumentType = self.builder.context.coreTypes.dynamicType
+        if node.typeExpression is not None:
+            argumentType = self.visitNodeExpectingType(node.typeExpression)
+
+        argument = HIRArgument(argumentType, node.name)
+        argument.isSelf = node.isSelf
+        return argument
 
     def visitAssertNode(self, node):
         assert False
@@ -89,8 +101,22 @@ class AnalysisAndBuildPass(ParseTreeVisitor):
     def visitBinaryExpressionSequenceNode(self, node: ParseTreeBinaryExpressionSequenceNode):
         return self.visitNode(node.expandAsMessageSends())
 
-    def visitFunctionTypeNode(self, node):
-        assert False
+    def visitFunctionTypeNode(self, node: ParseTreeFunctionTypeNode):
+        oldEnvironment = self.builder.environment
+        analysisEnvironment = HIRDependentFunctionTypeAnalysisEnvironment(oldEnvironment)
+        self.builder.environment = analysisEnvironment
+
+        argumentDefinitions = []
+        for argument in node.argumentDefinitions:
+            argumentDefinitions.append(self.visitNode(argument))
+
+        resultType = self.builder.context.coreTypes.dynamicType
+        if node.resultTypeExpression is not None:
+            resultType = self.visitNodeExpectingType(node.resultTypeExpression)
+
+        functionType = HIRDependentFunctionType(analysisEnvironment.captureList, argumentDefinitions, resultType, self.builder.context.coreTypes, node.sourcePosition)
+        self.builder.environment = oldEnvironment
+        return functionType
 
     def visitFunctionNode(self, node):
         assert False

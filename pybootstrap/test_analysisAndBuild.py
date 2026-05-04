@@ -270,3 +270,17 @@ class TestAnalysisAndBuild(unittest.TestCase):
         self.assertEqual(tupleType.elements[0], self.context.coreTypes.integerType)
         self.assertEqual(tupleType.elements[1], self.context.coreTypes.floatType)
         self.assertEqual(tupleType.elements[2], self.context.coreTypes.characterType)
+
+    def testFunctionType(self):
+        value = self.evaluateTopLevelFunctionSourceString('{:(Integer)x :: Integer}')
+        self.assertTrue(value.isDependentFunctionType())
+        self.assertEqual(len(value.arguments), 1)
+        self.assertEqual(value.arguments[0].name, 'x')
+        self.assertEqual(value.arguments[0].type, self.context.coreTypes.integerType)
+        self.assertEqual(value.resultType, self.context.coreTypes.integerType)
+
+        simplifiedType = value.asSimplifiedType()
+        self.assertTrue(simplifiedType.isSimpleFunctionType())
+        self.assertEqual(len(simplifiedType.argumentTypes), 1)
+        self.assertEqual(simplifiedType.argumentTypes[0], self.context.coreTypes.integerType)
+        self.assertEqual(simplifiedType.resultType, self.context.coreTypes.integerType)
