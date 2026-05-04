@@ -1,5 +1,5 @@
-##loadFileOnce: "Arithmetic.sysmel".
-##printLine(1+2)
-function printX(x: Integer) => Void
-    := printLine(x).
-printX(42).
+loadFileOnce: "Arithmetic.sysmel".
+####printLine(1+2)
+##function printX(x: Integer) => Void
+##    := printLine(x).
+##printX(42).

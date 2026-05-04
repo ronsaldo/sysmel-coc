@@ -1,5 +1,7 @@
 from parsetree import *
 from hir import *
+from parser import parseFileNamed
+import os.path
 
 class AnalysisAndEvaluationPass(ParseTreeVisitor):
     def __init__(self, evaluationContext: HIREvaluationContext):
@@ -343,4 +345,20 @@ class AnalysisAndEvaluationPass(ParseTreeVisitor):
         assert False
 
     def visitLoadFileOnceNode(self, node: ParseTreeLoadFileOnceNode):
-        assert False
+        relativePath = self.visitNodeWithExpectedType(node.pathExpression, self.evaluationContext.context.coreTypes.stringType).value
+        directoryValue = self.evaluationContext.environment.lookSymbolRecursively('__FileDir__')
+        if directoryValue is None:
+            raise RuntimeError(str(node.sourcePosition()) + ": loadFileOnce: is not in a file.")
+
+        # Compute the file path.
+        assert directoryValue.isStringConstant()
+        directory = directoryValue.value
+        path = os.path.join(directory, relativePath)
+
+        # Load the file.
+        ast = parseFileNamed(path)
+        ParseTreeErrorVisitor().checkPrintErrorsAndRaiseException(ast)
+
+        evaluationContext = self.evaluationContext.context.createTopLevelEvaluationContext(ast.sourcePosition.sourceCode)
+        return AnalysisAndEvaluationPass(evaluationContext).visitDecayedNode(ast)
+    

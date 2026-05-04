@@ -726,6 +726,9 @@ class HIRConstantLiteralStringValue(HIRConstantLiteralValue):
 
         return self.type == other.type and self.value == other.value
 
+    def __str__(self):
+        return self.value
+
     def __repr__(self):
         return 'string(%s)' % self.value
 
@@ -1965,6 +1968,9 @@ class HIRCoreTypes:
             return ParseTreeAssertNode(macroContext.sourcePosition, expression)
         def errorMacro(macroContext: HIRMacroContext, messageExpression: ParseTreeNode):
             return ParseTreeRuntimeErrorNode(macroContext.sourcePosition, messageExpression)
+        
+        def loadFileOnce(macroContext: HIRMacroContext, fileName: ParseTreeNode):
+            return ParseTreeLoadFileOnceNode(macroContext.sourcePosition, fileName)
 
         def letWith(macroContext: HIRMacroContext, nameExpression: ParseTreeNode, initialValue: ParseTreeNode):
             return ParseTreeVariableDefinitionNode(macroContext.sourcePosition, nameExpression, None, initialValue, False)
@@ -1994,6 +2000,8 @@ class HIRCoreTypes:
         self.corePrimitiveMacros = [
             HIRPrimitiveMacro('assert:', self.primitiveMacroType, assertMacro, None),
             HIRPrimitiveMacro('error:', self.primitiveMacroType, errorMacro, None),
+
+            HIRPrimitiveMacro('loadFileOnce:', self.primitiveMacroType, loadFileOnce, None),
 
             HIRPrimitiveMacro('let:with:', self.primitiveMacroType, letWith, None),
             HIRPrimitiveMacro('let:mutableWith:', self.primitiveMacroType, letMutableWith, None),
