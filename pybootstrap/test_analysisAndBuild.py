@@ -290,3 +290,14 @@ class TestAnalysisAndBuild(unittest.TestCase):
         result = functionValue.evaluateWithArguments([HIRConstantLiteralIntegerValue(42, self.context.coreTypes.integerType, None)])
         self.assertTrue(result.isIntegerConstant())
         self.assertEqual(result.value, 42)
+
+    def testFunctionCapture(self):
+        functionValue = self.evaluateTopLevelFunctionSourceString('{:(Integer)x :: Dynamic | {:(Integer)y :: Integer | x + y}}')
+        #print(functionValue.fullPrintString())
+
+        blockClosureValue = functionValue.evaluateWithArguments([HIRConstantLiteralIntegerValue(42, self.context.coreTypes.integerType, None)])
+        #print(blockClosureValue.function.fullPrintString())
+
+        result = blockClosureValue.evaluateWithArguments([HIRConstantLiteralIntegerValue(5, self.context.coreTypes.integerType, None)])
+        self.assertTrue(result.isIntegerConstant())
+        self.assertEqual(result.value, 47)

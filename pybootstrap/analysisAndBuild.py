@@ -131,8 +131,8 @@ class AnalysisAndBuildPass(ParseTreeVisitor):
         
         functionValue = function
         if len(function.captures) != 0:
-            #TODO: Make closure
-            assert False
+            captureValues = list(map(lambda capture: capture.sourceValue, function.captures))
+            functionValue = self.builder.makeClosure(function, captureValues, function.getType(), node.sourcePosition)
         
         if name is not None:
            self.builder.environment.setNewSymbolBinding(name, functionValue)

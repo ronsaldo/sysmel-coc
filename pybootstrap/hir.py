@@ -449,6 +449,16 @@ class HIRSimpleFunctionType(HIRType):
             return False
 
         return self.argumentTypes == other.argumentTypes and self.resultType == other.resultType
+    def __str__(self):
+        result = '('
+        for argumentType in self.argumentTypes:
+            if result != '(':
+                result += ', '
+            result += str(argumentType)
+
+        result += ') => '
+        result += str(self.resultType)
+        return result
 
 class HIRDependentFunctionType(HIRType):
     def __init__(self, captures, arguments, resultType: HIRValue, coreTypes, sourcePosition):
@@ -764,6 +774,7 @@ class HIRFunction(HIRConstant):
         
         # Function environment arguments
         functionEnvironment = HIRFunctionAnalysisEnvironment(self.definitionEnvironment)
+        functionEnvironment.addDependentFunctionTypeCaptures(self.dependentFunctionType.captures)
         for argument in self.dependentFunctionType.arguments:
             if argument.name is not None:
                 functionEnvironment.setNewSymbolBinding(argument.name, argument, argument.sourcePosition)
@@ -789,6 +800,7 @@ class HIRFunction(HIRConstant):
             builder.returnValue(result, self.sourcePosition)
 
         builder.finishBuilding()
+        self.captures = functionEnvironment.captureList
 
     def enumerateInstruction(self):
         if self.enumeratedInstructions is not None:
@@ -830,7 +842,10 @@ class HIRFunction(HIRConstant):
 
         for argument in self.dependentFunctionType.arguments:
             result += argument.fullPrintString() + '\n'
-        
+
+        for capture in self.captures:
+            result += capture.fullPrintString() + '\n'
+
         basicBlock = self.firstBasicBlock
         while basicBlock is not None:
             result += basicBlock.fullPrintString()
@@ -848,6 +863,18 @@ class HIRFunction(HIRConstant):
 
     def evaluateWithArguments(self, arguments):
         return self.evaluateWithArgumentsAndCaptures(arguments, [])
+
+class HIRFunctionClosure(HIRConstant):
+    def __init__(self, function: HIRFunction, captureVector: list[HIRValue], sourcePosition):
+        super().__init__(sourcePosition)
+        self.function = function
+        self.captureVector = captureVector
+    
+    def getType(self):
+        return self.function.getType()
+    
+    def evaluateWithArguments(self, arguments):
+        return self.function.evaluateWithArgumentsAndCaptures(arguments, self.captureVector)
 
 class HIRFunctionActivationContext:
     def __init__(self, instructions, coreTypes, sourcePosition):
@@ -929,8 +956,12 @@ class HIRArgument(HIRFunctionLocalValue):
 
 
 class HIRCapture(HIRFunctionLocalValue):
+    def __init__(self, sourceValue, type, name = None, sourcePosition=None):
+        super().__init__(type, name, sourcePosition)
+        self.sourceValue = sourceValue
+
     def fullPrintString(self) -> str:
-        return '%d|%s := capture' %(self.index, str(self.name))
+        return '%d|%s := capture source %s' %(self.index, str(self.name), self.sourceValue)
 
     def evaluateInActivationContext(self, context):
         # Nothing is required here
@@ -1140,6 +1171,21 @@ class HIRMakeAssociationInstruction(HIRInstruction):
             return HIRConstantAssociation(self.key, self.value, self.type, self.sourcePosition)
         return self
 
+class HIRMakeClosure(HIRInstruction):
+    def __init__(self, function, captureList, type, name=None, sourcePosition=None):
+        super().__init__(type, name, sourcePosition)
+        self.function = function
+        self.captureList = captureList
+
+    def evaluateInActivationContext(self, context):
+        functionValue = self.function.getValueInEvaluationContext(context)
+        captureVector = list(map(lambda x: x.getValueInEvaluationContext(context), self.captureList))
+        closure = HIRFunctionClosure(functionValue, captureVector, self.sourcePosition)
+        context.setCurrentInstructionValue(closure)
+
+    def fullPrintString(self):
+        return "%s := makeClosure %s, %s :: %s" % (str(self), str(self.function), str(self.captureList), str(self.type))
+
 class HIRMakeTuple(HIRInstruction):
     def __init__(self, elements: list[HIRValue], type, name=None, sourcePosition=None):
         super().__init__(type, name, sourcePosition)
@@ -1333,7 +1379,35 @@ class HIRDependentFunctionTypeAnalysisEnvironment(HIRLexicalEnvironment):
         return parentBinding
 
 class HIRFunctionAnalysisEnvironment(HIRLexicalEnvironment):
-    pass
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.captureTable = {}
+        self.captureList = []
+
+    def addDependentFunctionTypeCaptures(self, captureList):
+        for capture in captureList:
+            self.captureTable[capture.name] = capture
+            self.captureList.append(capture)
+
+    def lookSymbolRecursively(self, symbol):
+        if symbol in self.symbolTable:
+            binding = self.symbolTable[symbol]
+            return binding
+
+        # Captures
+        if symbol in self.captureTable:
+            return self.captureTable[symbol]
+
+        parentBinding = self.parent.lookSymbolRecursively(symbol)
+        # Parent binding
+        if parentBinding is not None:
+            if parentBinding.isFunctionLocalValue():
+                capture = HIRCapture(parentBinding, parentBinding.getType())
+                capture.name = symbol
+                self.captureTable[symbol] = capture
+                self.captureList.append(capture)
+                return capture
+        return parentBinding
 
 class HIRCoreTypes:
     def __init__(self):
@@ -1741,6 +1815,11 @@ class HIRBuilder:
             self.addInstruction(instruction)
         return simplified
 
+    def makeClosure(self, function, captureList, type, sourcePosition):
+        instruction = HIRMakeClosure(function, captureList, type, None, sourcePosition)
+        self.addInstruction(instruction)
+        return instruction
+    
     def makeTuple(self, elements, type, sourcePosition):
         instruction = HIRMakeTuple(elements, type, None, sourcePosition)
         simplified = instruction.simplifyWithBuilder(self)
