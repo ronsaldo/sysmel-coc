@@ -531,6 +531,9 @@ class HIRReferenceType(HIRPointerLikeType):
     def analyzeAndBuildMessageSendNode(self, buildPass, node: ParseTreeMessageSendNode, receiver):
         return self.baseType.analyzeAndBuildMessageSendNode(buildPass, node, receiver)
 
+    def lookupSelector(self, selector):
+        return self.baseType.lookupSelector(selector)
+
 class HIRMutableValueBoxType(HIRPointerLikeType):
     def isMutableValueBoxType(self):
         return True
