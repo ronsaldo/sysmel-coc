@@ -962,7 +962,8 @@ class HIRPrimitiveFunction(HIRConstant):
         return self.isPure
 
     def analyzeAndBuildApplicationNode(self, buildPass, node: ParseTreeApplicationNode, functional):
-        assert False
+        typecheckedArguments, resultType = self.type.analyzeBuildAndTypecheckArguments(buildPass, node.arguments, node.sourcePosition)
+        return buildPass.builder.call(self, typecheckedArguments, resultType, node.sourcePosition)
 
     def analyzeAndEvaluateApplicationNode(self, evaluationPass, node: ParseTreeApplicationNode, functional):
         typecheckedArguments, resultType = self.type.evaluateAndTypecheckArguments(evaluationPass, node.arguments, node.sourcePosition)
