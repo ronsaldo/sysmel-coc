@@ -416,6 +416,19 @@ class TestAnalysisAndEvaluation(unittest.TestCase):
         self.assertTrue(dictionary.isDictionaryConstant())
         self.assertEqual(3, len(dictionary.elements))
 
+    def testEnum(self):
+        enum = self.evaluateTopLevelSourceString("enum MyEnum baseType: Integer values: #{First: 1. Second: 2. Third:}")
+        self.assertTrue(enum.isEnumType())
+        
+        self.assertEqual(3, len(enum.values))
+        self.assertEqual('First', enum.values[0].name)
+        self.assertEqual(1, enum.values[0].value.value)
+
+        self.assertEqual('Second', enum.values[1].name)
+        self.assertEqual(2, enum.values[1].value.value)
+
+        self.assertEqual('Third', enum.values[2].name)
+        self.assertEqual(3, enum.values[2].value.value)
 
 if __name__ == '__main__':
     unittest.main()

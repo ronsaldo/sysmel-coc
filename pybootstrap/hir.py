@@ -93,6 +93,9 @@ class HIRValue(ABC):
     def isDictionaryType(self):
         return False
 
+    def isEnumType(self):
+        return False
+
     def isTupleType(self):
         return False
 
@@ -166,6 +169,9 @@ class HIRValue(ABC):
         return False
 
     def isDictionaryConstant(self):
+        return False
+
+    def isEnumConstant(self):
         return False
 
     def isTupleConstant(self):
@@ -248,6 +254,12 @@ class HIRNominalType(HIRType):
         super().__init__(coreTypes, sourcePosition)
         self.name = name
         self.methodDictionary = {}
+        self.defaultValue = None
+
+    def getDefaultValue(self):
+        if self.defaultValue is None:
+            raise RuntimeError('Nominal type %s does not have a default value.' % (self))
+        return self.defaultValue
 
     def getName(self):
         return self.name
@@ -403,7 +415,27 @@ class HIRDictionaryType(HIRType):
 
     def __str__(self):
         return 'Dictionary(%s : %s)' % (self.associationType.keyType, self.associationType.valueType)
-    
+
+class HIREnumType(HIRType):
+    def __init__(self, name, baseType, coreTypes, sourcePosition):
+        super().__init__(coreTypes, sourcePosition)
+        self.name = name
+        self.baseType = baseType
+        self.values = []
+        self.valueTable = {}
+
+    def addElementAt(self, element, sourcePosition):
+        if element.name in self.valueTable:
+            raise RuntimeError('%s: enum has duplicated definitions for symbol #"%s".' % (str(sourcePosition), str(element.name)))
+        self.values.append(element)
+        self.valueTable[element.name] = element
+
+    def isEnumType(self):
+        return True
+
+    def __str__(self):
+        return 'EnumType(%s %s)' % (self.name, str(self.self.baseType))
+
 class HIRTupleType(HIRType):
     def __init__(self, elements: list[HIRType], coreTypes, sourcePosition = None):
         super().__init__(coreTypes, sourcePosition)
@@ -588,6 +620,9 @@ class HIRConstantLiteralIntegerValue(HIRConstantLiteralValue):
 
     def isIntegerConstant(self):
         return True
+    
+    def plusOne(self):
+        return HIRConstantLiteralIntegerValue(self.value + 1, self.type, self.sourcePosition)
 
 class HIRConstantLiteralFloatValue(HIRConstantLiteralValue):
     def __init__(self, value: float, type: HIRType, sourcePosition):
@@ -753,6 +788,26 @@ class HIRConstantDictionary(HIRConstant):
 
     def __str__(self):
         return 'dictionary(%s)' % (str(self.elements))
+
+class HIRConstantEnum(HIRConstant):
+    def __init__(self, name, value, type, sourcePosition):
+        super().__init__(sourcePosition)
+        self.name = name
+        self.value = value
+        self.type = type
+
+    def getType(self):
+        return self.type
+
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            return False
+
+        return self.type == other.type and self.value == other.value
+
+    def __str__(self):
+        return 'enumValue(%s: %s)' % (str(self.name), str(self.value))
+    
 
 class HIRConstantTuple(HIRConstant):
     def __init__(self, elements, type, sourcePosition):
@@ -1691,6 +1746,22 @@ class HIRLetMetaBuilder(HIRNamedMetaBuilder):
         variableDefinition = ParseTreeVariableDefinitionNode(node.sourcePosition, self.nameExpression, self.typeExpression, node.value, self.isMutable)
         return buildPass.visitNode(variableDefinition)
 
+class HIREnumMetaBuilder(HIRNamedMetaBuilder):
+    def __init__(self, coreTypes, sourcePosition):
+        super().__init__(coreTypes, sourcePosition)
+        self.isPublic = False
+
+    def supportsSelector(self, selector):
+        return selector in ('baseType:values:')
+    
+    def expandMessageSend(self, evaluator, node: ParseTreeMessageSendNode, selector, receiver):
+        if selector == 'baseType:values:':
+            baseType = node.arguments[0]
+            values = node.arguments[1]
+            enumNode = ParseTreeEnumDefinitionNode(self.sourcePosition, self.nameExpression, baseType, values, self.isPublic)
+            return evaluator.visitNode(enumNode)
+        return super().expandMessageSend(evaluator, node, selector, receiver)
+
 class HIRFunctionMetaBuilder(HIRNamedMetaBuilder):
     def __init__(self, coreTypes, sourcePosition):
         super().__init__(coreTypes, sourcePosition)
@@ -1734,7 +1805,7 @@ class HIRPublicMetaBuilder(HIRMetaBuilder):
         super().__init__(coreTypes, sourcePosition)
 
     def supportsSelector(self, selector):
-        return selector in ('function',)
+        return selector in ('enum', 'function',)
     
     def expandMessageSend(self, evaluator, node: ParseTreeMessageSendNode, selector: str, receiver):
         if selector == 'function':
@@ -1755,7 +1826,9 @@ class HIRCoreTypes:
         self.stringType    = HIRNominalType('String', self, None);
         self.symbolType    = HIRNominalType('Symbol', self, None);
         self.undefinedType = HIRNominalType('Undefined', self, None);
-        
+
+        self.integerType.defaultValue = HIRConstantLiteralIntegerValue(0, self.integerType, None)
+
         self.dynamicType = HIRDynamicType('Dynamic', self, None)
         self.voidType    = HIRVoidType('Void', self, None);
 
@@ -1867,6 +1940,7 @@ class HIRCoreTypes:
 
     def createCorePrimitiveMetaBuilders(self):
         self.coreValueList += [
+            (HIRMetaBuilderFactory(HIREnumMetaBuilder, self, None), 'enum'),
             (HIRMetaBuilderFactory(HIRFunctionMetaBuilder, self, None), 'function'),
             (HIRMetaBuilderFactory(HIRLetMetaBuilder, self, None), 'let'),
             (HIRMetaBuilderFactory(HIRPublicMetaBuilder, self, None), 'public'),

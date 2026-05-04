@@ -307,7 +307,37 @@ class AnalysisAndEvaluationPass(ParseTreeVisitor):
         assert False
 
     def visitEnumDefinitionNode(self, node: ParseTreeEnumDefinitionNode):
-        assert False
+        name = self.visitSymbolNode(node.nameExpression)
+        baseType = self.evaluationContext.context.coreTypes.dynamicType
+        if node.baseTypeExpression:
+            baseType = self.visitNodeExpectingType(node.baseTypeExpression)
+
+        enumType = HIREnumType(name, baseType, self.evaluationContext.context.coreTypes, node.sourcePosition)
+        self.evaluationContext.environment.setNewSymbolBinding(name, enumType, node.sourcePosition)
+        if node.isPublic:
+            owner = self.evaluationContext.environment.lookupProgramEntityOwner()
+            owner.addPublicNamedElement(name, function, node.sourcePosition)
+
+        valuesDictionary = self.visitDecayedNode(node.valuesExpression)
+        if not valuesDictionary.isDictionaryConstant():
+            raise RuntimeError(str(node.sourcePosition) + ": Expected a dictionary with the enum values.")
+
+        nextImplicitValue = baseType.getDefaultValue()
+        for association in valuesDictionary.elements:
+            if not association.key.isSymbolConstant():
+                raise RuntimeError(str(node.sourcePosition) + ": Expected symbols for the association names.")
+
+            associationName = association.key.value
+            associationValue = nextImplicitValue
+            if association.value is not None and not association.value.isNilConstant():
+                if not baseType.isSatisfiedByValue(association.value):
+                    raise RuntimeError(str(node.sourcePosition) + ": association elements must be of type " + str(baseType))
+                associationValue = association.value
+
+            enumType.addElementAt(HIRConstantEnum(associationName, associationValue, enumType, association.key.sourcePosition), association.sourcePosition)
+            nextImplicitValue = associationValue.plusOne()
+
+        return enumType
 
     def visitFieldDefinitionNode(self, node: ParseTreeFieldDefinitionNode):
         assert False
