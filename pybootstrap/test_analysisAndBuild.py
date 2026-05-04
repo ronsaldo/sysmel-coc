@@ -241,3 +241,32 @@ class TestAnalysisAndBuild(unittest.TestCase):
 
         self.assertTrue(association.value.isIntegerConstant())
         self.assertEqual(association.value.value, 1)
+
+    def testTupleType(self):
+        tupleType = self.evaluateTopLevelFunctionSourceString('Integer, Float, Character')
+        self.assertTrue(tupleType.isTupleType())
+        self.assertEqual(len(tupleType.elements), 3)
+        self.assertEqual(tupleType.elements[0], self.context.coreTypes.integerType)
+        self.assertEqual(tupleType.elements[1], self.context.coreTypes.floatType)
+        self.assertEqual(tupleType.elements[2], self.context.coreTypes.characterType)
+
+    def testTuple(self):
+        tuple = self.evaluateTopLevelFunctionSourceString("1, 2.5, 'A'")
+        self.assertTrue(tuple.isTupleConstant())
+        self.assertEqual(len(tuple.elements), 3)
+        
+        self.assertTrue(tuple.elements[0].isIntegerConstant())
+        self.assertEqual(tuple.elements[0].value, 1)
+        
+        self.assertTrue(tuple.elements[1].isFloatConstant())
+        self.assertEqual(tuple.elements[1].value, 2.5)
+        
+        self.assertTrue(tuple.elements[2].isCharacterConstant())
+        self.assertEqual(tuple.elements[2].value, ord('A'))
+        
+        tupleType = tuple.getType()
+        self.assertTrue(tupleType.isTupleType())
+        self.assertEqual(len(tupleType.elements), 3)
+        self.assertEqual(tupleType.elements[0], self.context.coreTypes.integerType)
+        self.assertEqual(tupleType.elements[1], self.context.coreTypes.floatType)
+        self.assertEqual(tupleType.elements[2], self.context.coreTypes.characterType)

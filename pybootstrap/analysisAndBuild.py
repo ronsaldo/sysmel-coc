@@ -174,8 +174,22 @@ class AnalysisAndBuildPass(ParseTreeVisitor):
     def visitRuntimeErrorNode(self, node):
         assert False
 
-    def visitTupleNode(self, node):
-        assert False
+    def visitTupleNode(self, node: ParseTreeTupleNode):
+        tupleElements = []
+        tupleTypes = []
+        hasOnlyTypes = True
+        for elementNode in node.elements:
+            elementValue = self.visitDecayedNode(elementNode)
+            tupleElements.append(elementValue)
+            tupleTypes.append(elementValue.getType())
+            if not elementValue.isType():
+                hasOnlyTypes = False
+
+        if hasOnlyTypes:
+            return self.builder.context.getOrCreateTupleType(tupleElements)
+        
+        tupleType = self.builder.context.getOrCreateTupleType(tupleTypes)
+        return self.builder.makeTuple(tupleElements, tupleType, node.sourcePosition )
 
     def visitVariableDefinitionNode(self, node: ParseTreeVariableDefinitionNode):
         name = self.evaluateOptionalSymbolNode(node.nameExpression)

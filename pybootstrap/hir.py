@@ -308,8 +308,9 @@ class HIRTupleType(HIRType):
     def __str__(self):
         result = '('
         for element in self.elements:
+            if result != '(':
+                result += ', '
             result += str(element)
-            result += ', '
         result += ')'
         return result
 
@@ -458,6 +459,9 @@ class HIRConstantLiteralCharacterValue(HIRConstantLiteralValue):
         super().__init__(type, sourcePosition)
         self.value = value
 
+    def __repr__(self):
+        return 'character %d' % self.value
+
     def isCharacterConstant(self):
         return True
     
@@ -526,6 +530,21 @@ class HIRConstantAssociation(HIRConstant):
 
     def __str__(self):
         return 'association(%s : %s)' % (str(self.key), str(self.value))
+
+class HIRConstantTuple(HIRConstant):
+    def __init__(self, elements, type, sourcePosition):
+        super().__init__(sourcePosition)
+        self.elements = elements
+        self.type = type
+
+    def getType(self):
+        return self.type
+    
+    def isTupleConstant(self):
+        return True
+
+    def __str__(self):
+        return 'tupe(%s)' % (str(self.elements))
 
 class HIRMutableValueBox(HIRValue):
     def __init__(self, type, initialValue, sourcePosition):
@@ -1006,6 +1025,32 @@ class HIRMakeAssociationInstruction(HIRInstruction):
             return HIRConstantAssociation(self.key, self.value, self.type, self.sourcePosition)
         return self
 
+class HIRMakeTuple(HIRInstruction):
+    def __init__(self, elements: list[HIRValue], type, name=None, sourcePosition=None):
+        super().__init__(type, name, sourcePosition)
+        self.elements = elements
+
+    def evaluateInActivationContext(self, context):
+        elements = list(map(lambda element: element.getValueInEvaluationContext(context), self.elements))
+        result = HIRConstantTuple(elements, self.type, self.sourcePosition)
+        context.setCurrentInstructionValue(result)
+
+    def fullPrintString(self):
+        return "%s := makeTuple %s :: %s" % (str(self), str(self.elements), str(self.type))
+
+    def canSimplify(self):
+        for element in self.elements:
+            if not element.isConstantValue():
+                return False
+
+        return True
+
+    def simplifyWithBuilder(self, builder):
+        if not self.canSimplify():
+            return self
+
+        return HIRConstantTuple(self.elements, self.type, self.sourcePosition)
+
 class HIRPhiInstrucion(HIRInstruction):
     def __init__(self, type, name=None, sourcePosition=None):
         super().__init__(type, name, sourcePosition)
@@ -1455,6 +1500,9 @@ class HIRContext:
     def getOrCreateAssociationType(self, keyType, valueType):
         return HIRAssociationType(keyType, valueType, self.coreTypes, None)
 
+    def getOrCreateTupleType(self, elements):
+        return HIRTupleType(elements, self.coreTypes, None)
+
     def getOrCreatePointerType(self, baseType):
         return HIRPointerType(baseType, self.coreTypes, None)
 
@@ -1551,6 +1599,13 @@ class HIRBuilder:
 
     def makeAssociation(self, key, value, type, sourcePosition):
         instruction = HIRMakeAssociationInstruction(key, value,type, None, sourcePosition)
+        simplified = instruction.simplifyWithBuilder(self)
+        if instruction == simplified:
+            self.addInstruction(instruction)
+        return simplified
+
+    def makeTuple(self, elements, type, sourcePosition):
+        instruction = HIRMakeTuple(elements, type, None, sourcePosition)
         simplified = instruction.simplifyWithBuilder(self)
         if instruction == simplified:
             self.addInstruction(instruction)
