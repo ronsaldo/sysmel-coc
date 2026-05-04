@@ -129,6 +129,18 @@ class TestAnalysisAndEvaluation(unittest.TestCase):
         topLevelResult = self.evaluateTopLevelSourceString('while: false do: {}')
         self.assertTrue(topLevelResult.isVoidConstant())
 
+    def testWhileDoContinueWithMacro(self):
+        topLevelResult = self.evaluateTopLevelSourceString('while: false do: {} continueWith: ()')
+        self.assertTrue(topLevelResult.isVoidConstant())
+
+    def testDoWhileMacro(self):
+        topLevelResult = self.evaluateTopLevelSourceString('do: {} while: false')
+        self.assertTrue(topLevelResult.isVoidConstant())
+
+    def testDoContinueWithWhileMacro(self):
+        topLevelResult = self.evaluateTopLevelSourceString('do: {} continueWith: () while: false')
+        self.assertTrue(topLevelResult.isVoidConstant())
+
     def testQuote(self):
         topLevelResult = self.evaluateTopLevelSourceString("`'42")
         self.assertTrue(topLevelResult.isParseTreeConstant())

@@ -1600,6 +1600,11 @@ class HIRCoreTypes:
         def whileDo(macroContext: HIRMacroContext, conditionExpression: ParseTreeNode, bodyExpression: ParseTreeNode):
             return ParseTreeWhileDoNode(macroContext.sourcePosition, conditionExpression, bodyExpression, None)
 
+        def doContinueWithWhile(macroContext: HIRMacroContext, bodyExpression: ParseTreeNode, continueExpression: ParseTreeNode, conditionExpression: ParseTreeNode):
+            return ParseTreeDoWhileNode(macroContext.sourcePosition, bodyExpression, continueExpression, conditionExpression)
+        def doWhile(macroContext: HIRMacroContext, bodyExpression: ParseTreeNode, conditionExpression: ParseTreeNode):
+            return ParseTreeDoWhileNode(macroContext.sourcePosition, bodyExpression, None, conditionExpression)
+
         def returnMacro(macroContext: HIRMacroContext, valueExpression: ParseTreeNode):
             return ParseTreeReturnNode(macroContext.sourcePosition, valueExpression)
 
@@ -1612,6 +1617,9 @@ class HIRCoreTypes:
 
             HIRPrimitiveMacro('while:do:continueWith:', self.primitiveMacroType, whileDoContinueWith, None),
             HIRPrimitiveMacro('while:do:', self.primitiveMacroType, whileDo, None),
+
+            HIRPrimitiveMacro('do:continueWith:while:', self.primitiveMacroType, doContinueWithWhile, None),
+            HIRPrimitiveMacro('do:while:', self.primitiveMacroType, doWhile, None),
 
             HIRPrimitiveMacro('return:', self.primitiveMacroType, returnMacro, None),
         ]

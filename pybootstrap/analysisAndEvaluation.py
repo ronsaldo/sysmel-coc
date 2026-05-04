@@ -270,7 +270,7 @@ class AnalysisAndEvaluationPass(ParseTreeVisitor):
         while True:
             self.visitOptionalNode(node.bodyExpression)
             self.visitOptionalNode(node.continueExpression)
-            if not self.visitBooleanCondition(node.condition):
+            if not self.visitBooleanNode(node.condition):
                 break
         return self.evaluationContext.context.coreTypes.voidValue
 
