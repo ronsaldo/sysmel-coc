@@ -355,8 +355,46 @@ class AnalysisAndBuildPass(ParseTreeVisitor):
 
         return self.builder.context.coreTypes.voidValue
 
-    def visitDoWhileNode(self, node):
-        assert False
+    def visitDoWhileNode(self, node: ParseTreeDoWhileNode):
+        loopHeader = HIRBasicBlock("loopHeader", node.sourcePosition)
+        loopContinueWith = HIRBasicBlock("loopContinueWith", node.sourcePosition)
+        loopCondition = HIRBasicBlock("loopCondition", node.sourcePosition)
+        loopMerge = HIRBasicBlock("loopMerge", node.sourcePosition)
+
+        self.builder.branch(loopHeader, node.sourcePosition)
+
+        # Loop header
+        self.builder.basicBlock = loopHeader
+        self.builder.function.addBasicBlock(loopHeader)
+
+        if node.bodyExpression is not None:
+            self.visitNode(node.bodyExpression)
+
+        if not self.builder.isLastTerminator():
+            self.builder.branch(loopContinueWith, node.sourcePosition)
+
+        # Loop continue with
+        self.builder.basicBlock = loopContinueWith
+        self.builder.function.addBasicBlock(loopContinueWith)
+
+        if node.continueExpression is not None:
+            self.visitNode(node.continueExpression)
+
+        if not self.builder.isLastTerminator():
+            self.builder.branch(loopCondition, node.sourcePosition)
+
+        # Loop condition
+        self.builder.basicBlock = loopCondition
+        self.builder.function.addBasicBlock(loopCondition)
+
+        conditionValue = self.visitBooleanCondition(node.condition)
+        self.builder.conditionalBranch(conditionValue, loopHeader, loopMerge, node.sourcePosition)
+
+        # Loop merge
+        self.builder.basicBlock = loopMerge
+        self.builder.function.addBasicBlock(loopMerge)
+
+        return self.builder.context.coreTypes.voidValue
 
     def visitNamespaceNode(self, node):
         raise RuntimeError("%s: unsupported location for parse tree node." % str(node.sourcePosition))
