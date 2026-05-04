@@ -1148,7 +1148,6 @@ class HIRAssertInstruction(HIRInstruction):
             messageValue = self.errorMessage.getValueInEvaluationContext(context)
             raise AssertionError(str(self.sourcePosition) + ": " + messageValue.value)
 
-
 class HIRRuntimeErrorInstruction(HIRInstruction):
     def __init__(self, errorMessage, type, name=None, sourcePosition=None):
         super().__init__(type, name, sourcePosition)
@@ -1625,6 +1624,42 @@ class HIRLetMetaBuilder(HIRNamedMetaBuilder):
         variableDefinition = ParseTreeVariableDefinitionNode(node.sourcePosition, self.nameExpression, self.typeExpression, node.value, self.isMutable)
         return buildPass.visitNode(variableDefinition)
 
+class HIRFunctionMetaBuilder(HIRNamedMetaBuilder):
+    def __init__(self, coreTypes, sourcePosition):
+        super().__init__(coreTypes, sourcePosition)
+        self.argumentDefinitions = []
+        self.resultTypeExpression = None
+        self.isPublic = False
+
+    def supportsSelector(self, selector):
+        return selector in ('=>')
+
+    def expandMessageSend(self, evaluator, node: ParseTreeMessageSendNode, selector: str, receiver):
+        if selector == '=>':
+            self.resultTypeExpression = node.arguments[0]
+        return self
+
+    def analyzeAndEvaluateApplicationNode(self, evaluator, node: ParseTreeApplicationNode, functional):
+        for argument in node.arguments:
+            argumentDefinition = argument.parseAsArgumentDefinition()
+            self.argumentDefinitions.append(argumentDefinition)
+        return self
+
+    def analyzeAndBuildApplicationNode(self, buildPass, node: ParseTreeApplicationNode, functional):
+        ## TODO: Implement this.
+        assert False
+
+    def makeFunctionType(self):
+        return ParseTreeFunctionTypeNode(self.sourcePosition, self.argumentDefinitions, self.resultTypeExpression)
+
+    def analyzeAndEvaluateAssignment(self, evaluationPass, node):
+        functionNode = ParseTreeFunctionNode(node.sourcePosition, self.nameExpression, self.makeFunctionType(), node.value, self.isPublic)
+        return evaluationPass.visitNode(functionNode)
+
+    #def analyzeAndBuildAssignment(self, buildPass, node: ParseTreeAssignmentNode):
+    #    functionNode = ParseTreeFunctionNode(node.sourcePosition, self.nameExpression, self.argumentDefinitions, self.resultTypeExpression, node.value, self.isPublic)
+    #    return buildPass.visitNode(functionNode)
+#
 class HIRCoreTypes:
     def __init__(self):
         self.pointerSize = 8
@@ -1746,6 +1781,7 @@ class HIRCoreTypes:
 
     def createCorePrimitiveMetaBuilders(self):
         self.coreValueList += [
+            (HIRMetaBuilderFactory(HIRFunctionMetaBuilder, self, None), 'function'),
             (HIRMetaBuilderFactory(HIRLetMetaBuilder, self, None), 'let'),
         ]
         pass

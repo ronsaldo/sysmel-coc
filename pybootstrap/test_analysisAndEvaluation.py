@@ -283,6 +283,27 @@ class TestAnalysisAndEvaluation(unittest.TestCase):
         self.assertTrue(result.isIntegerConstant())
         self.assertEqual(result.value, -42)
 
+    def testFunctionMetaBuilder(self):
+        functionValue = self.evaluateTopLevelSourceString('function two() => Integer := 2')
+        result = functionValue.evaluateWithArguments([])
+        self.assertTrue(result.isIntegerConstant())
+        self.assertEqual(result.value, 2)
+
+    def testFunctionMetaBuilder2(self):
+        functionValue = self.evaluateTopLevelSourceString('function identity(x: Integer) => Integer := x')
+        result = functionValue.evaluateWithArguments([HIRConstantLiteralIntegerValue(42, self.context.coreTypes.integerType, None)])
+        self.assertTrue(result.isIntegerConstant())
+        self.assertEqual(result.value, 42)
+
+    def testFunctionMetaBuilder3(self):
+        functionValue = self.evaluateTopLevelSourceString('function identity(x: Integer. y: Integer) => Integer := x + y')
+        result = functionValue.evaluateWithArguments([
+            HIRConstantLiteralIntegerValue(1, self.context.coreTypes.integerType, None),
+            HIRConstantLiteralIntegerValue(2, self.context.coreTypes.integerType, None)
+        ])
+        self.assertTrue(result.isIntegerConstant())
+        self.assertEqual(result.value, 3)
+
     def testAssociationType(self):
         type = self.evaluateTopLevelSourceString('Symbol : Integer')
         self.assertTrue(type.isAssociationType())

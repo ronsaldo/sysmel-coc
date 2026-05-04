@@ -114,7 +114,7 @@ class AnalysisAndEvaluationPass(ParseTreeVisitor):
         self.evaluationContext.context.addEntityWithPendingAnalysis(function)
 
         if name is not None:
-            self.evaluationContext.environment.setNewSymbolBinding(name, function)
+            self.evaluationContext.environment.setNewSymbolBinding(name, function, node.sourcePosition)
             if node.isPublic:
                 assert False
 
@@ -129,7 +129,7 @@ class AnalysisAndEvaluationPass(ParseTreeVisitor):
     def visitIdentifierReferenceNode(self, node: ParseTreeIdentifierReferenceNode):
         bindingOrNone = self.evaluationContext.environment.lookSymbolRecursively(node.value)
         if bindingOrNone is None:
-            raise RuntimeError("%s: %s identifier is not found." % (str(node.sourcePosition), node.value))    
+            raise RuntimeError("%s: #%s identifier is not found." % (str(node.sourcePosition), node.value))    
         return bindingOrNone.analyzeAndEvaluateIdentifierReferenceNode(self, node)
 
     def visitLexicalBlockNode(self, node: ParseTreeLexicalBlockNode):
