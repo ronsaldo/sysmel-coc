@@ -437,12 +437,23 @@ class HIREnumType(HIRType):
         selector = evaluator.visitSymbolNode(node.selector)
         if selector in self.valueTable:
             return self.valueTable[selector]
-        
+
+        if selector == 'value:' :
+            assert len(node.arguments) == 1
+            value = evaluator.visitNodeWithExpectedType(node.arguments[0], self.baseType)
+            return HIRConstantEnum(None, value, self, node.sourcePosition)
         return super().analyzeAndEvaluateMessageSendNode(evaluator, node, receiver)
 
+    def analyzeAndEvaluateMessageSendNodeOnType(self, evaluator, node: ParseTreeMessageSendNode, receiver):
+        selector = evaluator.visitSymbolNode(node.selector)
+        if selector == 'value':
+            assert receiver.isEnumConstant()
+            return receiver.value
+
+        return super().analyzeAndEvaluateMessageSendNodeOnType(evaluator, node, receiver)
 
     def __str__(self):
-        return 'EnumType(%s %s)' % (self.name, str(self.self.baseType))
+        return 'EnumType(%s %s)' % (self.name, str(self.baseType))
 
 class HIRTupleType(HIRType):
     def __init__(self, elements: list[HIRType], coreTypes, sourcePosition = None):

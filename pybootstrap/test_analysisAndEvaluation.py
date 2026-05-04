@@ -435,6 +435,17 @@ class TestAnalysisAndEvaluation(unittest.TestCase):
         self.assertTrue(enumValue.isEnumConstant())
         self.assertEqual('First', enumValue.name)
         self.assertEqual(1, enumValue.value.value)
+
+    def testEnumValueAccess(self):
+        enumValue = self.evaluateTopLevelSourceString("enum MyEnum baseType: Integer values: #{First: 1. Second: 2. Third:}. MyEnum First value")
+        self.assertTrue(enumValue.isIntegerConstant())
+        self.assertEqual(1, enumValue.value)
+
+    def testEnumMakeValueAccess(self):
+        enumValue = self.evaluateTopLevelSourceString("enum MyEnum baseType: Integer values: #{First: 1. Second: 2. Third:}. MyEnum value: 2")
+        self.assertTrue(enumValue.isEnumConstant())
+        self.assertEqual(None, enumValue.name)
+        self.assertEqual(2, enumValue.value.value)
         
 
 
