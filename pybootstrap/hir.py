@@ -161,6 +161,9 @@ class HIRValue(ABC):
 
     def isTupleConstant(self):
         return False
+    
+    def isFunctionLocalValue(self):
+        return False
 
     def evaluateInActivationContext(self, context):
         raise RuntimeError("%s evaluateInActivationContext subclassResponsibility" % str(self.__class__))
@@ -448,8 +451,9 @@ class HIRSimpleFunctionType(HIRType):
         return self.argumentTypes == other.argumentTypes and self.resultType == other.resultType
 
 class HIRDependentFunctionType(HIRType):
-    def __init__(self, arguments, resultType: HIRValue, coreTypes, sourcePosition):
+    def __init__(self, captures, arguments, resultType: HIRValue, coreTypes, sourcePosition):
         super().__init__(coreTypes, sourcePosition)
+        self.captures = captures
         self.arguments = arguments
         self.resultType = resultType
 
@@ -903,6 +907,9 @@ class HIRFunctionLocalValue(HIRValue):
     def getValueInEvaluationContext(self, context):
         return context.instructionValues[self.index]
     
+    def isFunctionLocalValue(self):
+        return True
+
 class HIRArgument(HIRFunctionLocalValue):
     def __init__(self, type, name = None, sourcePosition=None):
         super().__init__(type, name, sourcePosition)
@@ -1304,13 +1311,25 @@ class HIRLexicalEnvironment(HIREnvironment):
 class HIRDependentFunctionTypeAnalysisEnvironment(HIRLexicalEnvironment):
     def __init__(self, parent):
         super().__init__(parent)
+        self.captureTable = {}
+        self.captureList = []
 
     def lookSymbolRecursively(self, symbol):
         if symbol in self.symbolTable:
             binding = self.symbolTable[symbol]
             binding.markDependentUsage()
             return binding
-        return self.parent.lookSymbolRecursively(symbol)
+
+        # Captures
+        if symbol in self.captureTable:
+            return self.captureTable[symbol]
+
+        parentBinding = self.parent.lookSymbolRecursively(symbol)
+        # Parent binding
+        if parentBinding is not None:
+            if parentBinding.isFunctionLocalValue():
+                assert False
+        return parentBinding
 
 class HIRFunctionAnalysisEnvironment(HIRLexicalEnvironment):
     pass
@@ -1585,7 +1604,7 @@ class HIRContext:
         return HIREvaluationContext(self, self.createTopLevelEnvironment(sourceCode))
 
     def createTopLevelFunctionBuilder(self, sourcePosition: SourcePosition = None):
-        dependentFunctionType = HIRDependentFunctionType([], self.coreTypes.dynamicType, self.coreTypes, sourcePosition)
+        dependentFunctionType = HIRDependentFunctionType([], [], self.coreTypes.dynamicType, self.coreTypes, sourcePosition)
         topLevelFunction = HIRFunction(None, dependentFunctionType, sourcePosition)
         topLevelFunction.isTopLevel = True
         topLevelEnvironment = self.createTopLevelEnvironment(sourcePosition.sourceCode)

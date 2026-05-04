@@ -14,7 +14,7 @@ class HIRTest(unittest.TestCase):
 
     def testIdentityFunction(self):
         argument = HIRArgument(self.context.coreTypes.integerType, "x")
-        functionType = HIRDependentFunctionType([argument], self.context.coreTypes.integerType, self.context.coreTypes, None)
+        functionType = HIRDependentFunctionType([],[argument], self.context.coreTypes.integerType, self.context.coreTypes, None)
         identity = HIRFunction('test', functionType, None)
         
         entryBlock = HIRBasicBlock('entry', None)

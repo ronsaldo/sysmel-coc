@@ -94,7 +94,7 @@ class AnalysisAndEvaluationPass(ParseTreeVisitor):
         if node.resultTypeExpression is not None:
             resultType = self.visitNodeExpectingType(node.resultTypeExpression)
 
-        functionType = HIRDependentFunctionType(argumentDefinitions, resultType, self.evaluationContext.context.coreTypes, node.sourcePosition)
+        functionType = HIRDependentFunctionType(analysisEnvironment.captureList, argumentDefinitions, resultType, self.evaluationContext.context.coreTypes, node.sourcePosition)
         self.evaluationContext.environment = oldEnvironment
         return functionType
 
