@@ -946,6 +946,18 @@ class HIRPrimitiveMacro(HIRConstant):
     def getType(self):
         return self.type
 
+    def analyzeAndEvaluateMessageSendNode(self, evaluator, node, receiver):
+        macroContext = HIRMacroContext(node.sourcePosition)
+        macroArguments = [ParseTreeLiteralValueNode(node.sourcePosition, receiver)] + node.arguments
+        expandedMacro = self.primitiveFunction(macroContext, *macroArguments)
+        return evaluator.visitNode(expandedMacro)
+
+    def analyzeAndBuildMessageSendNode(self, buildPass, node, receiver):
+        macroContext = HIRMacroContext(node.sourcePosition)
+        macroArguments = [ParseTreeLiteralValueNode(node.sourcePosition, receiver)] + node.arguments
+        expandedMacro = self.primitiveFunction(macroContext, *macroArguments)
+        return buildPass.visitNode(expandedMacro)
+
     def analyzeAndBuildApplicationNode(self, buildPass, node: ParseTreeApplicationNode, functional):
         macroContext = HIRMacroContext(node.sourcePosition)
         expandedMacro = self.primitiveFunction(macroContext, *node.arguments)
@@ -2075,8 +2087,14 @@ class HIRCoreTypes:
         def booleanNot(operand, resultType):
             assert operand.isBooleanConstant()
             return self.getBooleanConstant(not operand.value)
+        def booleanAnd(macroContext: HIRMacroContext, left: ParseTreeNode, right: ParseTreeNode):
+            return ParseTreeIfSelectionNode(macroContext.sourcePosition, left, right, ParseTreeLiteralValueNode(macroContext.sourcePosition, self.falseValue))
+        def booleanOr(macroContext: HIRMacroContext, left: ParseTreeNode, right: ParseTreeNode):
+            return ParseTreeIfSelectionNode(macroContext.sourcePosition, left, ParseTreeLiteralValueNode(macroContext.sourcePosition, self.trueValue), right)
         
         self.booleanType.withSelectorAddMethod('not', HIRPrimitiveFunction('Boolean::not', self.getOrCreateSimpleFunctionType((self.booleanType,), self.booleanType), booleanNot, None, isPure = True, isCompileTime = True))
+        self.booleanType.withSelectorAddMethod('&&', HIRPrimitiveMacro('&&', self.primitiveMacroType, booleanAnd, None))
+        self.booleanType.withSelectorAddMethod('||', HIRPrimitiveMacro('||', self.primitiveMacroType, booleanOr, None))
 
 
     def createIntegerPrimitiveFunctions(self):

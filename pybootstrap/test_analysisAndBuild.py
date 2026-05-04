@@ -364,3 +364,49 @@ class TestAnalysisAndBuild(unittest.TestCase):
     def testRuntimeError(self):
         with self.assertRaises(RuntimeError):
             self.evaluateTopLevelFunctionSourceString('error: "test message"')
+
+    def testBooleanNot(self):
+        value = self.evaluateTopLevelFunctionSourceString("false not")
+        self.assertTrue(value.isBooleanConstant())
+        self.assertTrue(value.value)
+
+        value = self.evaluateTopLevelFunctionSourceString("true not")
+        self.assertTrue(value.isBooleanConstant())
+        self.assertFalse(value.value)
+
+    def testBooleanAnd(self):
+        value = self.evaluateTopLevelFunctionSourceString("false && false")
+        self.assertTrue(value.isBooleanConstant())
+        self.assertFalse(value.value)
+
+        value = self.evaluateTopLevelFunctionSourceString("false && true")
+        self.assertTrue(value.isBooleanConstant())
+        self.assertFalse(value.value)
+
+        value = self.evaluateTopLevelFunctionSourceString("true && false")
+        self.assertTrue(value.isBooleanConstant())
+        self.assertFalse(value.value)
+
+        value = self.evaluateTopLevelFunctionSourceString("true && true")
+        self.assertTrue(value.isBooleanConstant())
+        self.assertTrue(value.value)
+
+    def testBooleanOr(self):
+        value = self.evaluateTopLevelFunctionSourceString("false || false")
+        self.assertTrue(value.isBooleanConstant())
+        self.assertFalse(value.value)
+
+        value = self.evaluateTopLevelFunctionSourceString("false || true")
+        self.assertTrue(value.isBooleanConstant())
+        self.assertTrue(value.value)
+
+        value = self.evaluateTopLevelFunctionSourceString("true || false")
+        self.assertTrue(value.isBooleanConstant())
+        self.assertTrue(value.value)
+
+        value = self.evaluateTopLevelFunctionSourceString("true || true")
+        self.assertTrue(value.isBooleanConstant())
+        self.assertTrue(value.value)
+
+if __name__ == '__main__':
+    unittest.main()

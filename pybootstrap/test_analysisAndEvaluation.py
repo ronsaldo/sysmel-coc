@@ -495,5 +495,39 @@ class TestAnalysisAndEvaluation(unittest.TestCase):
         self.assertTrue(value.isBooleanConstant())
         self.assertFalse(value.value)
 
+    def testBooleanAnd(self):
+        value = self.evaluateTopLevelSourceString("false && false")
+        self.assertTrue(value.isBooleanConstant())
+        self.assertFalse(value.value)
+
+        value = self.evaluateTopLevelSourceString("false && true")
+        self.assertTrue(value.isBooleanConstant())
+        self.assertFalse(value.value)
+
+        value = self.evaluateTopLevelSourceString("true && false")
+        self.assertTrue(value.isBooleanConstant())
+        self.assertFalse(value.value)
+
+        value = self.evaluateTopLevelSourceString("true && true")
+        self.assertTrue(value.isBooleanConstant())
+        self.assertTrue(value.value)
+
+    def testBooleanOr(self):
+        value = self.evaluateTopLevelSourceString("false || false")
+        self.assertTrue(value.isBooleanConstant())
+        self.assertFalse(value.value)
+
+        value = self.evaluateTopLevelSourceString("false || true")
+        self.assertTrue(value.isBooleanConstant())
+        self.assertTrue(value.value)
+
+        value = self.evaluateTopLevelSourceString("true || false")
+        self.assertTrue(value.isBooleanConstant())
+        self.assertTrue(value.value)
+
+        value = self.evaluateTopLevelSourceString("true || true")
+        self.assertTrue(value.isBooleanConstant())
+        self.assertTrue(value.value)
+
 if __name__ == '__main__':
     unittest.main()
