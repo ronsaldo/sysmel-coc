@@ -309,6 +309,28 @@ class TestAnalysisAndBuild(unittest.TestCase):
         self.assertTrue(result.isIntegerConstant())
         self.assertEqual(result.value, 42)
 
+    def testFunctionMetaBuilder(self):
+        functionValue = self.evaluateTopLevelFunctionSourceString('function two() => Integer := 2')
+        result = functionValue.evaluateWithArguments([])
+        self.assertTrue(result.isIntegerConstant())
+        self.assertEqual(result.value, 2)
+
+
+    def testFunctionMetaBuilder2(self):
+        functionValue = self.evaluateTopLevelFunctionSourceString('function identity(x: Integer) => Integer := x')
+        result = functionValue.evaluateWithArguments([HIRConstantLiteralIntegerValue(42, self.context.coreTypes.integerType, None)])
+        self.assertTrue(result.isIntegerConstant())
+        self.assertEqual(result.value, 42)
+
+    def testFunctionMetaBuilder3(self):
+        functionValue = self.evaluateTopLevelFunctionSourceString('function identity(x: Integer. y: Integer) => Integer := x + y')
+        result = functionValue.evaluateWithArguments([
+            HIRConstantLiteralIntegerValue(1, self.context.coreTypes.integerType, None),
+            HIRConstantLiteralIntegerValue(2, self.context.coreTypes.integerType, None)
+        ])
+        self.assertTrue(result.isIntegerConstant())
+        self.assertEqual(result.value, 3)
+
     def testFunctionCapture(self):
         functionValue = self.evaluateTopLevelFunctionSourceString('{:(Integer)x :: ((Integer) => Integer) | {:(Integer)y :: Integer | x + y}}')
         #print(functionValue.fullPrintString())

@@ -137,7 +137,7 @@ class AnalysisAndBuildPass(ParseTreeVisitor):
             functionValue = self.builder.makeClosure(function, captureValues, function.getType(), node.sourcePosition)
         
         if name is not None:
-           self.builder.environment.setNewSymbolBinding(name, functionValue)
+           self.builder.environment.setNewSymbolBinding(name, functionValue, node.sourcePosition)
 
         return functionValue
 

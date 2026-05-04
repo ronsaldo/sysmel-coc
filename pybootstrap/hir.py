@@ -1646,8 +1646,10 @@ class HIRFunctionMetaBuilder(HIRNamedMetaBuilder):
         return self
 
     def analyzeAndBuildApplicationNode(self, buildPass, node: ParseTreeApplicationNode, functional):
-        ## TODO: Implement this.
-        assert False
+        for argument in node.arguments:
+            argumentDefinition = argument.parseAsArgumentDefinition()
+            self.argumentDefinitions.append(argumentDefinition)
+        return self
 
     def makeFunctionType(self):
         return ParseTreeFunctionTypeNode(self.sourcePosition, self.argumentDefinitions, self.resultTypeExpression)
@@ -1655,11 +1657,11 @@ class HIRFunctionMetaBuilder(HIRNamedMetaBuilder):
     def analyzeAndEvaluateAssignment(self, evaluationPass, node):
         functionNode = ParseTreeFunctionNode(node.sourcePosition, self.nameExpression, self.makeFunctionType(), node.value, self.isPublic)
         return evaluationPass.visitNode(functionNode)
+    
+    def analyzeAndBuildAssignment(self, buildPass, node):
+        functionNode = ParseTreeFunctionNode(node.sourcePosition, self.nameExpression, self.makeFunctionType(), node.value, self.isPublic)
+        return buildPass.visitNode(functionNode)
 
-    #def analyzeAndBuildAssignment(self, buildPass, node: ParseTreeAssignmentNode):
-    #    functionNode = ParseTreeFunctionNode(node.sourcePosition, self.nameExpression, self.argumentDefinitions, self.resultTypeExpression, node.value, self.isPublic)
-    #    return buildPass.visitNode(functionNode)
-#
 class HIRCoreTypes:
     def __init__(self):
         self.pointerSize = 8
