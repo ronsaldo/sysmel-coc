@@ -254,11 +254,26 @@ class AnalysisAndEvaluationPass(ParseTreeVisitor):
                 return self.evaluationContext.context.coreTypes.voidValue
             return self.visitNode(node.falseExpression)
 
-    def visitSwitchSelectionNode(self, node):
-        assert False
+    def visitSwitchSelectionNode(self, node: ParseTreeSwitchSelectionNode):
+        value = self.visitDecayedNode(node.valueExpression)
+        if not node.cases.isDictionaryNode():
+            raise RuntimeError(str(node.cases.sourcePosition) + ": Expected a dictionary with switch cases.")
+
+        for caseAssociation in node.cases.elements:
+            if not caseAssociation.isAssociationNode():
+                raise RuntimeError(str(caseAssociation.sourcePosition) + ": Expected an association with the case key and value.")
+            caseKey = self.visitDecayedNode(caseAssociation.key)
+            caseValue = self.evaluationContext.context.coreTypes.voidValue
+            if value == caseKey or (caseKey.isSymbolConstant() and caseKey.value == '_'):
+                if caseAssociation.value is not None:
+                    ##print("caseAssociation.value ", caseAssociation.value)
+                    caseValue = self.visitDecayedNode(caseAssociation.value)
+                return caseValue
+
+        return self.evaluationContext.context.coreTypes.voidValue
 
     def visitReturnNode(self, node: ParseTreeReturnNode):
-        assert False
+        raise RuntimeError('%s: return expression is not supported in here.' % (str(node.sourcePosition)))
 
     def visitWhileDoNode(self, node: ParseTreeWhileDoNode):
         while self.visitBooleanNode(node.condition):

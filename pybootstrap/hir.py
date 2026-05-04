@@ -537,6 +537,12 @@ class HIRConstantLiteralIntegerValue(HIRConstantLiteralValue):
         super().__init__(type, sourcePosition)
         self.value = value
 
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            return False
+
+        return self.type == other.type and self.value == other.value
+
     def __repr__(self):
         return 'integer %d' % self.value
 
@@ -547,6 +553,12 @@ class HIRConstantLiteralFloatValue(HIRConstantLiteralValue):
     def __init__(self, value: float, type: HIRType, sourcePosition):
         super().__init__(type, sourcePosition)
         self.value = value
+    
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            return False
+
+        return self.type == other.type and self.value == other.value
 
     def __repr__(self):
         return 'float %f' % self.value
@@ -558,6 +570,12 @@ class HIRConstantLiteralBooleanValue(HIRConstantLiteralValue):
     def __init__(self, value: bool, type: HIRType, sourcePosition):
         super().__init__(type, sourcePosition)
         self.value = value
+
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            return False
+
+        return self.type == other.type and self.value == other.value
 
     def __repr__(self):
         if self.value:
@@ -573,6 +591,12 @@ class HIRConstantLiteralCharacterValue(HIRConstantLiteralValue):
         super().__init__(type, sourcePosition)
         self.value = value
 
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            return False
+
+        return self.type == other.type and self.value == other.value
+
     def __repr__(self):
         return 'character %d' % self.value
 
@@ -584,6 +608,12 @@ class HIRConstantLiteralStringValue(HIRConstantLiteralValue):
         super().__init__(type, sourcePosition)
         self.value = value
 
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            return False
+
+        return self.type == other.type and self.value == other.value
+
     def isStringConstant(self):
         return True
     
@@ -591,6 +621,12 @@ class HIRConstantLiteralSymbolValue(HIRConstantLiteralValue):
     def __init__(self, value: str, type: HIRType, sourcePosition):
         super().__init__(type, sourcePosition)
         self.value = value
+
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            return False
+
+        return self.type == other.type and self.value == other.value
 
     def __repr__(self):
         return 'symbol #"%s"' % self.value
@@ -623,6 +659,12 @@ class HIRConstantLiteralParseTree(HIRConstantLiteralValue):
         super().__init__(type, sourcePosition)
         self.value = value
 
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            return False
+
+        return self.type == other.type and self.value == other.value
+
     def isParseTreeConstant(self):
         return True
 
@@ -642,6 +684,12 @@ class HIRConstantAssociation(HIRConstant):
     def isAssociationConstant(self):
         return True
 
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            return False
+
+        return self.type == other.type and self.key == other.key and self.value == other.value
+
     def __str__(self):
         return 'association(%s : %s)' % (str(self.key), str(self.value))
 
@@ -656,6 +704,12 @@ class HIRConstantTuple(HIRConstant):
     
     def isTupleConstant(self):
         return True
+
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            return False
+
+        return self.type == other.type and self.elements == other.elements
 
     def __str__(self):
         return 'tupe(%s)' % (str(self.elements))
@@ -693,6 +747,12 @@ class HIRPointerLikeValue(HIRValue):
     def loadValue(self):
         return self.storage.loadValueAtIndex(0)
 
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            return False
+
+        return self.type == other.type and self.storage == other.storage and self.index == other.index
+    
 class HIRPointerValue(HIRPointerLikeValue):
     pass
 
@@ -1594,6 +1654,8 @@ class HIRCoreTypes:
             return ParseTreeIfSelectionNode(macroContext.sourcePosition, conditionExpression, trueExpression, falseExpression)
         def ifThen(macroContext: HIRMacroContext, conditionExpression: ParseTreeNode, trueExpression: ParseTreeNode):
             return ParseTreeIfSelectionNode(macroContext.sourcePosition, conditionExpression, trueExpression, None)
+        def switchWithCasesMacro(macroContext: HIRMacroContext, valueExpression: ParseTreeNode, cases: ParseTreeNode):
+            return ParseTreeSwitchSelectionNode(macroContext.sourcePosition, valueExpression, cases)
 
         def whileDoContinueWith(macroContext: HIRMacroContext, conditionExpression: ParseTreeNode, bodyExpression: ParseTreeNode, continueExpression: ParseTreeNode):
             return ParseTreeWhileDoNode(macroContext.sourcePosition, conditionExpression, bodyExpression, continueExpression)
@@ -1614,6 +1676,7 @@ class HIRCoreTypes:
 
             HIRPrimitiveMacro('if:then:else:', self.primitiveMacroType, ifThenElse, None),
             HIRPrimitiveMacro('if:then:', self.primitiveMacroType, ifThen, None),
+            HIRPrimitiveMacro('switch:withCases:', self.primitiveMacroType, switchWithCasesMacro, None),
 
             HIRPrimitiveMacro('while:do:continueWith:', self.primitiveMacroType, whileDoContinueWith, None),
             HIRPrimitiveMacro('while:do:', self.primitiveMacroType, whileDo, None),

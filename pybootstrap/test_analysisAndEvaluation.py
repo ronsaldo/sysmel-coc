@@ -125,6 +125,19 @@ class TestAnalysisAndEvaluation(unittest.TestCase):
         self.assertTrue(topLevelResult.isIntegerConstant())
         self.assertEqual(topLevelResult.value, 1)
 
+    def testSwitchMacro(self):
+        topLevelResult = self.evaluateTopLevelSourceString('switch: 1 withCases: #{1 : #first. 2 : #second. _: #somethingElse}')
+        self.assertTrue(topLevelResult.isSymbolConstant())
+        self.assertEqual(topLevelResult.value, 'first')
+
+        topLevelResult = self.evaluateTopLevelSourceString('switch: 2 withCases: #{1 : #first. 2 : #second. _: #somethingElse}')
+        self.assertTrue(topLevelResult.isSymbolConstant())
+        self.assertEqual(topLevelResult.value, 'second')
+
+        topLevelResult = self.evaluateTopLevelSourceString('switch: 42 withCases: #{1 : #first. 2 : #second. _: #somethingElse}')
+        self.assertTrue(topLevelResult.isSymbolConstant())
+        self.assertEqual(topLevelResult.value, 'somethingElse')
+
     def testWhileDoMacro(self):
         topLevelResult = self.evaluateTopLevelSourceString('while: false do: {}')
         self.assertTrue(topLevelResult.isVoidConstant())
