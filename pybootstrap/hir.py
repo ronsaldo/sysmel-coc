@@ -2042,6 +2042,7 @@ class HIRCoreTypes:
 
     def createCorePrimitiveFunctions(self):
         self.createGlobalPrimitives()
+        self.createBooleanPrimitiveFunctions()
         self.createIntegerPrimitiveFunctions()
         self.createFloatPrimitiveFunctions()
 
@@ -2069,6 +2070,14 @@ class HIRCoreTypes:
             (HIRPrimitiveFunction('IO::printLine', self.getOrCreateSimpleFunctionType((self.dynamicType,), self.voidType), printLinePrimitive, None), 'printLine'),
             (HIRPrimitiveFunction('IO::writeLine', self.getOrCreateSimpleFunctionType((self.dynamicType,), self.voidType), writeLinePrimitive, None), 'writeLine'),
         ]
+
+    def createBooleanPrimitiveFunctions(self):
+        def booleanNot(operand, resultType):
+            assert operand.isBooleanConstant()
+            return self.getBooleanConstant(not operand.value)
+        
+        self.booleanType.withSelectorAddMethod('not', HIRPrimitiveFunction('Boolean::not', self.getOrCreateSimpleFunctionType((self.booleanType,), self.booleanType), booleanNot, None, isPure = True, isCompileTime = True))
+
 
     def createIntegerPrimitiveFunctions(self):
         def integerNegated(operand, resultType):

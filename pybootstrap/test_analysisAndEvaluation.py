@@ -486,5 +486,14 @@ class TestAnalysisAndEvaluation(unittest.TestCase):
         self.assertTrue(enumValue.value.isIntegerConstant())
         self.assertEqual(2, enumValue.value.value)
 
+    def testBooleanNot(self):
+        value = self.evaluateTopLevelSourceString("false not")
+        self.assertTrue(value.isBooleanConstant())
+        self.assertTrue(value.value)
+
+        value = self.evaluateTopLevelSourceString("true not")
+        self.assertTrue(value.isBooleanConstant())
+        self.assertFalse(value.value)
+
 if __name__ == '__main__':
     unittest.main()
