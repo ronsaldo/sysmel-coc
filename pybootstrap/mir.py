@@ -105,6 +105,23 @@ class MirPackageElement:
     def isTemporary(self):
         return False
 
+class MirTypeWithMethodDictionary(MirPackageElement):
+    def __init__(self, name, sourceType):
+        super().__init__()
+        self.name = name
+        self.sourceType = sourceType
+        self.metaType = None
+        self.children = []
+        self.methodDictionary = {}
+
+    def withSelectorAddMethod(self, selector, method):
+        assert selector not in self.methodDictionary
+        self.children.append(method)
+        self.methodDictionary[selector] = method
+
+    def __str__(self):
+        return 'type ' + self.name
+
 class MirImportedFunction(MirPackageElement):
     def __init__(self, name):
         super().__init__()

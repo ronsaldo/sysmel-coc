@@ -10,6 +10,7 @@ class HirPackage2Mir(HIRVisitor):
         self.valueMap = {}
         self.packageList = []
         self.currentMirPackage = None
+        self.setCoreTypeMappings()
 
     def setCoreTypeMappings(self):
         self.coreTypeMappings = {
@@ -28,6 +29,10 @@ class HirPackage2Mir(HIRVisitor):
         self.valueMap[value] = translatedValue
         return translatedValue
 
+    def makeNominalTypeWithMethods(self, type:  HIRNominalType):
+        typeWithMethodDictionary = MirTypeWithMethodDictionary(type.name, type)
+        self.currentMirPackage.addElement(typeWithMethodDictionary)
+        return typeWithMethodDictionary
 
     def visitNextValue(self, value: HIRValue):
         return value.accept(self)
@@ -39,7 +44,11 @@ class HirPackage2Mir(HIRVisitor):
         assert False
 
     def visitNominalType(self, type: HIRNominalType):
-        return self.context.gcPointerType
+        mirType = self.coreTypeMappings.get(type, self.context.gcPointerType)
+        self.valueMap[type] = mirType
+
+        self.makeNominalTypeWithMethods(type)
+        return mirType
 
     def visitDynamicType(self, type: HIRDynamicType):
         return self.context.gcPointerType
@@ -66,10 +75,15 @@ class HirPackage2Mir(HIRVisitor):
         assert False
 
     def visitClass(self, type: HIRClass):
-        assert False
+        mirType = self.context.gcPointerType
+        self.valueMap[type] = mirType
+
+        self.makeNominalTypeWithMethods(type)
+        return mirType
 
     def visitMetaclass(self, type: HIRMetaclass):
         assert False
+        return self.context.gcPointerType
 
     def visitStructType(self, type: HIRStructType):
         assert False
