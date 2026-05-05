@@ -29,9 +29,14 @@ class HirPackage2Mir(HIRVisitor):
         self.valueMap[value] = translatedValue
         return translatedValue
 
-    def makeNominalTypeWithMethods(self, type:  HIRNominalType):
+    def makeNominalTypeWithMethods(self, type: HIRNominalType):
         typeWithMethodDictionary = MirTypeWithMethodDictionary(type.name, type)
         self.currentMirPackage.addElement(typeWithMethodDictionary)
+        for method in type.childrenMethods:
+            translatedMethod = self.translateValue(method)
+            if translatedMethod is not None:
+                typeWithMethodDictionary.withSelectorAddMethod(method.selector, translatedMethod)
+
         return typeWithMethodDictionary
 
     def visitNextValue(self, value: HIRValue):
@@ -152,7 +157,7 @@ class HirPackage2Mir(HIRVisitor):
             self.translateValue(child)
 
         self.currentMirPackage = oldCurrentPackage
-        mirPackage.dumpToConsole()
+        #mirPackage.dumpToConsole()
         return mirPackage
 
 class HirFunction2Mir(HIRVisitor):

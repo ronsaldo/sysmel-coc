@@ -1,3 +1,5 @@
+import math
+
 class MemoryDescriptor:
     def __init__(self, size, alignment, gcLayout = None):
         self.size = size
@@ -173,6 +175,9 @@ class MirContext:
             ('IO::print', "__sysmel_io_print", lambda x: print(str(x), end='')),
             ('IO::printLine', "__sysmel_io_printLine", lambda x: print(str(x))),
             ('IO::writeLine', "__sysmel_io_writeLine", lambda x: print(str(x))),
+
+            ## Boolean
+            ('Boolean::not', "__sysmel_boolean_not", lambda x: not x),
             
             ## Character
             ('Character::negated',    "__sysmel_character_negated",   lambda x: -x),
@@ -216,7 +221,7 @@ class MirContext:
             ('Integer::>>', "__sysmel_integer_shiftRight", lambda x, y: x >> y),
 
             ('Integer::=',    "__sysmel_integer_equals",          lambda x, y: x == y),
-            ('Integer::!=',   "__sysmel_integer_notEquals",       lambda x, y: x != y),
+            ('Integer::~=',   "__sysmel_integer_notEquals",       lambda x, y: x != y),
             ('Integer::hash', "__sysmel_integer_hash",            lambda x: hash(x)),
 
             ('Integer::<',   "__sysmel_integer_lessThan",        lambda x, y: x < y),
@@ -226,7 +231,7 @@ class MirContext:
 
             ## Float
             ('Float::negated',    "__sysmel_float_negated",   lambda x: -x),
-            ('Float::bitInvert',  "__sysmel_float_bitInvert", lambda x: 1 - x),
+            ('Float::sqrt',  "__sysmel_float_sqrt", lambda x: math.sqrt(x)),
 
             ('Float::+', "__sysmel_float_add", lambda x, y: x + y),
             ('Float::-', "__sysmel_float_sub", lambda x, y: x - y),
@@ -235,7 +240,7 @@ class MirContext:
             ('Float::%', "__sysmel_float_mod", lambda x, y: x % y),
 
             ('Float::=',   "__sysmel_float_equals",          lambda x, y: x == y),
-            ('Float::!=',  "__sysmel_float_notEquals",       lambda x, y: x != y),
+            ('Float::~=',  "__sysmel_float_notEquals",       lambda x, y: x != y),
             ('Float::hash', "__sysmel_float_hash",           lambda x: hash(x)),
 
             ('Float::<',   "__sysmel_float_lessThan",        lambda x, y: x < y),
