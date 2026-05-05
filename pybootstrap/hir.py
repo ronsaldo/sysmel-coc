@@ -689,7 +689,17 @@ class HIRClass(HIRBehavior):
         if len(node.arguments) > len(self.allFields):
             raise RuntimeError("%s: class construction can have at most %d arguments." %(str(node.sourcePosition), len(self.fields)))
 
-        assert False
+        objectFields = list(map(lambda f: f.type.getDefaultValue(), self.allFields))
+        objectValue = buildPass.builder.makeObject(self, objectFields, node.sourcePosition)
+        for i in range(len(node.arguments)):
+            element = buildPass.visitNodeWithExpectedType(node.arguments[i], self.allFields[i].type)
+            buildPass.builder.setAggregateField(objectValue, element, self.allFields[i], node.sourcePosition)
+
+        initializeMethod = self.lookupSelector("initialize")
+        if initializeMethod is not None:
+            buildPass.builder.call(initializeMethod.analyzeAndBuild(buildPass), [objectValue], buildPass.builder.coreTypes.voidType, node.sourcePosition)
+
+        return objectValue
     
     def analyzeAndEvaluateApplicationNode(self, evaluationPass, node: ParseTreeApplicationNode, functional):
         self.ensureLayout()
