@@ -99,6 +99,15 @@ class HIRValue(ABC):
     def isEnumType(self):
         return False
 
+    def isBehaviorType(self):
+        return False
+
+    def isClassType(self):
+        return False
+
+    def isMetaclassType(self):
+        return False
+
     def isStructType(self):
         return False
 
@@ -570,6 +579,123 @@ class HIRField(HIRValue):
 
     def __str__(self):
         return 'field %s (index: %d offset: %d)' %(str(self.name), self.getValidIndex(), self.getValidOffset())
+
+class HIRBehavior(HIRNominalType):
+    def __init__(self, name, coreTypes, sourcePosition=None):
+        super().__init__(name, coreTypes, sourcePosition)
+        self.type = None
+        self.superclass = None
+        self.fields = []
+        self.fieldMap = {}
+        self.allFields = []
+        self.publicFields = {}
+        self.instanceSize = None
+        self.instanceAlignment = None
+        self.totalFieldCount = None
+
+    def isBehaviorType(self):
+        return True
+
+    def getSupertype(self):
+        return self.superclass
+
+    def lookupField(self, name: str):
+        self.ensureAnalysis()
+        if name in self.fieldMap:
+            return self.fieldMap[name]
+        if self.superclass is not None:
+            return self.superclass.lookupField(name)
+        return None
+
+    def lookupSelector(self, selector: str):
+        self.ensureAnalysis()
+        if selector in self.methodDictionary:
+            return self.methodDictionary[selector]
+        if selector in self.publicFields:
+            return self.publicFields[selector]
+        if self.superclass is not None:
+            return self.superclass.lookupSelector(selector)
+        return None
+
+    def addField(self, field):
+        self.fields.append(field)
+        self.invalidateLayout()
+        field.owner = self
+
+        if field.name is not None:
+            self.fieldMap[field.name] = field
+
+        if field.isPublic and field.name is not None:
+            self.publicFields[field.name] = field # Getter
+            self.publicFields[field.name + ':'] = field #Setter
+
+    def invalidateLayout(self):
+        self.instanceSize = None
+        self.instanceAlignment = None
+
+    def ensureLayout(self):
+        self.ensureAnalysis()
+        if self.instanceSize is not None:
+            return
+        
+        self.instanceSize = 0
+        self.instanceAlignment = 1
+        self.totalFieldCount = 0
+        self.allFields = self.fields
+
+        if self.superclass is not None:
+            self.superclass.ensureLayout()
+            self.instanceSize = self.superclass.instanceSize
+            self.instanceAlignment = self.superclass.instanceAlignment
+            self.totalFieldCount = self.superclass.totalFieldCount
+            self.allFields = self.superclass.allFields + self.fields
+
+        for field in self.fields:
+            field.index = self.totalFieldCount
+            fieldAlignment = field.type.getValueAlignment()
+            fieldSize = field.type.getValueSize()
+            
+            self.instanceSize = alignedTo(self.instanceSize, fieldAlignment)
+            field.offset = self.instanceSize
+            self.instanceSize += fieldSize
+
+            self.instanceAlignment = max(self.instanceAlignment, fieldAlignment)
+            self.totalFieldCount += 1
+
+    def getType(self):
+        return self.type
+
+    def getInstanceSize(self):
+        self.ensureLayout()
+        return self.instanceSize
+
+    def getInstanceAlignment(self):
+        self.ensureLayout()
+        return self.instanceAlignment
+
+class HIRClass(HIRBehavior):
+    def __init__(self, name, metaclass, coreTypes, sourcePosition=None):
+        super().__init__(name, coreTypes, sourcePosition)
+        self.type = metaclass
+
+    def isClassType(self):
+        return True
+    
+    def __str__(self):
+        if self.name is None:
+            return 'an anonymous class'
+        return self.name
+
+class HIRMetaclass(HIRBehavior):
+    def __init__(self, coreTypes, sourcePosition=None):
+        super().__init__(None, coreTypes, sourcePosition)
+        self.thisClass = None
+
+    def isMetaclassType(self):
+        return True
+
+    def __str__(self):
+        return str(self.thisClass) + " class"
 
 class HIRStructType(HIRNominalType):
     def __init__(self, name, coreTypes, sourcePosition):
@@ -2220,6 +2346,26 @@ class HIRMethodMetaBuilder(HIRMetaBuilder):
         functionNode = ParseTreeFunctionNode(node.sourcePosition, self.selectorExpression, self.makeFunctionType(), node.value, self.isPublic, True)
         return evaluationPass.visitNode(functionNode)
 
+class HIRClassMetaBuilder(HIRNamedMetaBuilder):
+    def __init__(self, coreTypes, sourcePosition):
+        super().__init__(coreTypes, sourcePosition)
+        self.superclassExpression = None
+        self.isPublic = False
+
+    def supportsSelector(self, selector):
+        return selector in ('superclass:', 'definition:', 'superclass:definition:')
+
+    def expandMessageSend(self, evaluator, node: ParseTreeMessageSendNode, selector, receiver):
+        if selector == 'superclass:':
+            self.superclassExpression = node.arguments[0]
+        elif selector == 'definition:':
+            structNode = ParseTreeClassDefinitionNode(node.sourcePosition, self.nameExpression, self.superclassExpression, node.arguments[0], self.isPublic )
+            return evaluator.visitNode(structNode)
+        elif selector == 'superclass:definition:':
+            structNode = ParseTreeClassDefinitionNode(node.sourcePosition, self.nameExpression, node.arguments[0], node.arguments[1], self.isPublic )
+            return evaluator.visitNode(structNode)
+        return super().expandMessageSend(evaluator, node, selector, receiver)
+
 class HIRStructMetaBuilder(HIRNamedMetaBuilder):
     def __init__(self, coreTypes, sourcePosition):
         super().__init__(coreTypes, sourcePosition)
@@ -2239,10 +2385,14 @@ class HIRPublicMetaBuilder(HIRMetaBuilder):
         super().__init__(coreTypes, sourcePosition)
 
     def supportsSelector(self, selector):
-        return selector in ('enum', 'field', 'function', 'struct')
+        return selector in ('class', 'enum', 'field', 'function', 'struct')
     
     def expandMessageSend(self, evaluator, node: ParseTreeMessageSendNode, selector: str, receiver):
-        if selector == 'enum':
+        if selector == 'class':
+            metabuilder = HIRClassMetaBuilder(self.coreTypes, node.sourcePosition)
+            metabuilder.isPublic = True
+            return metabuilder
+        elif selector == 'enum':
             metabuilder = HIREnumMetaBuilder(self.coreTypes, node.sourcePosition)
             metabuilder.isPublic = True
             return metabuilder
@@ -2264,6 +2414,8 @@ class HIRCoreTypes:
     def __init__(self):
         self.pointerSize = 8
         self.pointerAlignment = 8
+
+
 
         self.integerType   = HIRNominalType('Integer', self, None);
         self.characterType = HIRNominalType('Character', self, None);
@@ -2329,9 +2481,60 @@ class HIRCoreTypes:
             (self.nilValue,   'nil'),
         ]
         
+        self.createCoreClassDefinitions()
         self.createCorePrimitiveMacros()
         self.createCorePrimitiveMetaBuilders()
         self.createCorePrimitiveFunctions()
+
+    def makeCoreClassDefinition(self, name, superclass, fields, metaFields):
+        metaclass = HIRMetaclass(self)
+        metaclass.type = self.metaclassType
+
+        clazz = HIRClass(name, metaclass, self)
+        clazz.superclass = superclass
+        if superclass is not None:
+            metaclass.superclass = superclass.getType()
+
+        metaclass.thisClass = clazz
+        return clazz
+    
+    def fixupMetaclassTypes(self, typesTopFixup):
+        for clazz in typesTopFixup:
+            metaclass = clazz.getType()
+            metaclass.type = self.metaclassType
+
+    def createCoreClassDefinitions(self):
+        self.metaclassType = None
+
+        self.protoObjectClass  = self.makeCoreClassDefinition('ProtoObject', None, [], [])
+        self.objectClass = self.makeCoreClassDefinition('Object', self.protoObjectClass, [], [])
+
+        self.metaObjectClass = self.makeCoreClassDefinition('MetaObject', self.objectClass, [], [])
+        self.typeClass = self.makeCoreClassDefinition('Type', self.metaObjectClass, [], [])
+        self.nominalTypeClass = self.makeCoreClassDefinition('NominalType', self.typeClass, [], [])
+        self.behaviorClass = self.makeCoreClassDefinition('Behavior', self.nominalTypeClass, [], [])
+        self.classClass = self.makeCoreClassDefinition('Class', self.behaviorClass, [], [])
+        self.metaclassType = self.makeCoreClassDefinition('Metaclass', self.behaviorClass, [], [])
+
+        # Short circuit
+        self.protoObjectClass.getType().superclass = self.classClass
+        self.fixupMetaclassTypes([
+            self.protoObjectClass, self.objectClass, self.metaObjectClass,
+            self.typeClass, self.nominalTypeClass, self.behaviorClass, self.classClass,
+            self.metaclassType
+        ])
+
+        self.coreTypeList += [
+            self.protoObjectClass,
+            self.objectClass,
+
+            self.metaObjectClass,
+            self.typeClass,
+            self.nominalTypeClass,
+            self.behaviorClass,
+            self.classClass,
+            self.metaclassType,
+        ]
 
     def createCorePrimitiveMacros(self):
 
@@ -2392,6 +2595,7 @@ class HIRCoreTypes:
 
     def createCorePrimitiveMetaBuilders(self):
         self.coreValueList += [
+            (HIRMetaBuilderFactory(HIRClassMetaBuilder, self, None), 'class'),
             (HIRMetaBuilderFactory(HIREnumMetaBuilder, self, None), 'enum'),
             (HIRMetaBuilderFactory(HIRFieldMetaBuilder, self, None), 'field'),
             (HIRMetaBuilderFactory(HIRFunctionMetaBuilder, self, None), 'function'),

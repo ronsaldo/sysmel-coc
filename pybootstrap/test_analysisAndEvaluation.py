@@ -613,5 +613,11 @@ class TestAnalysisAndEvaluation(unittest.TestCase):
         self.assertTrue(value.isIntegerConstant())
         self.assertEqual(3, value.value)
 
+    def testEmptyClass(self):
+        result = self.evaluateTopLevelSourceString('class MyClass definition: {}')
+        self.assertTrue(result.isClassType())
+        self.assertEqual(0, result.getInstanceSize())
+        self.assertEqual(1, result.getInstanceAlignment())
+
 if __name__ == '__main__':
     unittest.main()

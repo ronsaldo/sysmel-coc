@@ -312,7 +312,38 @@ class AnalysisAndEvaluationPass(ParseTreeVisitor):
         assert False
 
     def visitClassDefinitionNode(self, node: ParseTreeClassDefinitionNode):
-        assert False
+        name = self.visitOptionalSymbolNode(node.nameExpression)
+        superclass = None
+        if node.superclassExpression is not None:
+            superclass = self.visitDecayedNode(node.superclassExpression)
+            if not superclass.isClassType():
+                raise RuntimeError(str(node.sourcePosition) + ": a class superclass must be another class.")
+        else:
+            superclass = self.evaluationContext.context.coreTypes.protoObjectClass
+
+        metaclass = HIRMetaclass(self.evaluationContext.context.coreTypes, node.sourcePosition)
+        metaclass.type = self.evaluationContext.context.coreTypes.metaclassType
+
+        clazz = HIRClass(name, metaclass, self.evaluationContext.context.coreTypes, node.sourcePosition)
+        clazz.superclass = superclass
+        if superclass is not None:
+            metaclass.superclass = superclass.getType()
+
+        metaclass.thisClass = clazz
+
+        self.evaluationContext.context.addEntityWithPendingAnalysis(metaclass)
+        self.evaluationContext.context.addEntityWithPendingAnalysis(clazz)
+
+        if name is not None:
+            self.evaluationContext.environment.setNewSymbolBinding(name, clazz, node.sourcePosition)
+        if node.isPublic:
+            owner = self.evaluationContext.environment.lookupProgramEntityOwner()
+            if name is None:
+                owner.addAnonymousElement(clazz)
+            else:
+                owner.addPublicNamedElement(name, clazz)
+        clazz.addPendingDefinitionBody(self.evaluationContext, node.definitionBody)
+        return clazz
 
     def visitStructDefinitionNode(self, node: ParseTreeStructDefinitionNode):
         name = self.visitOptionalSymbolNode(node.nameExpression)
