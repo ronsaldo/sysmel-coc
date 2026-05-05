@@ -48,6 +48,7 @@ class MirContext:
 
         self.primitiveTranslatorMap = {}
         self.runtimePrimitiveImplementations = {}
+        self.primitiveRuntimeFunctionNameMap = {}
         self.addPrimitiveTranslators()
     
     def addNamedType(self, type):
@@ -168,6 +169,11 @@ class MirContext:
 
     def addCalloutPrimitives(self):
         for pair in [
+            ## IO
+            ('IO::print', "__sysmel_io_print", lambda x: print(str(x), end='')),
+            ('IO::printLine', "__sysmel_io_printLine", lambda x: print(str(x))),
+            ('IO::writeLine', "__sysmel_io_writeLine", lambda x: print(str(x))),
+            
             ## Character
             ('Character::negated',    "__sysmel_character_negated",   lambda x: -x),
             ('Character::bitInvert',  "__sysmel_character_bitInvert", lambda x: 1 - x),
@@ -247,6 +253,10 @@ class MirContext:
         def primitiveTranslator(mi2hir, callInstruction):
             return mi2hir.callRuntimeFunctionWithName(callInstruction, runtimeName)
         self.primitiveTranslatorMap[primitiveName] = primitiveTranslator
+        self.primitiveRuntimeFunctionNameMap[primitiveName] = runtimeName
+
+    def getPrimitiveRuntimeFunctionNameFor(self, primitiveName):
+        return self.primitiveRuntimeFunctionNameMap[primitiveName]
 
     def getPrimitiveTranslatorFor(self, primitiveName):
         return self.primitiveTranslatorMap[primitiveName]

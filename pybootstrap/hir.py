@@ -140,6 +140,9 @@ class HIRVisitor(ABC):
 
     def visitMacroContext(self, value):
         return self.visitValue(value)
+    
+    def visitMetaBuilderFactory(self, value):
+        return self.visitValue(value)
 
     def visitPrimitiveMacro(self, value):
         return self.visitConstant(value)
@@ -1338,6 +1341,9 @@ class HIRConstantLiteralIntegerValue(HIRConstantLiteralValue):
 
         return self.type == other.type and self.value == other.value
 
+    def __hash__(self):
+        return hash(self.type) ^ hash(self.value)
+    
     def __str__(self):
         return str(self.value)
 
@@ -1364,6 +1370,9 @@ class HIRConstantLiteralFloatValue(HIRConstantLiteralValue):
 
         return self.type == other.type and self.value == other.value
 
+    def __hash__(self):
+        return hash(self.type) ^ hash(self.value)
+    
     def __repr__(self):
         return 'float(%f)' % self.value
 
@@ -1383,6 +1392,9 @@ class HIRConstantLiteralBooleanValue(HIRConstantLiteralValue):
             return False
 
         return self.type == other.type and self.value == other.value
+    
+    def __hash__(self):
+        return hash(self.type) ^ hash(self.value)
 
     def __repr__(self):
         if self.value:
@@ -1407,6 +1419,9 @@ class HIRConstantLiteralCharacterValue(HIRConstantLiteralValue):
 
         return self.type == other.type and self.value == other.value
 
+    def __hash__(self):
+        return hash(self.type) ^ hash(self.value)
+    
     def __repr__(self):
         return 'character(%d)' % self.value
 
@@ -1427,6 +1442,9 @@ class HIRConstantLiteralStringValue(HIRConstantLiteralValue):
 
         return self.type == other.type and self.value == other.value
 
+    def __hash__(self):
+        return hash(self.type) ^ hash(self.value)
+    
     def __str__(self):
         return self.value
 
@@ -1449,7 +1467,10 @@ class HIRConstantLiteralSymbolValue(HIRConstantLiteralValue):
             return False
 
         return self.type == other.type and self.value == other.value
-
+    
+    def __hash__(self):
+        return hash(self.type) ^ hash(self.value)
+    
     def __repr__(self):
         return 'symbol(#"%s")' % self.value
     
@@ -1496,6 +1517,9 @@ class HIRConstantLiteralParseTree(HIRConstantLiteralValue):
 
         return self.type == other.type and self.value == other.value
 
+    def __hash__(self):
+        return hash(self.type) ^ hash(self.value)
+    
     def isParseTreeConstant(self):
         return True
 
@@ -2772,6 +2796,9 @@ class HIRMetaBuilderFactory(HIRValue):
         super().__init__(sourcePosition)
         self.coreTypes = coreTypes
         self.clazz = clazz
+
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitMetaBuilderFactory(self)
 
     def analyzeAndEvaluateIdentifierReferenceNode(self, evaluator, node: ParseTreeIdentifierReferenceNode):
         return self.clazz(self.coreTypes, node.sourcePosition).analyzeAndEvaluateIdentifierReferenceNode(evaluator, node)

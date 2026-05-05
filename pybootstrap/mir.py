@@ -82,12 +82,11 @@ MirOpcode = Enum('MirOpcode', [
 
 
 class MirPackage:
-    def __init__(self, context: MirContext):
+    def __init__(self, context: MirContext, name: str):
         self.context = context
         self.elementTable = []
-        self.translatedFunctionMap = {}
         self.translatedPrimitiveMap = {}
-        self.name = ''
+        self.name = name
 
     def addElement(self, element):
         assert element.module is None
@@ -98,6 +97,15 @@ class MirPackage:
         for element in self.elementTable:
             element.dumpToConsole()
 
+    def getOrCreateRuntimePrimitiveNamed(self, primitiveRuntimeName):
+        if primitiveRuntimeName in self.translatedPrimitiveMap:
+            return self.translatedPrimitiveMap[primitiveRuntimeName]
+
+        primitive = MirImportedFunction(primitiveRuntimeName)
+        primitive.implementation = self.context.getRuntimePrimitiveImplementationOrNone(primitiveRuntimeName)
+        self.translatedPrimitiveMap[primitiveRuntimeName] = primitive
+        return primitive
+    
 class MirPackageElement:
     def __init__(self):
         self.module: MirPackage = None
@@ -119,8 +127,13 @@ class MirTypeWithMethodDictionary(MirPackageElement):
         self.children.append(method)
         self.methodDictionary[selector] = method
 
+    def dumpToConsole(self):
+        print(str(self))
+        for child in self.children:
+            print(child)
+
     def __str__(self):
-        return 'type ' + self.name
+        return 'typeWithMethodDict ' + self.name
 
 class MirImportedFunction(MirPackageElement):
     def __init__(self, name):
@@ -133,6 +146,17 @@ class MirImportedFunction(MirPackageElement):
 
     def __str__(self):
         return 'importedFunction ' + self.name
+
+class MirGlobalData(MirPackageElement):
+    def __init__(self, data: bytes, name = None):
+        super().__init__()
+        self.data = data
+        self.name = name
+
+class MirInlineConstant:
+    def __init__(self, value, type):
+        self.value = value
+        self.type = type
 
 class MirFunction(MirPackageElement):
     def __init__(self, name = ''):

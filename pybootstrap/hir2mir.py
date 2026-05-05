@@ -112,6 +112,25 @@ class HirPackage2Mir(HIRVisitor):
     
     def visitDependentFunctionType(self, type: HIRDependentFunctionType):
         return self.context.gcPointerType
+    
+    def visitConstantLiteralBooleanValue(self, value):
+        return MirInlineConstant(value.value, self.context.boolean8Type)
+    
+    def visitConstantLiteralVoidValue(self, value):
+        return MirInlineConstant(None, self.context.voidType)
+
+    def visitConstantLiteralNilValue(self, value):
+        return MirInlineConstant(None, self.context.pointerType)
+    
+    def visitMetaBuilderFactory(self, value):
+        return None
+    
+    def visitPrimitiveFunction(self, primitiveFunction):
+        runtimeFunctionName = self.context.getPrimitiveRuntimeFunctionNameFor(primitiveFunction.name)
+        return self.currentMirPackage.getOrCreateRuntimePrimitiveNamed(runtimeFunctionName)
+
+    def visitPrimitiveMacro(self, value):
+        return None
 
     def visitPackage(self, package: HIRPackage):
         if package in self.valueMap:
@@ -119,7 +138,7 @@ class HirPackage2Mir(HIRVisitor):
         
         # Start translating the package.
         oldCurrentPackage = self.currentMirPackage
-        mirPackage = MirPackage(package.name)
+        mirPackage = MirPackage(self.context, package.name)
         self.valueMap[package] = mirPackage
         self.currentMirPackage = mirPackage
 
@@ -133,6 +152,7 @@ class HirPackage2Mir(HIRVisitor):
             self.translateValue(child)
 
         self.currentMirPackage = oldCurrentPackage
+        mirPackage.dumpToConsole()
         return mirPackage
 
 class HirFunction2Mir(HIRVisitor):

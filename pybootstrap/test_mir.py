@@ -4,8 +4,7 @@ from mir import *
 class MirTest(unittest.TestCase):
     def setUp(self):
         self.context = MirContext()
-        self.module = MirPackage(self.context)
-        self.module.name = "TestModule"
+        self.module = MirPackage(self.context, 'TestModule')
         return super().setUp()
     
     def testEmptyModule(self):
