@@ -38,64 +38,65 @@ class HirPackage2Mir(HIRVisitor):
     def visitType(self, value):
         assert False
 
-    def visitNominalType(self, type):
+    def visitNominalType(self, type: HIRNominalType):
         return self.context.gcPointerType
 
-    def visitDynamicType(self, type):
+    def visitDynamicType(self, type: HIRDynamicType):
         return self.context.gcPointerType
 
-    def visitVoidType(self, type):
+    def visitVoidType(self, type: HIRVoidType):
         return self.context.voidType
 
-    def visitControlFlowEscapeType(self, type):
+    def visitControlFlowEscapeType(self, type: HIRControlFlowEscapeType):
         return self.context.voidType
 
-    def visitUniverseType(self, type):
+    def visitUniverseType(self, type: HIRUniverseType):
         return self.context.gcPointerType
 
-    def visitAssociationType(self, type):
+    def visitAssociationType(self, type: HIRAssociationType):
         return self.context.gcPointerType
 
-    def visitDictionaryType(self, type):
+    def visitDictionaryType(self, type: HIRDictionaryType):
         assert False
 
-    def visitEnumType(self, type):
+    def visitEnumType(self, type: HIREnumType):
         assert False
 
-    def visitBehavior(self, type):
+    def visitBehavior(self, type: HIRBehavior):
         assert False
 
-    def visitClass(self, type):
+    def visitClass(self, type: HIRClass):
         assert False
 
-    def visitMetaclass(self, type):
+    def visitMetaclass(self, type: HIRMetaclass):
         assert False
 
-    def visitStructType(self, type):
+    def visitStructType(self, type: HIRStructType):
         assert False
 
-    def visitTupleType(self, type):
+    def visitTupleType(self, type: HIRTupleType):
         assert False
 
-    def visitDerivedType(self, type):
+    def visitDerivedType(self, type: HIRDerivedType):
         assert False
 
-    def visitPointerLikeType(self, type):
-        return self.context.pointerType
-
-    def visitPointerType(self, type):
-        return self.context.pointerType
-
-    def visitReferenceType(self, type):
-        return self.context.pointerType
-
-    def visitMutableValueBoxType(self, type):
+    def visitPointerLikeType(self, type: HIRPointerLikeType):
+        # TODO: inspect the base type to determine the corrent pointer type
         return self.context.gcPointerType
 
-    def visitSimpleFunctionType(self, type):
+    def visitPointerType(self, type: HIRPointerType):
+        return self.visitPointerLikeType(type)
+
+    def visitReferenceType(self, type: HIRReferenceType):
+        return self.visitPointerLikeType(type)
+
+    def visitMutableValueBoxType(self, type: HIRMutableValueBoxType):
+        return self.context.gcPointerType
+
+    def visitSimpleFunctionType(self, type: HIRSimpleFunctionType):
         return self.context.gcPointerType
     
-    def visitDependentFunctionType(self, type):
+    def visitDependentFunctionType(self, type: HIRDependentFunctionType):
         return self.context.gcPointerType
 
     def visitPackage(self, package: HIRPackage):
