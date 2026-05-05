@@ -618,6 +618,64 @@ class TestAnalysisAndEvaluation(unittest.TestCase):
         self.assertTrue(result.isClassType())
         self.assertEqual(0, result.getInstanceSize())
         self.assertEqual(1, result.getInstanceAlignment())
+    
+    def testInstantiateEmptyClass(self):
+        result = self.evaluateTopLevelSourceString('class MyClass definition: {}. MyClass()')
+        self.assertTrue(result.isObjectValue())
+        self.assertEqual(0, len(result.fields))
+
+    def testClassWithField(self):
+        result = self.evaluateTopLevelSourceString('class MyClass definition: {public field f => Integer}')
+        self.assertTrue(result.isClassType())
+        self.assertEqual(8, result.getInstanceSize())
+        self.assertEqual(8, result.getInstanceAlignment())
+
+    def testInstantiateClassWithField(self):
+        result = self.evaluateTopLevelSourceString('class MyClass definition: {public field f => Integer}. MyClass(42)')
+        self.assertTrue(result.isObjectValue())
+        
+        self.assertTrue(result.fields[0].isIntegerConstant())
+        self.assertEqual(42, result.fields[0].value)
+
+    def testClassWithSuperclassField(self):
+        result = self.evaluateTopLevelSourceString('class MyClass superclass: Object definition: {public field f => Integer}')
+        self.assertTrue(result.isClassType())
+        self.assertEqual(8, result.getInstanceSize())
+        self.assertEqual(8, result.getInstanceAlignment())
+
+        self.assertEqual('Object', result.superclass.name)
+
+    def testClassExplicitGetterAccessor(self):
+        value = self.evaluateTopLevelSourceString("""
+        class TestPair definition: {
+            public field first type: Integer.
+            public field second type: Integer.
+
+            method sumExplicit => Integer := self first + self second.
+        }.
+        TestPair(1. 2) sumExplicit
+        """)
+        self.assertTrue(value.isIntegerConstant())
+        self.assertEqual(3, value.value)
+
+    def testClassExplicitSetterAccessor(self):
+        value = self.evaluateTopLevelSourceString("""
+        class TestPair definition: {
+            public field first type: Integer.
+            public field second type: Integer.
+                                          
+            method setFirst: (firstValue: Integer) second: (secondValue: Integer) ::=> Void := {
+                self first: firstValue.
+                self second: secondValue.
+                void
+            }.
+
+            method sumExplicit => Integer := self first + self second.
+        }.
+        TestPair(1. 2) setFirst: 5 second: 42; sumExplicit
+        """)
+        self.assertTrue(value.isIntegerConstant())
+        self.assertEqual(47, value.value)
 
 if __name__ == '__main__':
     unittest.main()

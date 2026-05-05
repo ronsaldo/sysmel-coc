@@ -189,6 +189,9 @@ class HIRValue(ABC):
     def isEnumConstant(self):
         return False
 
+    def isObjectValue(self):
+        return False
+
     def isStructValue(self):
         return False
 
@@ -672,7 +675,7 @@ class HIRBehavior(HIRNominalType):
     def getInstanceAlignment(self):
         self.ensureLayout()
         return self.instanceAlignment
-
+    
 class HIRClass(HIRBehavior):
     def __init__(self, name, metaclass, coreTypes, sourcePosition=None):
         super().__init__(name, coreTypes, sourcePosition)
@@ -680,6 +683,28 @@ class HIRClass(HIRBehavior):
 
     def isClassType(self):
         return True
+
+    def analyzeAndBuildApplicationNode(self, buildPass, node: ParseTreeApplicationNode, functional):
+        self.ensureLayout()
+        if len(node.arguments) > len(self.allFields):
+            raise RuntimeError("%s: class construction can have at most %d arguments." %(str(node.sourcePosition), len(self.fields)))
+
+        assert False
+    
+    def analyzeAndEvaluateApplicationNode(self, evaluationPass, node: ParseTreeApplicationNode, functional):
+        self.ensureLayout()
+        if len(node.arguments) > len(self.allFields):
+            raise RuntimeError("%s: class construction can have at most %d arguments." %(str(node.sourcePosition), len(self.fields)))
+
+        objectFields = list(map(lambda f: f.type.getDefaultValue(), self.allFields))
+        for i in range(len(node.arguments)):
+            element = evaluationPass.visitNodeWithExpectedType(node.arguments[i], self.fields[i].type)
+            objectFields[i] = element
+
+        objectValue = HIRObjectValue(self, objectFields, node.sourcePosition)
+        if self.lookupSelector('initialize'):
+            objectValue.performWithArguments('initialize', [], node.sourcePosition)
+        return objectValue
     
     def __str__(self):
         if self.name is None:
@@ -769,6 +794,10 @@ class HIRStructType(HIRNominalType):
         self.valueSize = alignedTo(self.valueSize, self.valueAlignment)
 
     def analyzeAndBuildApplicationNode(self, buildPass, node: ParseTreeApplicationNode, functional):
+        self.ensureLayout()
+        if len(node.arguments) > len(self.fields):
+            raise RuntimeError("%s: struct construction can have at most %d arguments." %(str(node.sourcePosition), len(self.fields)))
+
         assert False
     
     def analyzeAndEvaluateApplicationNode(self, evaluationPass, node: ParseTreeApplicationNode, functional):
@@ -1201,6 +1230,27 @@ class HIRConstantTuple(HIRConstant):
 
     def __str__(self):
         return 'tupe(%s)' % (str(self.elements))
+
+class HIRObjectValue(HIRValue):
+    def __init__(self, type, fields, sourcePosition):
+        super().__init__(sourcePosition)
+        self.type = type
+        self.fields = fields
+
+    def getType(self):
+        return self.type
+
+    def isObjectValue(self):
+        return True
+    
+    def storeValueAtIndex(self, valueToStore, index):
+        assert index < len(self.fields)
+        self.fields[index] = valueToStore
+
+    def loadValueAtIndex(self, index):
+        assert index < len(self.fields)
+        return self.fields[index]
+
 class HIRStructValue(HIRValue):
     def __init__(self, type, fields, sourcePosition):
         super().__init__(sourcePosition)
