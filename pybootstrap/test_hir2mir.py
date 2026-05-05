@@ -13,8 +13,7 @@ class HIR2MIRTest(unittest.TestCase):
         self.context.currentPackage = self.package
 
         self.mirContext = MirContext()
-        self.mirPackage = MirPackage(self.mirContext)
-        self.mirPackage.name = "Test"
+        self.mirPackage = None
 
         return super().setUp()
     
@@ -34,7 +33,8 @@ class HIR2MIRTest(unittest.TestCase):
     
     def compilePackageToMir(self):
         self.context.finishPendingAnalysis()
-        return HirPackage2Mir(self.mirContext).translateHirPackage2Mir(self.package, self.mirPackage)
+        self.mirPackage = HirPackage2Mir(self.context.coreTypes, self.mirContext).translateHirPackage2Mir(self.package, )
+        return self.mirPackage
     
     def testEmpty(self):
         self.evaluateTopLevelSourceString('')

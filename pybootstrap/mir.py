@@ -94,29 +94,6 @@ class MirPackage:
         self.elementTable.append(element)
         element.module = self
 
-    def getOrCreateRuntimePrimitiveNamed(self, primitiveRuntimeName):
-        if primitiveRuntimeName in self.translatedPrimitiveMap:
-            return self.translatedPrimitiveMap[primitiveRuntimeName]
-
-        primitive = MirImportedFunction(primitiveRuntimeName)
-        primitive.implementation = self.context.getRuntimePrimitiveImplementationOrNone(primitiveRuntimeName)
-        self.translatedPrimitiveMap[primitiveRuntimeName] = primitive
-        return primitive
-
-    def getOrCreateMirFunctionForHir(self, hirFunction):
-        from hir2mir import Hir2Mir
-        if hirFunction in self.translatedFunctionMap:
-            return self.translatedFunctionMap[hirFunction]
-
-        mirFunction = MirFunction(hirFunction.name)
-        mirFunction.module = self
-        mirFunction.sourceFunction = hirFunction
-        self.translatedFunctionMap[hirFunction] = mirFunction
-
-        Hir2Mir(self.context, self).translateHirFunction2MirFunction(hirFunction, mirFunction)
-
-        return mirFunction
-
     def dumpToConsole(self):
         for element in self.elementTable:
             element.dumpToConsole()

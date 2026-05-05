@@ -66,7 +66,7 @@ class HIRVisitor(ABC):
     def visitReferenceType(self, type):
         return self.visitPointerLikeType(type)
 
-    def visitMutabletypeBoxType(self, type):
+    def visitMutableValueBoxType(self, type):
         return self.visitDerivedType(type)
 
     def visitSimpleFunctionType(self, type):
@@ -535,6 +535,7 @@ class HIRNominalType(HIRType):
         super().__init__(coreTypes, sourcePosition)
         self.name = name
         self.methodDictionary = {}
+        self.children = []
         self.defaultValue = None
         self.pendingDefinitionBodies = []
 
@@ -567,6 +568,8 @@ class HIRNominalType(HIRType):
     
     def withSelectorAddMethod(self, selector, method):
         self.methodDictionary[selector] = method
+        self.children.append(method)
+        method.addedToOwner(self)
 
     def lookupSelector(self, selector):
         if selector in self.methodDictionary:
@@ -685,6 +688,9 @@ class HIRUniverseType(HIRType):
 
         return self.level == other.level
     
+    def __hash__(self):
+        return hash(self.level)
+
     def __str__(self):
         return self.name
 
@@ -1717,9 +1723,14 @@ class HIRPrimitiveMacro(HIRConstant):
         self.name = name
         self.type = type
         self.primitiveFunction = primitiveFunction
+        self.owner = None
 
     def accept(self, visitor: HIRVisitor):
         return visitor.visitPrimitiveMacro(self)
+
+    def addedToOwner(self, owner):
+        assert self.owner is None
+        self.owner = owner
 
     def getType(self):
         return self.type
@@ -1754,9 +1765,14 @@ class HIRPrimitiveFunction(HIRConstant):
         self.primitiveFunction = primitiveFunction
         self.isCompileTime = isCompileTime
         self.isPure = isPure
+        self.owner = None
 
     def accept(self, visitor: HIRVisitor):
         return visitor.visitPrimitiveFunction(self)
+
+    def addedToOwner(self, owner):
+        assert self.owner is None
+        self.owner = owner
 
     def getType(self):
         return self.type
@@ -1812,9 +1828,14 @@ class HIRFunction(HIRConstant):
         self.definitionContext: HIRContext = None
         self.definitionEnvironment: HIRContext = None
         self.enumeratedInstructions = None
+        self.owner = None
 
     def accept(self, visitor: HIRVisitor):
         return visitor.visitFunction(self)
+
+    def addedToOwner(self, owner):
+        assert self.owner is None
+        self.owner = owner
 
     def getType(self):
         return self.simplifiedType
