@@ -11,6 +11,11 @@ class HIR2MIRTest(unittest.TestCase):
         self.package = HIRPackage('Test')
         self.package.usePackage(self.context.corePackage)
         self.context.currentPackage = self.package
+
+        self.mirContext = MirContext()
+        self.mirPackage = MirPackage(self.mirContext)
+        self.mirPackage.name = "Test"
+
         return super().setUp()
     
     def tearDown(self):
@@ -28,19 +33,20 @@ class HIR2MIRTest(unittest.TestCase):
         return AnalysisAndEvaluationPass(evaluationContext).visitDecayedNode(ast)
     
     def compilePackageToMir(self):
-        print(self.context.currentPackage.children)
+        self.context.finishPendingAnalysis()
+        return HirPackage2Mir(self.mirContext).translateHirPackage2Mir(self.package, self.mirPackage)
     
     def testEmpty(self):
-        topLevelResult = self.evaluateTopLevelSourceString('')
-        self.assertTrue(topLevelResult.isVoidConstant())
-
+        self.evaluateTopLevelSourceString('')
         mirPackage = self.compilePackageToMir()
+        self.assertTrue(len(mirPackage.elementTable) == 0)
 
     def testFunction(self):
         topLevelResult = self.evaluateTopLevelSourceString('public function add(x: Integer. y: Integer) => Integer := x + y')
         self.assertTrue(topLevelResult.isFunction())
 
         mirPackage = self.compilePackageToMir()
+        self.assertTrue(len(mirPackage.elementTable) == 1)
 
 if __name__ == '__main__':
     unittest.main()
