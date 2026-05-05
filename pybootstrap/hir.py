@@ -798,7 +798,13 @@ class HIRStructType(HIRNominalType):
         if len(node.arguments) > len(self.fields):
             raise RuntimeError("%s: struct construction can have at most %d arguments." %(str(node.sourcePosition), len(self.fields)))
 
-        assert False
+        structElements = list(map(lambda f: f.type.getDefaultValue(), self.fields))
+        structValue = buildPass.builder.makeStruct(self, structElements, node.sourcePosition)
+        for i in range(len(node.arguments)):
+            element = buildPass.visitNodeWithExpectedType(node.arguments[i], self.fields[i].type)
+            buildPass.builder.setAggregateField(structValue, element, self.fields[i], node.sourcePosition)
+
+        return structValue
     
     def analyzeAndEvaluateApplicationNode(self, evaluationPass, node: ParseTreeApplicationNode, functional):
         self.ensureLayout()
@@ -1888,6 +1894,21 @@ class HIRExtractFieldReferenceInstruction(HIRInstruction):
     def fullPrintString(self):
         return "%s := extractFieldReference %s.%s :: %s" % (str(self), str(self.aggregate), str(self.field), str(self.type))
 
+class HIRSetAggregateFieldInstruction(HIRInstruction):
+    def __init__(self, type, aggregate, value, field, name=None, sourcePosition=None):
+        super().__init__(type, name, sourcePosition)
+        self.aggregate = aggregate
+        self.value = value
+        self.field = field
+
+    def evaluateInActivationContext(self, context):
+        aggregateValue = self.aggregate.getValueInEvaluationContext(context)
+        valueValue = self.value.getValueInEvaluationContext(context)
+        aggregateValue.fields[self.field.getValidIndex()] = valueValue
+
+    def fullPrintString(self):
+        return "setAggregateField %s.%s to %s:: %s" % (str(self.aggregate), str(self.field), str(self.value), str(self.type))
+
 class HIRDynamicUnboxInstruction(HIRInstruction):
     def __init__(self, boxedValue, type, name=None, sourcePosition=None):
         super().__init__(type, name, sourcePosition)
@@ -1922,7 +1943,7 @@ class HIRMakeAssociationInstruction(HIRInstruction):
             return HIRConstantAssociation(self.key, self.value, self.type, self.sourcePosition)
         return self
 
-class HIRMakeClosure(HIRInstruction):
+class HIRMakeClosureInstruction(HIRInstruction):
     def __init__(self, function, captureList, type, name=None, sourcePosition=None):
         super().__init__(type, name, sourcePosition)
         self.function = function
@@ -1937,7 +1958,29 @@ class HIRMakeClosure(HIRInstruction):
     def fullPrintString(self):
         return "%s := makeClosure %s, %s :: %s" % (str(self), str(self.function), str(self.captureList), str(self.type))
 
-class HIRMakeTuple(HIRInstruction):
+class HIRMakeObjectInstruction(HIRInstruction):
+    def __init__(self, type, defaultElements, name=None, sourcePosition=None):
+        super().__init__(type, name, sourcePosition)
+        self.defaultElements = defaultElements
+
+    def evaluateInActivationContext(self, context):
+        context.setCurrentInstructionValue(HIRObjectValue(self.type, list(self.defaultElements), self.sourcePosition))
+
+    def fullPrintString(self):
+        return "%s := makeObject %s :: %s" % (str(self), str(self.defaultElements), str(self.type))
+
+class HIRMakeStructInstruction(HIRInstruction):
+    def __init__(self, type, defaultElements, name=None, sourcePosition=None):
+        super().__init__(type, name, sourcePosition)
+        self.defaultElements = defaultElements
+
+    def evaluateInActivationContext(self, context):
+        context.setCurrentInstructionValue(HIRStructValue(self.type, list(self.defaultElements), self.sourcePosition))
+
+    def fullPrintString(self):
+        return "%s := makeStruct %s :: %s" % (str(self), str(self.defaultElements), str(self.type))
+    
+class HIRMakeTupleInstruction(HIRInstruction):
     def __init__(self, elements: list[HIRValue], type, name=None, sourcePosition=None):
         super().__init__(type, name, sourcePosition)
         self.elements = elements
@@ -3005,11 +3048,17 @@ class HIRBuilder:
         instruction = HIREnumUnboxValueInstruction(enumValue, type, None, sourcePosition)
         self.addInstruction(instruction)
         return instruction
+
     def extractFieldReference(self, referenceType, aggregate, field, sourcePosition):
         instruction = HIRExtractFieldReferenceInstruction(referenceType, aggregate, field, None, sourcePosition)
         self.addInstruction(instruction)
         return instruction
 
+    def setAggregateField(self, aggregate, value, field, sourcePosition: SourcePosition = None):
+        instruction = HIRSetAggregateFieldInstruction(self.context.coreTypes.voidType, aggregate, value, field, sourcePosition)
+        self.addInstruction(instruction)
+        return instruction
+    
     def load(self, type, storage, sourcePosition):
         instruction = HIRLoadInstruction(type, storage, None, sourcePosition)
         self.addInstruction(instruction)
@@ -3028,12 +3077,22 @@ class HIRBuilder:
         return simplified
 
     def makeClosure(self, function, captureList, type, sourcePosition):
-        instruction = HIRMakeClosure(function, captureList, type, None, sourcePosition)
+        instruction = HIRMakeClosureInstruction(function, captureList, type, None, sourcePosition)
         self.addInstruction(instruction)
         return instruction
-    
+
+    def makeObject(self, type, defaultElements, sourcePosition):
+        instruction = HIRMakeObjectInstruction(type, defaultElements, None, sourcePosition)
+        self.addInstruction(instruction)
+        return instruction
+
+    def makeStruct(self, type, defaultElements, sourcePosition):
+        instruction = HIRMakeStructInstruction(type, defaultElements, None, sourcePosition)
+        self.addInstruction(instruction)
+        return instruction
+
     def makeTuple(self, elements, type, sourcePosition):
-        instruction = HIRMakeTuple(elements, type, None, sourcePosition)
+        instruction = HIRMakeTupleInstruction(elements, type, None, sourcePosition)
         simplified = instruction.simplifyWithBuilder(self)
         if instruction == simplified:
             self.addInstruction(instruction)

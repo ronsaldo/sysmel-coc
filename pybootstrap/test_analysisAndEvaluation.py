@@ -677,5 +677,35 @@ class TestAnalysisAndEvaluation(unittest.TestCase):
         self.assertTrue(value.isIntegerConstant())
         self.assertEqual(47, value.value)
 
+    def testMakeStruct(self):
+        value = self.evaluateTopLevelSourceString("""
+        struct TestPair definition: {
+            public field first type: Integer.
+            public field second type: Integer.
+        }.
+                                          
+        { :: TestPair | TestPair()}()
+        """)
+        self.assertTrue(value.isStructValue())
+        self.assertEqual(2, len(value.fields))
+
+    def testMakeStruct2(self):
+        value = self.evaluateTopLevelSourceString("""
+        struct TestPair definition: {
+            public field first type: Integer.
+            public field second type: Integer.
+        }.
+                                          
+        { :: TestPair | TestPair(1. 2)}()
+        """)
+        self.assertTrue(value.isStructValue())
+        self.assertEqual(2, len(value.fields))
+
+        self.assertTrue(value.fields[0].isIntegerConstant())
+        self.assertEqual(1, value.fields[0].value)
+
+        self.assertTrue(value.fields[1].isIntegerConstant())
+        self.assertEqual(2, value.fields[1].value)
+
 if __name__ == '__main__':
     unittest.main()
