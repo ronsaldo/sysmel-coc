@@ -9,6 +9,237 @@ class HIRVisitor(ABC):
     def visitValue(self, value):
         pass
 
+    def visitType(self, value):
+        pass
+
+    def visitNominalType(self, type):
+        return self.visitType(type)
+
+    def visitDynamicType(self, type):
+        return self.visitType(type)
+
+    def visitVoidType(self, type):
+        return self.visitType(type)
+
+    def visitControlFlowEscapeType(self, type):
+        return self.visitType(type)
+
+    def visitUniverseType(self, type):
+        return self.visitType(type)
+
+    def visitAssociationType(self, type):
+        return self.visitType(type)
+
+    def visitDictionaryType(self, type):
+        return self.visitType(type)
+
+    def visitEnumType(self, type):
+        return self.visitType(type)
+
+    def visitField(self, field):
+        pass
+
+    def visitBehavior(self, type):
+        pass
+
+    def visitClass(self, type):
+        return self.visitBehavior(type)
+
+    def visitMetaclass(self, type):
+        return self.visitBehavior(type)
+
+    def visitStructType(self, type):
+        return self.visitType(type)
+
+    def visitTupleType(self, type):
+        return self.visitType(type)
+
+    def visitDerivedType(self, type):
+        return self.visitType(type)
+
+    def visitPointerLikeType(self, type):
+        return self.visitDerivedType(type)
+
+    def visitPointerType(self, type):
+        return self.visitPointerLikeType(type)
+
+    def visitReferenceType(self, type):
+        return self.visitPointerLikeType(type)
+
+    def visitMutabletypeBoxType(self, type):
+        return self.visitDerivedType(type)
+
+    def visitSimpleFunctionType(self, type):
+        return self.visitType(type)
+    
+    def visitDependentFunctionType(self, type):
+        return self.visitType(type)
+
+    def visitConstant(self, value):
+        return self.visitValue(value)
+
+    def visitConstantLiteralValue(self, value):
+        return self.visitConstant(value)
+
+    def visitConstantLiteralIntegerValue(self, value):
+        return self.visitConstantLiteralValue(value)
+
+    def visitConstantLiteralFloatValue(self, value):
+        return self.visitConstantLiteralValue(value)
+
+    def visitConstantLiteralBooleanValue(self, value):
+        return self.visitConstantLiteralValue(value)
+
+    def visitConstantLiteralCharacterValue(self, value):
+        return self.visitConstantLiteralValue(value)
+
+    def visitConstantLiteralStringValue(self, value):
+        return self.visitConstantLiteralValue(value)
+
+    def visitConstantLiteralSymbolValue(self, value):
+        return self.visitConstantLiteralValue(value)
+
+    def visitConstantLiteralVoidValue(self, value):
+        return self.visitConstantLiteralValue(value)
+
+    def visitConstantLiteralNilValue(self, value):
+        return self.visitConstantLiteralValue(value)
+
+    def visitConstantLiteralParseTree(self, value):
+        return self.visitConstantLiteralValue(value)
+
+    def visitConstantAssociation(self, value):
+        return self.visitConstant(value)
+
+    def visitConstantDictionary(self, value):
+        return self.visitConstant(value)
+
+    def visitConstantEnum(self, value):
+        return self.visitConstant(value)
+
+    def visitConstantTuple(self, value):
+        return self.visitConstant(value)
+
+    def visitObjectValue(self, value):
+        return self.visitValue(value)
+
+    def visitStructValue(self, value):
+        return self.visitValue(value)
+
+    def visitMutableValueBox(self, value):
+        return self.visitValue(value)
+
+    def visitPointerLikeValue(self, value):
+        return self.visitConstant(value)
+
+    def visitPointerValue(self, value):
+        return self.visitPointerLikeValue(value)
+
+    def visitReferenceValue(self, value):
+        return self.visitPointerLikeValue(value)
+
+    def visitMacroContext(self, value):
+        return self.visitValue(value)
+
+    def visitPrimitiveMacro(self, value):
+        return self.visitConstant(value)
+
+    def visitPrimitiveFunction(self, value):
+        return self.visitConstant(value)
+
+    def visitFunction(self, value):
+        return self.visitConstant(value)
+
+    def visitFunctionClosure(self, value):
+        return self.visitConstant(value)
+
+    def visitFunctionLocalValue(self, value):
+        return self.visitValue(value)
+
+    def visitArgument(self, value):
+        return self.visitFunctionLocalValue(value)
+
+    def visitCapture(self, value):
+        return self.visitFunctionLocalValue(value)
+
+    def visitBasicBlock(self, value):
+        return self.visitFunctionLocalValue(value)
+    
+    def visitInstruction(self, instruction):
+        return self.visitFunctionLocalValue(instruction)
+
+    def visitAllocaInstruction(self, instruction):
+        return self.visitInstruction(instruction)
+
+    def visitAssertInstruction(self, instruction):
+        return self.visitInstruction(instruction)
+
+    def visitRuntimeErrorInstruction(self, instruction):
+        return self.visitInstruction(instruction)
+
+    def visitLoadInstruction(self, instruction):
+        return self.visitInstruction(instruction)
+
+    def visitStoreInstruction(self, instruction):
+        return self.visitInstruction(instruction)
+
+    def visitBranchInstruction(self, instruction):
+        return self.visitInstruction(instruction)
+
+    def visitConditionalBranchInstruction(self, instruction):
+        return self.visitInstruction(instruction)
+
+    def visitCallInstruction(self, instruction):
+        return self.visitInstruction(instruction)
+
+    def visitSendInstruction(self, instruction):
+        return self.visitInstruction(instruction)
+
+    def visitEnumBoxValueInstruction(self, instruction):
+        return self.visitInstruction(instruction)
+
+    def visitEnumUnboxValueInstruction(self, instruction):
+        return self.visitInstruction(instruction)
+
+    def visitExtractFieldReferenceInstruction(self, instruction):
+        return self.visitInstruction(instruction)
+
+    def visitSetAggregateFieldInstruction(self, instruction):
+        return self.visitInstruction(instruction)
+
+    def visitDynamicUnboxInstruction(self, instruction):
+        return self.visitInstruction(instruction)
+
+    def visitDynamicUnboxInstruction(self, instruction):
+        return self.visitInstruction(instruction)
+
+    def visitMakeAssociationInstructino(self, instruction):
+        return self.visitInstruction(instruction)
+
+    def visitMakeClosureInstructino(self, instruction):
+        return self.visitInstruction(instruction)
+
+    def visitMakeObjectInstructino(self, instruction):
+        return self.visitInstruction(instruction)
+
+    def visitMakeStructInstructino(self, instruction):
+        return self.visitInstruction(instruction)
+
+    def visitPhiInstruction(self, instruction):
+        return self.visitInstruction(instruction)
+
+    def visitPhiSourceInstruction(self, instruction):
+        return self.visitInstruction(instruction)
+
+    def visitReturnInstruction(self, instruction):
+        return self.visitInstruction(instruction)
+
+    def visitUnreachableInstruction(self, instruction):
+        return self.visitInstruction(instruction)
+
+    def visitPackage(self, package):
+        return self.visitValue(package)
+
 class HIRValue(ABC):
     def __init__(self, sourcePosition: SourcePosition):
         self.sourcePosition = sourcePosition
@@ -144,6 +375,12 @@ class HIRValue(ABC):
     def isPureFunction(self):
         return False
 
+    def isPrimitiveFunction(self):
+        return False
+
+    def isFunction(self):
+        return False
+
     def isConstantValue(self):
         return False
 
@@ -215,6 +452,9 @@ class HIRType(HIRValue):
     def __init__(self, coreTypes, sourcePosition):
         super().__init__(sourcePosition)
         self.coreTypes = coreTypes
+
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitType(self)
 
     def analyzeAndBuildApplicationNode(self, buildPass, node: ParseTreeApplicationNode, functional):
         raise RuntimeError(str(node.sourcePosition) +  ": cannot analyze and build non-functional value.")
@@ -298,6 +538,9 @@ class HIRNominalType(HIRType):
         self.defaultValue = None
         self.pendingDefinitionBodies = []
 
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitNominalType(self)
+    
     def addPendingDefinitionBody(self, evaluationContext, definitionBody):
         self.pendingDefinitionBodies.append(PendingDefinitionBody(evaluationContext, definitionBody))
 
@@ -335,6 +578,9 @@ class HIRDynamicType(HIRType):
         super().__init__(coreTypes, sourcePosition)
         self.name = name
 
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitDynamicType(self)
+
     def getName(self):
         return self.name
 
@@ -365,6 +611,9 @@ class HIRVoidType(HIRType):
         super().__init__(coreTypes, sourcePosition)
         self.name = name
 
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitVoidType(self)
+
     def getName(self):
         return self.name
 
@@ -378,6 +627,9 @@ class HIRControlFlowEscapeType(HIRType):
     def __init__(self, name: str, coreTypes, sourcePosition = None):
         super().__init__(coreTypes, sourcePosition)
         self.name = name
+
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitVoidType(self)
 
     def getName(self):
         return self.name
@@ -393,6 +645,9 @@ class HIRUniverseType(HIRType):
         super().__init__(coreTypes, None)
         self.level = level
         self.name = name
+
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitUniverseType(self)
 
     def getName(self):
         return self.name
@@ -439,6 +694,9 @@ class HIRAssociationType(HIRType):
         self.keyType = keyType
         self.valueType = valueType
 
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitAssociationType(self)
+
     def isAssociationType(self):
         return True
     
@@ -455,6 +713,9 @@ class HIRDictionaryType(HIRType):
     def __init__(self, associationType: HIRAssociationType, coreTypes, sourcePosition = None):
         super().__init__(coreTypes, sourcePosition)
         self.associationType = associationType
+
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitDictionaryType(self)
 
     def isDictionaryType(self):
         return True
@@ -475,6 +736,9 @@ class HIREnumType(HIRType):
         self.baseType = baseType
         self.values = []
         self.valueTable = {}
+
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitEnumType(self)
 
     def addElementAt(self, element, sourcePosition):
         if element.name in self.valueTable:
@@ -537,6 +801,9 @@ class HIRField(HIRValue):
         self.index = None
         self.owner = None
 
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitField(self)
+
     def getType(self):
         return self.coreTypes.fieldType
 
@@ -595,6 +862,9 @@ class HIRBehavior(HIRNominalType):
         self.instanceSize = None
         self.instanceAlignment = None
         self.totalFieldCount = None
+
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitBehavior(self)
 
     def isBehaviorType(self):
         return True
@@ -681,6 +951,9 @@ class HIRClass(HIRBehavior):
         super().__init__(name, coreTypes, sourcePosition)
         self.type = metaclass
 
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitClass(self)
+
     def isClassType(self):
         return True
 
@@ -726,6 +999,9 @@ class HIRMetaclass(HIRBehavior):
         super().__init__(None, coreTypes, sourcePosition)
         self.thisClass = None
 
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitMetaclass(self)
+
     def isMetaclassType(self):
         return True
 
@@ -740,6 +1016,9 @@ class HIRStructType(HIRNominalType):
         self.publicFields = {}
         self.valueSize = None
         self.valueAlignment = None
+
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitStructType(self)
 
     def isStructType(self):
         return True
@@ -836,6 +1115,9 @@ class HIRTupleType(HIRType):
         super().__init__(coreTypes, sourcePosition)
         self.elements = elements
 
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitTupleType(self)
+    
     def isTupleType(self):
         return True
 
@@ -862,6 +1144,9 @@ class HIRDerivedType(HIRType):
         super().__init__(coreTypes, sourcePosition)
         self.baseType = baseType
 
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitDerivedType(self)
+
     def isDerivedType(self):
         return True
 
@@ -872,14 +1157,23 @@ class HIRDerivedType(HIRType):
         return self.baseType == other.baseType
 
 class HIRPointerLikeType(HIRDerivedType):
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitPointerLikeType(self)
+
     def isPointerLikeType(self):
         return True
 
 class HIRPointerType(HIRPointerLikeType):
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitPointerType(self)
+
     def isPointerType(self):
         return True
 
 class HIRReferenceType(HIRPointerLikeType):
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitReferenceType(self)
+
     def isReferenceType(self):
         return True
 
@@ -893,6 +1187,9 @@ class HIRReferenceType(HIRPointerLikeType):
         return self.baseType.lookupSelector(selector)
 
 class HIRMutableValueBoxType(HIRPointerLikeType):
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitMutableValueBoxType(self)
+
     def isMutableValueBoxType(self):
         return True
 
@@ -901,6 +1198,9 @@ class HIRSimpleFunctionType(HIRType):
         super().__init__(coreTypes, sourcePosition)
         self.argumentTypes = argumentTypes
         self.resultType = resultType
+
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitSimpleFunctionType(self)
 
     def isSimpleFunctionType(self):
         return True
@@ -969,6 +1269,9 @@ class HIRDependentFunctionType(HIRType):
         self.arguments = arguments
         self.resultType = resultType
 
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitDependentFunctionType(self)
+
     def copyWithImplicitArgument(self, implicitArgument):
         return HIRDependentFunctionType(self.captures, [implicitArgument] + self.arguments, self.resultType, self.coreTypes, self.sourcePosition)
 
@@ -995,6 +1298,9 @@ class HIRConstant(HIRValue):
     def __init__(self, sourcePosition):
         super().__init__(sourcePosition)
 
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitConstant(self)
+
     def isConstantValue(self):
         return True
     
@@ -1006,6 +1312,9 @@ class HIRConstantLiteralValue(HIRConstant):
         super().__init__(sourcePosition)
         self.type = type
 
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitConstantLiteralValue(self)
+
     def getType(self):
         return self.type
 
@@ -1013,6 +1322,9 @@ class HIRConstantLiteralIntegerValue(HIRConstantLiteralValue):
     def __init__(self, value: int, type: HIRType, sourcePosition):
         super().__init__(type, sourcePosition)
         self.value = value
+
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitConstantLiteralIntegerValue(self)
 
     def __eq__(self, other):
         if not isinstance(other, self.__class__):
@@ -1037,6 +1349,9 @@ class HIRConstantLiteralFloatValue(HIRConstantLiteralValue):
         super().__init__(type, sourcePosition)
         self.value = value
     
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitConstantLiteralFloatValue(self)
+
     def __eq__(self, other):
         if not isinstance(other, self.__class__):
             return False
@@ -1053,6 +1368,9 @@ class HIRConstantLiteralBooleanValue(HIRConstantLiteralValue):
     def __init__(self, value: bool, type: HIRType, sourcePosition):
         super().__init__(type, sourcePosition)
         self.value = value
+
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitConstantLiteralBooleanValue(self)
 
     def __eq__(self, other):
         if not isinstance(other, self.__class__):
@@ -1074,6 +1392,9 @@ class HIRConstantLiteralCharacterValue(HIRConstantLiteralValue):
         super().__init__(type, sourcePosition)
         self.value = value
 
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitConstantLiteralCharacterValue(self)
+
     def __eq__(self, other):
         if not isinstance(other, self.__class__):
             return False
@@ -1090,6 +1411,9 @@ class HIRConstantLiteralStringValue(HIRConstantLiteralValue):
     def __init__(self, value: str, type: HIRType, sourcePosition):
         super().__init__(type, sourcePosition)
         self.value = value
+
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitConstantLiteralStringValue(self)
 
     def __eq__(self, other):
         if not isinstance(other, self.__class__):
@@ -1111,6 +1435,9 @@ class HIRConstantLiteralSymbolValue(HIRConstantLiteralValue):
         super().__init__(type, sourcePosition)
         self.value = value
 
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitConstantLiteralSymbolValue(self)
+
     def __eq__(self, other):
         if not isinstance(other, self.__class__):
             return False
@@ -1127,6 +1454,9 @@ class HIRConstantLiteralVoidValue(HIRConstantLiteralValue):
     def __init__(self, type: HIRType, sourcePosition):
         super().__init__(type, sourcePosition)
 
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitConstantLiteralVoidValue(self)
+
     def isVoidConstant(self):
         return True
 
@@ -1136,6 +1466,9 @@ class HIRConstantLiteralVoidValue(HIRConstantLiteralValue):
 class HIRConstantLiteralNilValue(HIRConstantLiteralValue):
     def __init__(self, type: HIRType, sourcePosition):
         super().__init__(type, sourcePosition)
+
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitConstantLiteralNilValue(self)
 
     def isNilConstant(self):
         return True
@@ -1147,6 +1480,9 @@ class HIRConstantLiteralParseTree(HIRConstantLiteralValue):
     def __init__(self, value: ParseTreeNode, type: HIRType, sourcePosition):
         super().__init__(type, sourcePosition)
         self.value = value
+
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitConstantLiteralParseTree(self)
 
     def __eq__(self, other):
         if not isinstance(other, self.__class__):
@@ -1166,6 +1502,9 @@ class HIRConstantAssociation(HIRConstant):
         self.key = key
         self.value = value
         self.type = type
+
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitConstantAssociation(self)
 
     def getType(self):
         return self.type
@@ -1187,6 +1526,9 @@ class HIRConstantDictionary(HIRConstant):
         super().__init__(sourcePosition)
         self.elements = elements
         self.type = type
+
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitConstantDictionary(self)
 
     def getType(self):
         return self.type
@@ -1210,6 +1552,9 @@ class HIRConstantEnum(HIRConstant):
         self.value = value
         self.type = type
 
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitConstantEnum(self)
+
     def getType(self):
         return self.type
 
@@ -1232,6 +1577,9 @@ class HIRConstantTuple(HIRConstant):
         self.elements = elements
         self.type = type
 
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitConstantTuple(self)
+
     def getType(self):
         return self.type
     
@@ -1253,6 +1601,9 @@ class HIRObjectValue(HIRValue):
         self.type = type
         self.fields = fields
 
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitObjectValue(self)
+
     def getType(self):
         return self.type
 
@@ -1272,6 +1623,9 @@ class HIRStructValue(HIRValue):
         super().__init__(sourcePosition)
         self.type = type
         self.fields = fields
+
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitStructValue(self)
 
     def getType(self):
         return self.type
@@ -1293,6 +1647,9 @@ class HIRMutableValueBox(HIRValue):
         self.type = type
         self.value = initialValue
 
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitMutableValueBox(self)
+
     def getType(self):
         return self.type
 
@@ -1304,12 +1661,15 @@ class HIRMutableValueBox(HIRValue):
         assert index == 0
         return self.value
     
-class HIRPointerLikeValue(HIRValue):
+class HIRPointerLikeValue(HIRConstant):
     def __init__(self, type, storage, index, sourcePosition):
         super().__init__(sourcePosition)
         self.type = type
         self.storage = storage
         self.index = index
+
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitPointerLikeValue(self)
 
     def getType(self):
         return self.type
@@ -1327,15 +1687,29 @@ class HIRPointerLikeValue(HIRValue):
         return self.type == other.type and self.storage == other.storage and self.index == other.index
     
 class HIRPointerValue(HIRPointerLikeValue):
-    pass
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitPointerValue(self)
+
+    def isPointerValue(self):
+        return True
 
 class HIRReferenceValue(HIRPointerLikeValue):
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitReferenceValue(self)
+
     def isReferenceValue(self):
         return True
 
-class HIRMacroContext:
-    def __init__(self, sourcePosition: SourcePosition):
-        self.sourcePosition = sourcePosition
+class HIRMacroContext(HIRConstant):
+    def __init__(self, coreType, sourcePosition):
+        super().__init__(sourcePosition)
+        self.coreTypes = coreType
+
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitMacroContext(self)
+
+    def getType(self):
+        self.coreTypes.macroContextType
 
 class HIRPrimitiveMacro(HIRConstant):
     def __init__(self, name: str, type, primitiveFunction, sourcePosition):
@@ -1344,28 +1718,31 @@ class HIRPrimitiveMacro(HIRConstant):
         self.type = type
         self.primitiveFunction = primitiveFunction
 
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitPrimitiveMacro(self)
+
     def getType(self):
         return self.type
 
     def analyzeAndEvaluateMessageSendNode(self, evaluator, node, receiver):
-        macroContext = HIRMacroContext(node.sourcePosition)
+        macroContext = HIRMacroContext(evaluator.evaluationContext.context.coreTypes, node.sourcePosition)
         macroArguments = [ParseTreeLiteralValueNode(node.sourcePosition, receiver)] + node.arguments
         expandedMacro = self.primitiveFunction(macroContext, *macroArguments)
         return evaluator.visitNode(expandedMacro)
 
     def analyzeAndBuildMessageSendNode(self, buildPass, node, receiver):
-        macroContext = HIRMacroContext(node.sourcePosition)
+        macroContext = HIRMacroContext(buildPass.builder.context.coreTypes, node.sourcePosition)
         macroArguments = [ParseTreeLiteralValueNode(node.sourcePosition, receiver)] + node.arguments
         expandedMacro = self.primitiveFunction(macroContext, *macroArguments)
         return buildPass.visitNode(expandedMacro)
 
     def analyzeAndBuildApplicationNode(self, buildPass, node: ParseTreeApplicationNode, functional):
-        macroContext = HIRMacroContext(node.sourcePosition)
+        macroContext = HIRMacroContext(buildPass.builder.context.coreTypes, node.sourcePosition)
         expandedMacro = self.primitiveFunction(macroContext, *node.arguments)
         return buildPass.visitNode(expandedMacro)
 
     def analyzeAndEvaluateApplicationNode(self, evaluationPass, node: ParseTreeApplicationNode, functional):
-        macroContext = HIRMacroContext(node.sourcePosition)
+        macroContext = HIRMacroContext(evaluationPass.evaluationContext.context.coreTypes, node.sourcePosition)
         expandedMacro = self.primitiveFunction(macroContext, *node.arguments)
         return evaluationPass.visitNode(expandedMacro)
 
@@ -1378,6 +1755,9 @@ class HIRPrimitiveFunction(HIRConstant):
         self.isCompileTime = isCompileTime
         self.isPure = isPure
 
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitPrimitiveFunction(self)
+
     def getType(self):
         return self.type
 
@@ -1386,6 +1766,9 @@ class HIRPrimitiveFunction(HIRConstant):
 
     def isPureFunction(self):
         return self.isPure
+    
+    def isPrimitiveFunction(self):
+        return True
 
     def analyzeAndBuildApplicationNode(self, buildPass, node: ParseTreeApplicationNode, functional):
         typecheckedArguments, resultType = self.type.analyzeBuildAndTypecheckArguments(buildPass, node.arguments, node.sourcePosition)
@@ -1430,8 +1813,14 @@ class HIRFunction(HIRConstant):
         self.definitionEnvironment: HIRContext = None
         self.enumeratedInstructions = None
 
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitFunction(self)
+
     def getType(self):
         return self.simplifiedType
+
+    def isFunction(self):
+        return True
     
     def addBasicBlock(self, basicBlock):
         if self.lastBasicBlock is None:
@@ -1565,7 +1954,10 @@ class HIRFunctionClosure(HIRConstant):
         super().__init__(sourcePosition)
         self.function = function
         self.captureVector = captureVector
-    
+
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitFunctionClosure(self)
+
     def getType(self):
         return self.function.getType()
     
@@ -1622,6 +2014,9 @@ class HIRFunctionLocalValue(HIRValue):
         self.name = name
         self.index = -1
 
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitFunctionLocalValue(self)
+
     def __repr__(self):
         return '%d|%s' %(self.index, str(self.name))
 
@@ -1640,6 +2035,9 @@ class HIRArgument(HIRFunctionLocalValue):
         self.hasDependentUser = False
         self.isSelf = False
 
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitArgument(self)
+
     def fullPrintString(self) -> str:
         return '%d|%s := argument' %(self.index, str(self.name))
 
@@ -1656,6 +2054,9 @@ class HIRCapture(HIRFunctionLocalValue):
         super().__init__(type, name, sourcePosition)
         self.sourceValue = sourceValue
 
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitCapture(self)
+
     def fullPrintString(self) -> str:
         return '%d|%s := capture source %s' %(self.index, str(self.name), self.sourceValue)
 
@@ -1670,6 +2071,9 @@ class HIRBasicBlock(HIRFunctionLocalValue):
         self.nextBlock = None
         self.firstInstruction = None
         self.lastInstruction = None
+
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitBasicBlock(self)
 
     def addInstruction(self, instruction):
         if self.lastInstruction is None:
@@ -1703,6 +2107,9 @@ class HIRInstruction(HIRFunctionLocalValue):
         self.previousInstruction = None
         self.nextInstruction = None
 
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitInstruction(self)
+
     def isTerminator(self):
         return False
 
@@ -1711,6 +2118,9 @@ class HIRAllocaInstruction(HIRInstruction):
         super().__init__(referenceType, name, sourcePosition)
         self.valueType = valueType
         self.valueBoxType = valueBoxType
+
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitAllocaInstruction(self)
 
     def fullPrintString(self) -> str:
         return '%s := alloca %s' % (str(self), str(self.valueType))
@@ -1730,6 +2140,9 @@ class HIRAssertInstruction(HIRInstruction):
         self.condition = condition
         self.errorMessage = errorMessage
 
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitAssertInstruction(self)
+
     def fullPrintString(self) -> str:
         return 'assert %s : %s' % (str(self.condition), str(self.errorMessage))
 
@@ -1744,6 +2157,9 @@ class HIRRuntimeErrorInstruction(HIRInstruction):
         super().__init__(type, name, sourcePosition)
         self.errorMessage = errorMessage
 
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitRuntimeErrorInstruction(self)
+
     def fullPrintString(self) -> str:
         return 'runtimeError %s' % str(self.errorMessage)
 
@@ -1756,6 +2172,9 @@ class HIRLoadInstruction(HIRInstruction):
     def __init__(self, type, storage, name=None, sourcePosition=None):
         super().__init__(type, name, sourcePosition)
         self.storage = storage
+
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitLoadInstruction(self)
 
     def fullPrintString(self) -> str:
         return '%s := load %s' % (str(self), str(self.storage))
@@ -1770,6 +2189,9 @@ class HIRStoreInstruction(HIRInstruction):
         self.storage = storage
         self.valueToStore = valueToStore
 
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitStoreInstruction(self)
+
     def fullPrintString(self) -> str:
             return 'store %s in %s' % (str(self.valueToStore), str(self.storage))
 
@@ -1782,6 +2204,9 @@ class HIRBranchInstruction(HIRInstruction):
     def __init__(self, destination: HIRBasicBlock, type, name=None, sourcePosition=None):
         super().__init__(type, name, sourcePosition)
         self.destination = destination
+
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitBranchInstruction(self)
 
     def isTerminator(self):
         return True
@@ -1799,6 +2224,9 @@ class HIRConditionalBranchInstruction(HIRInstruction):
         self.trueDestination = trueDestination
         self.falseDestination = falseDestination
     
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitConditionalBranchInstruction(self)
+
     def isTerminator(self):
         return True
 
@@ -1817,6 +2245,9 @@ class HIRCallInstruction(HIRInstruction):
         super().__init__(type, name, sourcePosition)
         self.functional = functional
         self.arguments = arguments
+
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitCallInstruction(self)
 
     def fullPrintString(self):
         return "%s := call %s with %s :: %s" % (str(self), str(self.functional), str(self.arguments), str(self.type))
@@ -1851,6 +2282,9 @@ class HIRSendInstruction(HIRInstruction):
         self.selector = selector
         self.arguments = arguments
 
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitSendInstruction(self)
+
     def fullPrintString(self):
         return "%s := send %s to %s with: %s :: %s" % (str(self), str(self.selector), str(self.receiver), str(self.arguments), str(self.type))
 
@@ -1866,6 +2300,9 @@ class HIREnumBoxValueInstruction(HIRInstruction):
         super().__init__(type, name, sourcePosition)
         self.value = value
 
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitEnumBoxValueInstruction(self)
+
     def evaluateInActivationContext(self, context):
         value = self.value.getValueInEvaluationContext(context)
         context.setCurrentInstructionValue(HIRConstantEnum(None, value, self.type, self.sourcePosition))
@@ -1877,6 +2314,9 @@ class HIREnumUnboxValueInstruction(HIRInstruction):
     def __init__(self, enumValue, type, name=None, sourcePosition=None):
         super().__init__(type, name, sourcePosition)
         self.enumValue = enumValue
+
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitEnumUnboxValueInstruction(self)
 
     def evaluateInActivationContext(self, context):
         enumValue = self.enumValue.getValueInEvaluationContext(context)
@@ -1890,6 +2330,9 @@ class HIRExtractFieldReferenceInstruction(HIRInstruction):
         super().__init__(type, name, sourcePosition)
         self.aggregate = aggregate
         self.field = field
+
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitExtractFieldReferenceInstruction(self)
 
     def evaluateInActivationContext(self, context):
         aggregateValue = self.aggregate.getValueInEvaluationContext(context)
@@ -1911,6 +2354,9 @@ class HIRSetAggregateFieldInstruction(HIRInstruction):
         self.value = value
         self.field = field
 
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitSetAggregateFieldInstruction(self)
+
     def evaluateInActivationContext(self, context):
         aggregateValue = self.aggregate.getValueInEvaluationContext(context)
         valueValue = self.value.getValueInEvaluationContext(context)
@@ -1923,6 +2369,9 @@ class HIRDynamicUnboxInstruction(HIRInstruction):
     def __init__(self, boxedValue, type, name=None, sourcePosition=None):
         super().__init__(type, name, sourcePosition)
         self.boxedValue = boxedValue
+
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitDynamicUnboxInstruction(self)
 
     def evaluateInActivationContext(self, context):
         boxedValue = self.boxedValue.getValueInEvaluationContext(context)
@@ -1938,6 +2387,9 @@ class HIRMakeAssociationInstruction(HIRInstruction):
         super().__init__(type, name, sourcePosition)
         self.key = key
         self.value = value
+
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitMakeAssociationInstructino(self)
 
     def evaluateInActivationContext(self, context):
         key = self.key.getValueInEvaluationContext(context)
@@ -1959,6 +2411,9 @@ class HIRMakeClosureInstruction(HIRInstruction):
         self.function = function
         self.captureList = captureList
 
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitMakeClosureInstructino(self)
+
     def evaluateInActivationContext(self, context):
         functionValue = self.function.getValueInEvaluationContext(context)
         captureVector = list(map(lambda x: x.getValueInEvaluationContext(context), self.captureList))
@@ -1973,6 +2428,9 @@ class HIRMakeObjectInstruction(HIRInstruction):
         super().__init__(type, name, sourcePosition)
         self.defaultElements = defaultElements
 
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitMakeObjectInstructino(self)
+
     def evaluateInActivationContext(self, context):
         context.setCurrentInstructionValue(HIRObjectValue(self.type, list(self.defaultElements), self.sourcePosition))
 
@@ -1984,6 +2442,9 @@ class HIRMakeStructInstruction(HIRInstruction):
         super().__init__(type, name, sourcePosition)
         self.defaultElements = defaultElements
 
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitMakeStructInstructino(self)
+
     def evaluateInActivationContext(self, context):
         context.setCurrentInstructionValue(HIRStructValue(self.type, list(self.defaultElements), self.sourcePosition))
 
@@ -1994,6 +2455,9 @@ class HIRMakeTupleInstruction(HIRInstruction):
     def __init__(self, elements: list[HIRValue], type, name=None, sourcePosition=None):
         super().__init__(type, name, sourcePosition)
         self.elements = elements
+
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitMakeTupleInstructino(self)
 
     def evaluateInActivationContext(self, context):
         elements = list(map(lambda element: element.getValueInEvaluationContext(context), self.elements))
@@ -2020,6 +2484,9 @@ class HIRPhiInstrucion(HIRInstruction):
     def __init__(self, type, name=None, sourcePosition=None):
         super().__init__(type, name, sourcePosition)
 
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitPhiInstruction(self)
+
     def fullPrintString(self):
         return "%s := phi %s" % (str(self), str(self.type))
 
@@ -2033,6 +2500,9 @@ class HIRPhiSourceInstruction(HIRInstruction):
         self.targetPhi = targetPhi
         self.sourceValue = sourceValue
 
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitPhiSourceInstruction(self)
+
     def fullPrintString(self):
         return "phi: %s source: %s" % (str(self.targetPhi), str(self.sourceValue))
 
@@ -2044,6 +2514,9 @@ class HIRReturnInstruction(HIRInstruction):
     def __init__(self, valueToReturn, type, name=None, sourcePosition=None):
         super().__init__(type, name, sourcePosition)
         self.valueToReturn = valueToReturn
+
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitReturnInstruction(self)
 
     def isTerminator(self):
         return True
@@ -2060,6 +2533,9 @@ class HIRUnreachable(HIRInstruction):
     def __init__(self, type, name=None, sourcePosition=None):
         super().__init__(type, name, sourcePosition)
 
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitUnreachableInstruction(self)
+
     def isTerminator(self):
         return True
 
@@ -2074,6 +2550,9 @@ class HIRPackage(HIRValue):
         self.publicSymbolTable = {}
         self.coreTypes = None
         self.pendingAnalysisList = []
+
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitPackage(self)
 
     def addCoreTypes(self, coreTypes):
         self.coreTypes = coreTypes
@@ -2518,8 +2997,6 @@ class HIRCoreTypes:
         self.pointerSize = 8
         self.pointerAlignment = 8
 
-
-
         self.integerType   = HIRNominalType('Integer', self, None);
         self.characterType = HIRNominalType('Character', self, None);
         self.floatType     = HIRNominalType('Float', self, None);
@@ -2541,6 +3018,7 @@ class HIRCoreTypes:
         self.packageType = HIRNominalType('Package', self, None)
         self.fieldType = HIRNominalType('Field', self, None)
         self.parseTreeNodeType = HIRNominalType('ParseTreeNode', self, None)
+        self.macroContextType = HIRNominalType('MacroContext', self, None)
         self.primitiveMacroType = HIRNominalType('PrimitiveMacro', self, None)
 
         self.prop = HIRUniverseType('Prop', self, 0);
@@ -2572,6 +3050,7 @@ class HIRCoreTypes:
 
             self.packageType,
             self.parseTreeNodeType,
+            self.macroContextType,
             self.primitiveMacroType,
 
             self.prop,
