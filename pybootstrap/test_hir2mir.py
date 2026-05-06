@@ -51,6 +51,17 @@ class HIR2MIRTest(unittest.TestCase):
         result = addMirFunction.evaluateWithArguments([1, 2])
         self.assertEqual(result, 3)
 
+    def testInt32Identity(self):
+        hirFunction = self.evaluateTopLevelSourceString('public function identity(x: Int32) => Int32 := x')
+        self.assertTrue(hirFunction.isFunction())
+
+        mirPackage = self.compilePackageToMir()
+        mirFunction = mirPackage.translatedFunctionMap[hirFunction]
+
+        result = mirFunction.evaluateWithArguments([42])
+        self.assertEqual(result, 42)
+
+
     def testInt32Add(self):
         addFunction = self.evaluateTopLevelSourceString('public function add(x: Int32. y: Int32) => Int32 := x + y')
         self.assertTrue(addFunction.isFunction())
