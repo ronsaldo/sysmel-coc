@@ -300,6 +300,9 @@ class HirFunction2Mir(HIRVisitor):
     def visitConstantLiteralNilValue(self, constantLiteral: HIRConstantLiteralIntegerValue):
         constantType = self.packageTranslator.translateValue(constantLiteral.getType())
         return constantType.emitNilConstantWithBuilder(self.prologueBuilder, constantLiteral.sourcePosition)
+    
+    def visitFunction(self, hirFunction):
+        return self.packageTranslator.translateValue(hirFunction)
 
     def visitArgument(self, argument: HIRArgument):
         argumentType = self.packageTranslator.translateValue(argument.type)
@@ -336,7 +339,15 @@ class HirFunction2Mir(HIRVisitor):
             translator = self.packageTranslator.context.getPrimitiveTranslatorFor(primitiveName)
             return translator(self, instruction)
 
-        assert False
+        functional = self.translateValue(instruction.functional)
+        self.builder.beginCallAt(instruction.sourcePosition)
+        for argument in instruction.arguments:
+            argumentValue = self.translateValue(argument)
+            argumentType = self.packageTranslator.translateValue(argument.getType())
+            argumentType.emitCallArgumentWithBuilder(self.builder, argumentValue, argument.sourcePosition)
+
+        callType = self.packageTranslator.translateValue(instruction.getType())
+        return callType.emitCallWithBuilder(self.builder, functional, instruction.sourcePosition)
 
     def callRuntimeFunctionWithName(self, instruction: HIRCallInstruction, runtimePrimitiveName):
         primitive = self.packageTranslator.currentMirPackage.getOrCreateRuntimePrimitiveNamed(runtimePrimitiveName)

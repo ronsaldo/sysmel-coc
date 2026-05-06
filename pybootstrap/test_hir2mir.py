@@ -61,6 +61,20 @@ class HIR2MIRTest(unittest.TestCase):
         result = mirFunction.evaluateWithArguments([42])
         self.assertEqual(result, 42)
 
+    def testInt32CallSum(self):
+        hirFunction = self.evaluateTopLevelSourceString("""
+            function sum(first: Int32. second: Int32) => Int32 := first + second.
+            public function callSum() => Int32 := sum(1i32. 2i32).
+        """)
+        self.assertTrue(hirFunction.isFunction())
+
+        mirPackage = self.compilePackageToMir()
+        mirFunction = mirPackage.translatedFunctionMap[hirFunction]
+        mirFunction.dumpToConsole()
+
+        result = mirFunction.evaluateWithArguments([])
+        self.assertEqual(result, 3)
+
 
     def testInt32Add(self):
         addFunction = self.evaluateTopLevelSourceString('public function add(x: Int32. y: Int32) => Int32 := x + y')
