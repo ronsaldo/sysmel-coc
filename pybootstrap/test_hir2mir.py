@@ -77,13 +77,28 @@ class HIR2MIRTest(unittest.TestCase):
 
     def testInt32MinFunction(self):
         mirFunction = self.compileFunctionToMir('public function min(first: Int32. second: Int32) => Int32 := if: first < second then: first else: second')
-        mirFunction.dumpToConsole()
         
         result = mirFunction.evaluateWithArguments([1, 2])
         self.assertEqual(result, 1)
 
         result = mirFunction.evaluateWithArguments([2, 1])
         self.assertEqual(result, 1)
+
+    def testInt32NegFunction(self):
+        mirFunction = self.compileFunctionToMir("public function int32Neg(a: Int32) => Int32 := a negated")
+        
+        result = mirFunction.evaluateWithArguments([1])
+        self.assertEqual(result, -1)
+
+    def testInt32ArithmeticFunction(self):
+        mirFunction = self.compileFunctionToMir("public function arithmetic(a: Int32. b: Int32. c: Int32. d: Int32. e: Int32) => Int32 := a negated + b - ((c * d) // e)")
+        result = mirFunction.evaluateWithArguments([1, 2, 3, 4, 5])
+        self.assertEqual(result, -1)
+
+    def testInt32BitwiseFunction(self):
+        mirFunction = self.compileFunctionToMir("public function bitwise(a: Int32. b: Int32. c: Int32. d: Int32. e: Int32. f: Int32) => Int32 := a bitInvert & b | c ^ d << e >> f")
+        result = mirFunction.evaluateWithArguments([1, 2, 3, 4, 5, 6])
+        self.assertEqual(result, 3)
 
     def testReturnChar8(self):
         mirFunction = self.compileFunctionToMir("public function testReturnChar8() => Char8 := 'A'c8")

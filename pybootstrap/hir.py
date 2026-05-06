@@ -3430,6 +3430,27 @@ class HIRCoreTypes:
             assert rightOperand.isIntegerConstant()
             return HIRConstantLiteralIntegerValue(leftOperand.value // rightOperand.value, resultType, None)
 
+        def integerBitAnd(leftOperand, rightOperand, resultType):
+            assert leftOperand.isIntegerConstant()
+            assert rightOperand.isIntegerConstant()
+            return HIRConstantLiteralIntegerValue(leftOperand.value & rightOperand.value, resultType, None)
+        def integerBitOr(leftOperand, rightOperand, resultType):
+            assert leftOperand.isIntegerConstant()
+            assert rightOperand.isIntegerConstant()
+            return HIRConstantLiteralIntegerValue(leftOperand.value | rightOperand.value, resultType, None)
+        def integerBitXor(leftOperand, rightOperand, resultType):
+            assert leftOperand.isIntegerConstant()
+            assert rightOperand.isIntegerConstant()
+            return HIRConstantLiteralIntegerValue(leftOperand.value ^ rightOperand.value, resultType, None)
+        def integerBitShiftLeft(leftOperand, rightOperand, resultType):
+            assert leftOperand.isIntegerConstant()
+            assert rightOperand.isIntegerConstant()
+            return HIRConstantLiteralIntegerValue(leftOperand.value << rightOperand.value, resultType, None)
+        def integerBitShiftRight(leftOperand, rightOperand, resultType):
+            assert leftOperand.isIntegerConstant()
+            assert rightOperand.isIntegerConstant()
+            return HIRConstantLiteralIntegerValue(leftOperand.value >> rightOperand.value, resultType, None)
+
         def integerEquals(leftOperand, rightOperand, resultType):
             assert leftOperand.isIntegerConstant()
             assert rightOperand.isIntegerConstant()
@@ -3465,6 +3486,12 @@ class HIRCoreTypes:
         anIntegerType.addMethod(HIRPrimitiveFunction('-',  primitivePrefix + '-',  self.getOrCreateSimpleFunctionType((anIntegerType, anIntegerType), anIntegerType), integerSubtract, None, isPure = True, isCompileTime = True))
         anIntegerType.addMethod(HIRPrimitiveFunction('*',  primitivePrefix + '*',  self.getOrCreateSimpleFunctionType((anIntegerType, anIntegerType), anIntegerType), integerMultiply, None, isPure = True, isCompileTime = True))
         anIntegerType.addMethod(HIRPrimitiveFunction('//', primitivePrefix + '//', self.getOrCreateSimpleFunctionType((anIntegerType, anIntegerType), anIntegerType), integerDivide, None, isPure = True, isCompileTime = True))
+
+        anIntegerType.addMethod(HIRPrimitiveFunction('&',  primitivePrefix + '&',  self.getOrCreateSimpleFunctionType((anIntegerType, anIntegerType), anIntegerType), integerBitAnd, None, isPure = True, isCompileTime = True))
+        anIntegerType.addMethod(HIRPrimitiveFunction('|',  primitivePrefix + '|',  self.getOrCreateSimpleFunctionType((anIntegerType, anIntegerType), anIntegerType), integerBitOr, None, isPure = True, isCompileTime = True))
+        anIntegerType.addMethod(HIRPrimitiveFunction('^',  primitivePrefix + '^',  self.getOrCreateSimpleFunctionType((anIntegerType, anIntegerType), anIntegerType), integerBitXor, None, isPure = True, isCompileTime = True))
+        anIntegerType.addMethod(HIRPrimitiveFunction('<<', primitivePrefix + '<<',  self.getOrCreateSimpleFunctionType((anIntegerType, anIntegerType), anIntegerType), integerBitShiftLeft, None, isPure = True, isCompileTime = True))
+        anIntegerType.addMethod(HIRPrimitiveFunction('>>', primitivePrefix + '>>',  self.getOrCreateSimpleFunctionType((anIntegerType, anIntegerType), anIntegerType), integerBitShiftRight, None, isPure = True, isCompileTime = True))
 
         anIntegerType.addMethod(HIRPrimitiveFunction('=',  primitivePrefix + '=',  self.getOrCreateSimpleFunctionType((anIntegerType, anIntegerType), self.booleanType), integerEquals, None, isPure = True, isCompileTime = True))
         anIntegerType.addMethod(HIRPrimitiveFunction('~=', primitivePrefix + '~=', self.getOrCreateSimpleFunctionType((anIntegerType, anIntegerType), self.booleanType), integerNotEquals, None, isPure = True, isCompileTime = True))
