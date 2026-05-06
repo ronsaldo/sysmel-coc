@@ -136,6 +136,9 @@ class HirPackage2Mir(HIRVisitor):
 
     def visitPrimitiveMacro(self, value):
         return None
+    
+    def visitFunction(self, value: HIRFunction):
+        assert False
 
     def visitPackage(self, package: HIRPackage):
         if package in self.valueMap:
@@ -161,5 +164,78 @@ class HirPackage2Mir(HIRVisitor):
         return mirPackage
 
 class HirFunction2Mir(HIRVisitor):
-    def __init__(self):
+    def __init__(self, packageTranslator):
         super().__init__()
+        self.packageTranslator = packageTranslator
+
+    def visitValue(self, value):
+        assert False
+
+    def visitAllocaInstruction(self, instruction):
+        assert False
+
+    def visitAssertInstruction(self, instruction):
+        assert False
+
+    def visitRuntimeErrorInstruction(self, instruction):
+        assert False
+
+    def visitLoadInstruction(self, instruction):
+        assert False
+
+    def visitStoreInstruction(self, instruction):
+        assert False
+
+    def visitBranchInstruction(self, instruction):
+        assert False
+
+    def visitConditionalBranchInstruction(self, instruction):
+        assert False
+
+    def visitCallInstruction(self, instruction):
+        assert False
+
+    def visitSendInstruction(self, instruction):
+        assert False
+
+    def visitEnumBoxValueInstruction(self, instruction):
+        assert False
+
+    def visitEnumUnboxValueInstruction(self, instruction):
+        assert False
+
+    def visitExtractFieldReferenceInstruction(self, instruction):
+        assert False
+
+    def visitSetAggregateFieldInstruction(self, instruction):
+        assert False
+
+    def visitDynamicUnboxInstruction(self, instruction):
+        assert False
+
+    def visitDynamicUnboxInstruction(self, instruction):
+        assert False
+
+    def visitMakeAssociationInstructino(self, instruction):
+        assert False
+
+    def visitMakeClosureInstructino(self, instruction):
+        assert False
+
+    def visitMakeObjectInstructino(self, instruction):
+        assert False
+
+    def visitMakeStructInstructino(self, instruction):
+        assert False
+
+    def visitPhiInstruction(self, instruction):
+        assert False
+
+    def visitPhiSourceInstruction(self, instruction):
+        assert False
+
+    def visitReturnInstruction(self, instruction):
+        assert False
+
+    def visitUnreachableInstruction(self, instruction):
+        assert False
