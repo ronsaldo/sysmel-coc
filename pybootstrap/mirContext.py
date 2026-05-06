@@ -396,10 +396,70 @@ class MirBoolean8Type(MirType):
 class MirInt8Type(MirType):
     def isInt8Type(self):
         return True
+    
+    def emitArgumentWithBuilder(self, builder, sourcePosition):
+        return builder.argumentInt32At(sourcePosition)
+
+    def emitReturnWithBuilder(self, builder, returnValue, sourcePosition):
+        return builder.returnInt32At(returnValue, sourcePosition)
+
+    def emitCallArgumentWithBuilder(self, builder, argument, sourcePosition):
+        return builder.callArgumentInt32At(argument, sourcePosition)
+
+    def emitCallWithBuilder(self, builder, functional, sourcePosition):
+        return builder.callInt32ResultAt(functional, sourcePosition)
+
+    def emitCharacterConstantWithBuilder(self, builder, integer, sourcePosition):
+        return builder.constInt32At(integer, sourcePosition)
+
+    def emitIntegerConstantWithBuilder(self, builder, integer, sourcePosition):
+        return builder.constInt32At(integer, sourcePosition)
+
+    def emitPhiWithBuilder(self, builder, sourcePosition):
+        return builder.phiInt32At(sourcePosition)
+
+    def emitPhiSourceWithBuilder(self, builder, targetTemp, sourceTemp, sourcePosition):
+        return builder.phiSourceInt32At(targetTemp, sourceTemp, sourcePosition)
+
+    def emitLoadWithBuilder(self, builder, pointer, sourcePosition):
+        return builder.loadInt32At(pointer, sourcePosition)
+
+    def emitStoreWithBuilder(self, builder, pointer, value, sourcePosition):
+        return builder.storeInt32At(pointer, value, sourcePosition)
 
 class MirInt16Type(MirType):
     def isInt16Type(self):
         return True
+    
+    def emitArgumentWithBuilder(self, builder, sourcePosition):
+        return builder.argumentInt32At(sourcePosition)
+
+    def emitReturnWithBuilder(self, builder, returnValue, sourcePosition):
+        return builder.returnInt32At(returnValue, sourcePosition)
+
+    def emitCallArgumentWithBuilder(self, builder, argument, sourcePosition):
+        return builder.callArgumentInt32At(argument, sourcePosition)
+
+    def emitCallWithBuilder(self, builder, functional, sourcePosition):
+        return builder.callInt32ResultAt(functional, sourcePosition)
+
+    def emitCharacterConstantWithBuilder(self, builder, integer, sourcePosition):
+        return builder.constInt32At(integer, sourcePosition)
+
+    def emitIntegerConstantWithBuilder(self, builder, integer, sourcePosition):
+        return builder.constInt32At(integer, sourcePosition)
+
+    def emitPhiWithBuilder(self, builder, sourcePosition):
+        return builder.phiInt32At(sourcePosition)
+
+    def emitPhiSourceWithBuilder(self, builder, targetTemp, sourceTemp, sourcePosition):
+        return builder.phiSourceInt32At(targetTemp, sourceTemp, sourcePosition)
+
+    def emitLoadWithBuilder(self, builder, pointer, sourcePosition):
+        return builder.loadInt32At(pointer, sourcePosition)
+
+    def emitStoreWithBuilder(self, builder, pointer, value, sourcePosition):
+        return builder.storeInt32At(pointer, value, sourcePosition)
 
 class MirInt32Type(MirType):
     def isInt32Type(self):
@@ -416,6 +476,9 @@ class MirInt32Type(MirType):
 
     def emitCallWithBuilder(self, builder, functional, sourcePosition):
         return builder.callInt32ResultAt(functional, sourcePosition)
+
+    def emitCharacterConstantWithBuilder(self, builder, integer, sourcePosition):
+        return builder.constInt32At(integer, sourcePosition)
 
     def emitIntegerConstantWithBuilder(self, builder, integer, sourcePosition):
         return builder.constInt32At(integer, sourcePosition)
@@ -461,10 +524,58 @@ class MirUInt8Type(MirType):
     def isUInt8Type(self):
         return True
 
+    def emitArgumentWithBuilder(self, builder, sourcePosition):
+        return builder.argumentInt32At(sourcePosition)
+
+    def emitReturnWithBuilder(self, builder, returnValue, sourcePosition):
+        return builder.returnInt32At(returnValue, sourcePosition)
+
+    def emitCallArgumentWithBuilder(self, builder, argument, sourcePosition):
+        return builder.callArgumentInt32At(argument, sourcePosition)
+
+    def emitCallWithBuilder(self, builder, functional, sourcePosition):
+        return builder.callInt32ResultAt(functional, sourcePosition)
+
+    def emitCharacterConstantWithBuilder(self, builder, character, sourcePosition):
+        return builder.constInt32At(character, sourcePosition)
+
+    def emitIntegerConstantWithBuilder(self, builder, integer, sourcePosition):
+        return builder.constInt32At(integer, sourcePosition)
+    
+    def emitPhiWithBuilder(self, builder, sourcePosition):
+        return builder.phiInt32At(sourcePosition)
+
+    def emitPhiSourceWithBuilder(self, builder, targetTemp, sourceTemp, sourcePosition):
+        return builder.phiSourceInt32At(targetTemp, sourceTemp, sourcePosition)
+
 class MirUInt16Type(MirType):
     def isUInt16Type(self):
         return True
 
+    def emitArgumentWithBuilder(self, builder, sourcePosition):
+        return builder.argumentInt32At(sourcePosition)
+
+    def emitReturnWithBuilder(self, builder, returnValue, sourcePosition):
+        return builder.returnInt32At(returnValue, sourcePosition)
+
+    def emitCallArgumentWithBuilder(self, builder, argument, sourcePosition):
+        return builder.callArgumentInt32At(argument, sourcePosition)
+
+    def emitCallWithBuilder(self, builder, functional, sourcePosition):
+        return builder.callInt32ResultAt(functional, sourcePosition)
+
+    def emitCharacterConstantWithBuilder(self, builder, character, sourcePosition):
+        return builder.constInt32At(character, sourcePosition)
+
+    def emitIntegerConstantWithBuilder(self, builder, integer, sourcePosition):
+        return builder.constInt32At(integer, sourcePosition)
+    
+    def emitPhiWithBuilder(self, builder, sourcePosition):
+        return builder.phiInt32At(sourcePosition)
+
+    def emitPhiSourceWithBuilder(self, builder, targetTemp, sourceTemp, sourcePosition):
+        return builder.phiSourceInt32At(targetTemp, sourceTemp, sourcePosition)
+    
 class MirUInt32Type(MirType):
     def isUInt32Type(self):
         return True
@@ -480,6 +591,9 @@ class MirUInt32Type(MirType):
 
     def emitCallWithBuilder(self, builder, functional, sourcePosition):
         return builder.callInt32ResultAt(functional, sourcePosition)
+
+    def emitCharacterConstantWithBuilder(self, builder, character, sourcePosition):
+        return builder.constInt32At(character, sourcePosition)
 
     def emitIntegerConstantWithBuilder(self, builder, integer, sourcePosition):
         return builder.constInt32At(integer, sourcePosition)

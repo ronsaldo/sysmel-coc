@@ -55,6 +55,12 @@ class TestAnalysisAndEvaluation(unittest.TestCase):
         self.assertTrue(topLevelResult.isSymbolConstant())
         self.assertEqual(topLevelResult.value, 'hello')
 
+    def testLiteralInt32(self):
+        topLevelResult = self.evaluateTopLevelSourceString('42i32')
+        self.assertTrue(topLevelResult.isIntegerConstant())
+        self.assertEqual(topLevelResult.value, 42)
+
+
     def testLexicalBlock(self):
         topLevelResult = self.evaluateTopLevelSourceString('{42}')
         self.assertTrue(topLevelResult.isIntegerConstant())

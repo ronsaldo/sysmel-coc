@@ -61,14 +61,65 @@ class HIR2MIRTest(unittest.TestCase):
         result = addMirFunction.evaluateWithArguments([1, 2])
         self.assertEqual(result, 3)
 
-    def testReturnInteger(self):
-        addFunction = self.evaluateTopLevelSourceString('public function returnInteger() => Integer := 42')
-        self.assertTrue(addFunction.isFunction())
+    def testReturnChar8(self):
+        hirFunction = self.evaluateTopLevelSourceString("public function testReturnChar8() => Char8 := 'A'c8")
+        self.assertTrue(hirFunction.isFunction())
 
         mirPackage = self.compilePackageToMir()
-        addMirFunction = mirPackage.translatedFunctionMap[addFunction]
+        mirFunction = mirPackage.translatedFunctionMap[hirFunction]
 
-        result = addMirFunction.evaluateWithArguments([])
+        result = mirFunction.evaluateWithArguments([])
+        self.assertEqual(result, ord('A'))
+
+    def testReturnFloat32(self):
+        hirFunction = self.evaluateTopLevelSourceString('public function returnInteger() => Float32 := 42f32')
+        self.assertTrue(hirFunction.isFunction())
+
+        mirPackage = self.compilePackageToMir()
+        mirFunction = mirPackage.translatedFunctionMap[hirFunction]
+
+        result = mirFunction.evaluateWithArguments([])
+        self.assertEqual(result, 42)
+
+
+    def testReturnInt32(self):
+        hirFunction = self.evaluateTopLevelSourceString('public function returnInteger() => Int32 := 42i32')
+        self.assertTrue(hirFunction.isFunction())
+
+        mirPackage = self.compilePackageToMir()
+        mirFunction = mirPackage.translatedFunctionMap[hirFunction]
+
+        result = mirFunction.evaluateWithArguments([])
+        self.assertEqual(result, 42)
+
+    def testReturnCharacter(self):
+        hirFunction = self.evaluateTopLevelSourceString("public function returnInteger() => Character := 'A'")
+        self.assertTrue(hirFunction.isFunction())
+
+        mirPackage = self.compilePackageToMir()
+        mirFunction = mirPackage.translatedFunctionMap[hirFunction]
+
+        result = mirFunction.evaluateWithArguments([])
+        self.assertEqual(result, ord('A'))
+
+    def testReturnFloat(self):
+        hirFunction = self.evaluateTopLevelSourceString("public function returnInteger() => Float := 42.5")
+        self.assertTrue(hirFunction.isFunction())
+
+        mirPackage = self.compilePackageToMir()
+        mirFunction = mirPackage.translatedFunctionMap[hirFunction]
+
+        result = mirFunction.evaluateWithArguments([])
+        self.assertEqual(result, 42.5)
+
+    def testReturnInteger(self):
+        hirFunction = self.evaluateTopLevelSourceString('public function returnInteger() => Integer := 42')
+        self.assertTrue(hirFunction.isFunction())
+
+        mirPackage = self.compilePackageToMir()
+        mirFunction = mirPackage.translatedFunctionMap[hirFunction]
+
+        result = mirFunction.evaluateWithArguments([])
         self.assertEqual(result, 42)
 
     def testReturnVoid(self):
@@ -77,7 +128,6 @@ class HIR2MIRTest(unittest.TestCase):
 
         mirPackage = self.compilePackageToMir()
         mirFunction = mirPackage.translatedFunctionMap[function]
-        mirFunction.dumpToConsole()
 
         result = mirFunction.evaluateWithArguments([])
         self.assertEqual(result, None)

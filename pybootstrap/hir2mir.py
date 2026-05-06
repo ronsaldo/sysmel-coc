@@ -26,6 +26,10 @@ class HirPackage2Mir(HIRVisitor):
             self.hirCoreTypes.uint32Type : self.context.uint32Type,
             self.hirCoreTypes.uint64Type : self.context.uint64Type,
 
+            self.hirCoreTypes.char8Type :  self.context.uint8Type,
+            self.hirCoreTypes.char16Type : self.context.uint16Type,
+            self.hirCoreTypes.char32Type : self.context.uint32Type,
+
             self.hirCoreTypes.float32Type : self.context.float32Type,
             self.hirCoreTypes.float64Type : self.context.float64Type,
        }
@@ -273,6 +277,14 @@ class HirFunction2Mir(HIRVisitor):
     
     def visitValue(self, value):
         assert False
+
+    def visitConstantLiteralCharacterValue(self, constantLiteral: HIRConstantLiteralCharacterValue):
+        constantType = self.packageTranslator.translateValue(constantLiteral.getType())
+        return constantType.emitCharacterConstantWithBuilder(self.prologueBuilder, constantLiteral.value, constantLiteral.sourcePosition)
+
+    def visitConstantLiteralFloatValue(self, constantLiteral: HIRConstantLiteralCharacterValue):
+        constantType = self.packageTranslator.translateValue(constantLiteral.getType())
+        return constantType.emitFloatConstantWithBuilder(self.prologueBuilder, constantLiteral.value, constantLiteral.sourcePosition)
 
     def visitConstantLiteralIntegerValue(self, constantLiteral: HIRConstantLiteralIntegerValue):
         constantType = self.packageTranslator.translateValue(constantLiteral.getType())

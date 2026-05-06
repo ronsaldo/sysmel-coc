@@ -3085,6 +3085,10 @@ class HIRCoreTypes:
 
         self.boolean8Type = HIRPrimitiveType('Boolean8', 1, 1, self, None)
 
+        self.char8Type  = HIRPrimitiveType('Char8',  1, 1, self, None)
+        self.char16Type = HIRPrimitiveType('Char16', 2, 2, self, None)
+        self.char32Type = HIRPrimitiveType('Char32', 4, 4, self, None)
+
         self.int8Type  = HIRPrimitiveType('Int8',  1, 1, self, None)
         self.int16Type = HIRPrimitiveType('Int16', 2, 2, self, None)
         self.int32Type = HIRPrimitiveType('Int32', 4, 4, self, None)
@@ -3137,6 +3141,12 @@ class HIRCoreTypes:
             self.stringType,
             self.symbolType,
             self.undefinedType,
+
+            self.boolean8Type,
+
+            self.char8Type,
+            self.char16Type,
+            self.char32Type,
 
             self.int8Type,
             self.int16Type,
@@ -3302,6 +3312,9 @@ class HIRCoreTypes:
 
         for floatType in [self.floatType, self.float32Type, self.float64Type]:
             self.createFloatPrimitiveFunctions(floatType)
+
+        for numericalType in [self.characterType, self.floatType, self.integerType]:
+            self.createNumericalPrimitiveConversionMethods(numericalType)
 
     def getBooleanConstant(self, value):
         if value:
@@ -3477,6 +3490,34 @@ class HIRCoreTypes:
         aFloatType.addMethod(HIRPrimitiveFunction('<=', primitivePrefix + '<=', self.getOrCreateSimpleFunctionType((aFloatType, aFloatType), self.booleanType), floatLessOrEquals, None, isPure = True, isCompileTime = True))
         aFloatType.addMethod(HIRPrimitiveFunction('>',  primitivePrefix + '>',  self.getOrCreateSimpleFunctionType((aFloatType, aFloatType), self.booleanType), floatGreaterThan, None, isPure = True, isCompileTime = True))
         aFloatType.addMethod(HIRPrimitiveFunction('>=', primitivePrefix + '>=', self.getOrCreateSimpleFunctionType((aFloatType, aFloatType), self.booleanType), floatGreaterOrEquals, None, isPure = True, isCompileTime = True))
+
+    def createNumericalPrimitiveConversionMethods(self, numericalType):
+        def asPrimitiveCharacter(operand, resultType):
+            return HIRConstantLiteralCharacterValue(operand.value, resultType, None)
+
+        def asPrimitiveFloat(operand, resultType):
+            return HIRConstantLiteralFloatValue(operand.value, resultType, None)
+
+        def asPrimitiveInteger(operand, resultType):
+            return HIRConstantLiteralIntegerValue(operand.value, resultType, None)
+
+        primitivePrefix = numericalType.name + "::"
+        numericalType.addMethod(HIRPrimitiveFunction('i8',  primitivePrefix + 'i8',  self.getOrCreateSimpleFunctionType((numericalType,), self.int8Type),  asPrimitiveInteger, None, isPure = True, isCompileTime = True))
+        numericalType.addMethod(HIRPrimitiveFunction('i16', primitivePrefix + 'i16', self.getOrCreateSimpleFunctionType((numericalType,), self.int16Type), asPrimitiveInteger, None, isPure = True, isCompileTime = True))
+        numericalType.addMethod(HIRPrimitiveFunction('i32', primitivePrefix + 'i32', self.getOrCreateSimpleFunctionType((numericalType,), self.int32Type), asPrimitiveInteger, None, isPure = True, isCompileTime = True))
+        numericalType.addMethod(HIRPrimitiveFunction('i64', primitivePrefix + 'i64', self.getOrCreateSimpleFunctionType((numericalType,), self.int64Type), asPrimitiveInteger, None, isPure = True, isCompileTime = True))
+
+        numericalType.addMethod(HIRPrimitiveFunction('u8',  primitivePrefix + 'u8',  self.getOrCreateSimpleFunctionType((numericalType,), self.uint8Type),  asPrimitiveInteger, None, isPure = True, isCompileTime = True))
+        numericalType.addMethod(HIRPrimitiveFunction('u16', primitivePrefix + 'u16', self.getOrCreateSimpleFunctionType((numericalType,), self.uint16Type), asPrimitiveInteger, None, isPure = True, isCompileTime = True))
+        numericalType.addMethod(HIRPrimitiveFunction('u32', primitivePrefix + 'u32', self.getOrCreateSimpleFunctionType((numericalType,), self.uint32Type), asPrimitiveInteger, None, isPure = True, isCompileTime = True))
+        numericalType.addMethod(HIRPrimitiveFunction('u64', primitivePrefix + 'u64', self.getOrCreateSimpleFunctionType((numericalType,), self.uint64Type), asPrimitiveInteger, None, isPure = True, isCompileTime = True))
+
+        numericalType.addMethod(HIRPrimitiveFunction('c8',  primitivePrefix + 'c8',  self.getOrCreateSimpleFunctionType((numericalType,), self.char8Type),  asPrimitiveCharacter, None, isPure = True, isCompileTime = True))
+        numericalType.addMethod(HIRPrimitiveFunction('c16', primitivePrefix + 'c16', self.getOrCreateSimpleFunctionType((numericalType,), self.char16Type), asPrimitiveCharacter, None, isPure = True, isCompileTime = True))
+        numericalType.addMethod(HIRPrimitiveFunction('c32', primitivePrefix + 'c32', self.getOrCreateSimpleFunctionType((numericalType,), self.char32Type), asPrimitiveCharacter, None, isPure = True, isCompileTime = True))
+
+        numericalType.addMethod(HIRPrimitiveFunction('f32', primitivePrefix + 'f32', self.getOrCreateSimpleFunctionType((numericalType,), self.float32Type), asPrimitiveFloat, None, isPure = True, isCompileTime = True))
+        numericalType.addMethod(HIRPrimitiveFunction('f64', primitivePrefix + 'f64', self.getOrCreateSimpleFunctionType((numericalType,), self.float64Type), asPrimitiveFloat, None, isPure = True, isCompileTime = True))
 
     def getOrCreateSimpleFunctionType(self, argumentTypes, resultType, sourcePosition = None):
         return HIRSimpleFunctionType(argumentTypes, resultType, self, sourcePosition)
