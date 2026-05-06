@@ -41,12 +41,23 @@ class HIR2MIRTest(unittest.TestCase):
         mirPackage = self.compilePackageToMir()
         self.assertTrue(len(mirPackage.elementTable) == 0)
 
-    def testFunction(self):
+    def testIntegerAdd(self):
         addFunction = self.evaluateTopLevelSourceString('public function add(x: Integer. y: Integer) => Integer := x + y')
         self.assertTrue(addFunction.isFunction())
 
         mirPackage = self.compilePackageToMir()
         addMirFunction = mirPackage.translatedFunctionMap[addFunction]
+
+        result = addMirFunction.evaluateWithArguments([1, 2])
+        self.assertEqual(result, 3)
+
+    def testInt32Add(self):
+        addFunction = self.evaluateTopLevelSourceString('public function add(x: Int32. y: Int32) => Int32 := x + y')
+        self.assertTrue(addFunction.isFunction())
+
+        mirPackage = self.compilePackageToMir()
+        addMirFunction = mirPackage.translatedFunctionMap[addFunction]
+        addMirFunction.dumpToConsole()
 
         result = addMirFunction.evaluateWithArguments([1, 2])
         self.assertEqual(result, 3)

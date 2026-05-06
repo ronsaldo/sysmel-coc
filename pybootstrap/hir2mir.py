@@ -14,8 +14,21 @@ class HirPackage2Mir(HIRVisitor):
 
     def setCoreTypeMappings(self):
         self.coreTypeMappings = {
-            self.hirCoreTypes.booleanType : self.context.boolean8Type
-        }
+            self.hirCoreTypes.boolean8Type : self.context.boolean8Type,
+
+            self.hirCoreTypes.int8Type  : self.context.int8Type,
+            self.hirCoreTypes.int16Type : self.context.int16Type,
+            self.hirCoreTypes.int32Type : self.context.int32Type,
+            self.hirCoreTypes.int64Type : self.context.int64Type,
+
+            self.hirCoreTypes.uint8Type :  self.context.uint8Type,
+            self.hirCoreTypes.uint16Type : self.context.uint16Type,
+            self.hirCoreTypes.uint32Type : self.context.uint32Type,
+            self.hirCoreTypes.uint64Type : self.context.uint64Type,
+
+            self.hirCoreTypes.float32Type : self.context.float32Type,
+            self.hirCoreTypes.float64Type : self.context.float64Type,
+       }
 
     def translateHirPackage2Mir(self, hirPackage: HIRPackage):
         return self.translateValue(hirPackage)
@@ -54,6 +67,9 @@ class HirPackage2Mir(HIRVisitor):
 
         self.makeNominalTypeWithMethods(type)
         return mirType
+    
+    def visitPrimitiveType(self, type):
+        return self.visitNominalType(type)
 
     def visitDynamicType(self, type: HIRDynamicType):
         return self.context.gcPointerType
@@ -132,6 +148,8 @@ class HirPackage2Mir(HIRVisitor):
     
     def visitPrimitiveFunction(self, primitiveFunction):
         runtimeFunctionName = self.context.getPrimitiveRuntimeFunctionNameFor(primitiveFunction.name)
+        if runtimeFunctionName is None:
+            return None
         return self.currentMirPackage.getOrCreateRuntimePrimitiveNamed(runtimeFunctionName)
 
     def visitPrimitiveMacro(self, value):

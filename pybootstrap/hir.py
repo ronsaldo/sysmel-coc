@@ -15,6 +15,9 @@ class HIRVisitor(ABC):
     def visitNominalType(self, type):
         return self.visitType(type)
 
+    def visitPrimitiveType(self, type):
+        return self.visitType(type)
+
     def visitDynamicType(self, type):
         return self.visitType(type)
 
@@ -616,6 +619,15 @@ class HIRDynamicType(HIRType):
 
     def __str__(self):
         return self.name
+    
+class HIRPrimitiveType(HIRNominalType):
+    def __init__(self, name, size, alignment, coreTypes, sourcePosition=None):
+        super().__init__(name, coreTypes, sourcePosition)
+        self.size = size
+        self.alignment = alignment
+
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitPrimitiveType(self)
 
 class HIRVoidType(HIRType):
     def __init__(self, name: str, coreTypes, sourcePosition = None):
@@ -3071,6 +3083,21 @@ class HIRCoreTypes:
         self.symbolType    = HIRNominalType('Symbol', self, None);
         self.undefinedType = HIRNominalType('Undefined', self, None);
 
+        self.boolean8Type = HIRPrimitiveType('Boolean8', 1, 1, self, None)
+
+        self.int8Type  = HIRPrimitiveType('Int8',  1, 1, self, None)
+        self.int16Type = HIRPrimitiveType('Int16', 2, 2, self, None)
+        self.int32Type = HIRPrimitiveType('Int32', 4, 4, self, None)
+        self.int64Type = HIRPrimitiveType('Int64', 8, 8, self, None)
+
+        self.uint8Type  = HIRPrimitiveType('UInt8',  1, 1, self, None)
+        self.uint16Type = HIRPrimitiveType('UInt16', 2, 2, self, None)
+        self.uint32Type = HIRPrimitiveType('UInt32', 4, 4, self, None)
+        self.uint64Type = HIRPrimitiveType('UInt64', 8, 8, self, None)
+
+        self.float32Type = HIRPrimitiveType('Float32', 4, 4, self, None)
+        self.float64Type = HIRPrimitiveType('Float64', 8, 8, self, None)
+
         self.integerType.defaultValue = HIRConstantLiteralIntegerValue(0, self.integerType, None)
 
         self.dynamicType = HIRDynamicType('Dynamic', self, None)
@@ -3110,6 +3137,19 @@ class HIRCoreTypes:
             self.stringType,
             self.symbolType,
             self.undefinedType,
+
+            self.int8Type,
+            self.int16Type,
+            self.int32Type,
+            self.int64Type,
+
+            self.uint8Type,
+            self.uint16Type,
+            self.uint32Type,
+            self.uint64Type,
+
+            self.float32Type,
+            self.float64Type,
 
             self.dynamicType,
             self.voidType,
@@ -3256,8 +3296,10 @@ class HIRCoreTypes:
     def createCorePrimitiveFunctions(self):
         self.createGlobalPrimitives()
         self.createBooleanPrimitiveFunctions()
-        self.createIntegerPrimitiveFunctions()
         self.createFloatPrimitiveFunctions()
+
+        for integerType in [self.integerType, self.int32Type, self.uint32Type, self.int64Type, self.uint64Type]:
+            self.createIntegerPrimitiveFunctions(integerType)
 
     def getBooleanConstant(self, value):
         if value:
@@ -3298,7 +3340,7 @@ class HIRCoreTypes:
         self.booleanType.withSelectorAddMethod('||', HIRPrimitiveMacro('||', self.primitiveMacroType, booleanOr, None))
 
 
-    def createIntegerPrimitiveFunctions(self):
+    def createIntegerPrimitiveFunctions(self, anIntegerType):
         def integerNegated(operand, resultType):
             assert operand.isIntegerConstant()
             return HIRConstantLiteralIntegerValue(-operand.value, resultType, None)
@@ -3349,20 +3391,22 @@ class HIRCoreTypes:
             assert rightOperand.isIntegerConstant()
             return self.getBooleanConstant(leftOperand.value >= rightOperand.value)
 
-        self.integerType.addMethod(HIRPrimitiveFunction('negated', 'Integer::negated', self.getOrCreateSimpleFunctionType((self.integerType,), self.integerType), integerNegated, None, isPure = True, isCompileTime = True))
-        self.integerType.addMethod(HIRPrimitiveFunction('bitInvert', 'Integer::bitInvert', self.getOrCreateSimpleFunctionType((self.integerType,), self.integerType), integerBitInvert, None, isPure = True, isCompileTime = True))
+        primitivePrefix = anIntegerType.name + "::"
 
-        self.integerType.addMethod(HIRPrimitiveFunction('+',  'Integer::+', self.getOrCreateSimpleFunctionType((self.integerType, self.integerType), self.integerType), integerAdd, None, isPure = True, isCompileTime = True))
-        self.integerType.addMethod(HIRPrimitiveFunction('-',  'Integer::-', self.getOrCreateSimpleFunctionType((self.integerType, self.integerType), self.integerType), integerSubtract, None, isPure = True, isCompileTime = True))
-        self.integerType.addMethod(HIRPrimitiveFunction('*',  'Integer::*', self.getOrCreateSimpleFunctionType((self.integerType, self.integerType), self.integerType), integerMultiply, None, isPure = True, isCompileTime = True))
-        self.integerType.addMethod(HIRPrimitiveFunction('//', 'Integer:://', self.getOrCreateSimpleFunctionType((self.integerType, self.integerType), self.integerType), integerDivide, None, isPure = True, isCompileTime = True))
+        anIntegerType.addMethod(HIRPrimitiveFunction('negated',   primitivePrefix + 'negated', self.getOrCreateSimpleFunctionType( (anIntegerType,), anIntegerType), integerNegated, None, isPure = True, isCompileTime = True))
+        anIntegerType.addMethod(HIRPrimitiveFunction('bitInvert', primitivePrefix + 'bitInvert', self.getOrCreateSimpleFunctionType((anIntegerType,), anIntegerType), integerBitInvert, None, isPure = True, isCompileTime = True))
 
-        self.integerType.addMethod(HIRPrimitiveFunction('=', 'Integer::=',  self.getOrCreateSimpleFunctionType((self.integerType, self.integerType), self.booleanType), integerEquals, None, isPure = True, isCompileTime = True))
-        self.integerType.addMethod(HIRPrimitiveFunction('~=', 'Integer::~=', self.getOrCreateSimpleFunctionType((self.integerType, self.integerType), self.booleanType), integerNotEquals, None, isPure = True, isCompileTime = True))
-        self.integerType.addMethod(HIRPrimitiveFunction('<', 'Integer::<',  self.getOrCreateSimpleFunctionType((self.integerType, self.integerType), self.booleanType), integerLessThan, None, isPure = True, isCompileTime = True))
-        self.integerType.addMethod(HIRPrimitiveFunction('<=', 'Integer::<=', self.getOrCreateSimpleFunctionType((self.integerType, self.integerType), self.booleanType), integerLessOrEquals, None, isPure = True, isCompileTime = True))
-        self.integerType.addMethod(HIRPrimitiveFunction('>', 'Integer::>',  self.getOrCreateSimpleFunctionType((self.integerType, self.integerType), self.booleanType), integerGreaterThan, None, isPure = True, isCompileTime = True))
-        self.integerType.addMethod(HIRPrimitiveFunction('>=', 'Integer::>=', self.getOrCreateSimpleFunctionType((self.integerType, self.integerType), self.booleanType), integerGreaterOrEquals, None, isPure = True, isCompileTime = True))
+        anIntegerType.addMethod(HIRPrimitiveFunction('+',  primitivePrefix + '+',  self.getOrCreateSimpleFunctionType((anIntegerType, anIntegerType), anIntegerType), integerAdd, None, isPure = True, isCompileTime = True))
+        anIntegerType.addMethod(HIRPrimitiveFunction('-',  primitivePrefix + '-',  self.getOrCreateSimpleFunctionType((anIntegerType, anIntegerType), anIntegerType), integerSubtract, None, isPure = True, isCompileTime = True))
+        anIntegerType.addMethod(HIRPrimitiveFunction('*',  primitivePrefix + '*',  self.getOrCreateSimpleFunctionType((anIntegerType, anIntegerType), anIntegerType), integerMultiply, None, isPure = True, isCompileTime = True))
+        anIntegerType.addMethod(HIRPrimitiveFunction('//', primitivePrefix + '//', self.getOrCreateSimpleFunctionType((anIntegerType, anIntegerType), anIntegerType), integerDivide, None, isPure = True, isCompileTime = True))
+
+        anIntegerType.addMethod(HIRPrimitiveFunction('=',  primitivePrefix + '=',  self.getOrCreateSimpleFunctionType((anIntegerType, anIntegerType), self.booleanType), integerEquals, None, isPure = True, isCompileTime = True))
+        anIntegerType.addMethod(HIRPrimitiveFunction('~=', primitivePrefix + '~=', self.getOrCreateSimpleFunctionType((anIntegerType, anIntegerType), self.booleanType), integerNotEquals, None, isPure = True, isCompileTime = True))
+        anIntegerType.addMethod(HIRPrimitiveFunction('<',  primitivePrefix + '<',  self.getOrCreateSimpleFunctionType((anIntegerType, anIntegerType), self.booleanType), integerLessThan, None, isPure = True, isCompileTime = True))
+        anIntegerType.addMethod(HIRPrimitiveFunction('<=', primitivePrefix + '<=', self.getOrCreateSimpleFunctionType((anIntegerType, anIntegerType), self.booleanType), integerLessOrEquals, None, isPure = True, isCompileTime = True))
+        anIntegerType.addMethod(HIRPrimitiveFunction('>',  primitivePrefix + '>',  self.getOrCreateSimpleFunctionType((anIntegerType, anIntegerType), self.booleanType), integerGreaterThan, None, isPure = True, isCompileTime = True))
+        anIntegerType.addMethod(HIRPrimitiveFunction('>=', primitivePrefix + '>=', self.getOrCreateSimpleFunctionType((anIntegerType, anIntegerType), self.booleanType), integerGreaterOrEquals, None, isPure = True, isCompileTime = True))
 
     def createFloatPrimitiveFunctions(self):
         def floatNegated(operand, resultType):

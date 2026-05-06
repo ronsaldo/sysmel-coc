@@ -261,7 +261,7 @@ class MirContext:
         self.primitiveRuntimeFunctionNameMap[primitiveName] = runtimeName
 
     def getPrimitiveRuntimeFunctionNameFor(self, primitiveName):
-        return self.primitiveRuntimeFunctionNameMap[primitiveName]
+        return self.primitiveRuntimeFunctionNameMap.get(primitiveName, None)
 
     def getPrimitiveTranslatorFor(self, primitiveName):
         return self.primitiveTranslatorMap[primitiveName]
