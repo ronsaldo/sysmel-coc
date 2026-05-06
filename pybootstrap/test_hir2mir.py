@@ -323,5 +323,49 @@ class HIR2MIRTest(unittest.TestCase):
         result = mirFunction.evaluateWithArguments([structPointer])
         self.assertEqual(result, 2)
 
+    def testStructInstantiation(self):
+        mirFunction = self.compileFunctionToMir("""
+        struct TestPair definition: {
+            public field first type: Int32.
+            public field second type: Int32.
+        }.
+        public function makePair() => TestPair := TestPair()
+""")
+        
+        result = mirFunction.evaluateWithArguments([])
+        self.assertTrue(result.isMirMemorySimulationPointer())
+        self.assertEqual(0, result.loadInt32())
+        self.assertEqual(0, (result + 4).loadInt32())
+
+
+    def testStructInstantiation2(self):
+        mirFunction = self.compileFunctionToMir("""
+        struct TestPair definition: {
+            public field first type: Int32.
+            public field second type: Int32.
+        }.
+        public function makePair() => TestPair := TestPair(1i32. 2i32)
+""")
+        result = mirFunction.evaluateWithArguments([])
+        self.assertTrue(result.isMirMemorySimulationPointer())
+        self.assertEqual(1, result.loadInt32())
+        self.assertEqual(2, (result + 4).loadInt32())
+
+    def testStructExplicitFieldAccess(self):
+        mirFunction = self.compileFunctionToMir("""
+        struct TestPair definition: {
+            public field first type: Int32.
+            public field second type: Int32.
+        }.
+        public function getSecond(pair: TestPair) => Int32 := pair second.
+""")
+
+        structPointer = MirMemorySimulationPointer(MirMemorySimulation(8), 0)
+        structPointer.storeInt32(1)
+        (structPointer + 4).storeInt32(2)
+
+        result = mirFunction.evaluateWithArguments([structPointer])
+        self.assertEqual(result, 2)
+
 if __name__ == '__main__':
     unittest.main()

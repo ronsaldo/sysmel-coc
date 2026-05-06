@@ -114,8 +114,13 @@ class HirPackage2Mir(HIRVisitor):
         assert False
         return self.context.gcPointerType
 
-    def visitStructType(self, type: HIRStructType):
-        assert False
+    def visitStructType(self, structType: HIRStructType):
+        mirType = MirStructType(self, structType)
+        self.valueMap[type] = mirType
+
+        mirType.buildMemoryDescriptor(self)
+        self.makeNominalTypeWithMethods(structType)
+        return mirType
 
     def visitTupleType(self, type: HIRTupleType):
         assert False
@@ -412,7 +417,9 @@ class HirFunction2Mir(HIRVisitor):
         return self.builder.gcAllocateAt(memoryDescriptor, instruction.sourcePosition)
 
     def visitMakeStructInstruction(self, instruction):
-        assert False
+        objectType = self.packageTranslator.translateValue(instruction.getType())
+        memoryDescriptor = objectType.getMemoryDescriptor()
+        return self.builder.gcAllocateAt(memoryDescriptor, instruction.sourcePosition)
 
     def visitPhiInstruction(self, instruction):
         raise RuntimeError("Phi should be translated during the basic block creation pass")

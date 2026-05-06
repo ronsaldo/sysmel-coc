@@ -751,10 +751,10 @@ class MirStructType(MirType):
     def isStructType(self) -> bool:
         return True
 
-    def buildMemoryDescriptor(self):
+    def buildMemoryDescriptor(self, packageTranslator):
         self.memoryDescriptor = MemoryDescriptor(self.structType.getValueSize(), self.structType.getValueAlignment())
         for field in self.structType.fields:
-            fieldMirType = field.type.asMirTypeInContext(self.context)
+            fieldMirType = packageTranslator.translateValue(field.type)
             if fieldMirType.isGCPointerType():
                 assert False
 
