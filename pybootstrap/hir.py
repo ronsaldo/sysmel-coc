@@ -1810,6 +1810,9 @@ class HIRPrimitiveFunction(HIRConstant):
     def getType(self):
         return self.type
 
+    def getPrimitiveName(self):
+        return self.name
+
     def isCompileTimeFunction(self):
         return self.isCompileTime
 
@@ -2164,6 +2167,9 @@ class HIRInstruction(HIRFunctionLocalValue):
     def accept(self, visitor: HIRVisitor):
         return visitor.visitInstruction(self)
 
+    def isPhiInstruction(self):
+        return False
+    
     def isTerminator(self):
         return False
 
@@ -2540,6 +2546,9 @@ class HIRPhiInstrucion(HIRInstruction):
 
     def accept(self, visitor: HIRVisitor):
         return visitor.visitPhiInstruction(self)
+
+    def isPhiInstruction(self):
+        return True
 
     def fullPrintString(self):
         return "%s := phi %s" % (str(self), str(self.type))

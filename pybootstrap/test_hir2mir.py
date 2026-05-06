@@ -31,7 +31,7 @@ class HIR2MIRTest(unittest.TestCase):
         evaluationContext = self.context.createTopLevelEvaluationContext(ast.sourcePosition.sourceCode)
         return AnalysisAndEvaluationPass(evaluationContext).visitDecayedNode(ast)
     
-    def compilePackageToMir(self):
+    def compilePackageToMir(self) -> MirPackage:
         self.context.finishPendingAnalysis()
         self.mirPackage = HirPackage2Mir(self.context.coreTypes, self.mirContext).translateHirPackage2Mir(self.package, )
         return self.mirPackage
@@ -42,11 +42,14 @@ class HIR2MIRTest(unittest.TestCase):
         self.assertTrue(len(mirPackage.elementTable) == 0)
 
     def testFunction(self):
-        topLevelResult = self.evaluateTopLevelSourceString('public function add(x: Integer. y: Integer) => Integer := x + y')
-        self.assertTrue(topLevelResult.isFunction())
+        addFunction = self.evaluateTopLevelSourceString('public function add(x: Integer. y: Integer) => Integer := x + y')
+        self.assertTrue(addFunction.isFunction())
 
         mirPackage = self.compilePackageToMir()
-        self.assertTrue(len(mirPackage.elementTable) == 1)
+        addMirFunction = mirPackage.translatedFunctionMap[addFunction]
+
+        result = addMirFunction.evaluateWithArguments([1, 2])
+        self.assertEqual(result, 3)
 
 if __name__ == '__main__':
     unittest.main()

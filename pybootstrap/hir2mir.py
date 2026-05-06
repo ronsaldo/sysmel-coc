@@ -138,7 +138,13 @@ class HirPackage2Mir(HIRVisitor):
         return None
     
     def visitFunction(self, value: HIRFunction):
-        assert False
+        mirFunction = MirFunction(value.name)
+        mirFunction.sourceFunction = value
+        self.valueMap[value] = mirFunction
+        self.currentMirPackage.addMirFunction(mirFunction)
+
+        HirFunction2Mir(self).translateHirFunctionToMir(value, mirFunction)
+        return mirFunction
 
     def visitPackage(self, package: HIRPackage):
         if package in self.valueMap:
@@ -164,11 +170,98 @@ class HirPackage2Mir(HIRVisitor):
         return mirPackage
 
 class HirFunction2Mir(HIRVisitor):
-    def __init__(self, packageTranslator):
+    def __init__(self, packageTranslator: HirPackage2Mir):
         super().__init__()
         self.packageTranslator = packageTranslator
+        self.prologueBuilder: MirBuilder = None
+        self.builder: MirBuilder = None
+        self.valueMap = {}
 
+    def translateHirFunctionToMir(self, hirFunction: HIRFunction, mirFunction: MirFunction):
+        self.hirFunction = hirFunction
+        self.mirFunction = mirFunction
+
+        prologueBlock = MirBasicBlock(hirFunction.sourcePosition, 'prologue')
+        mirFunction.addBasicBlock(prologueBlock)
+
+        # Prologue block for receiving arguments, closure captures and constants.
+        self.prologueBuilder = MirBuilder(mirFunction, prologueBlock)
+        self.builder = MirBuilder(mirFunction, prologueBlock)
+        for argument in hirFunction.dependentFunctionType.arguments:
+            self.visitNextValue(argument)
+
+        # Translate th basic blocks
+        self.createAndMapBasicBlocks()
+
+        # Translate the basic blocks
+        self.translateBasicBlocks()
+
+        # End the prologue
+        firstBasicBlock = self.valueMap[hirFunction.firstBasicBlock]
+        self.prologueBuilder.jump(firstBasicBlock, hirFunction.sourcePosition)
+
+    def createAndMapBasicBlocks(self):
+        basicBlock = self.hirFunction.firstBasicBlock
+        while basicBlock is not None:
+            mirBasicBlock = MirBasicBlock(basicBlock.sourcePosition, basicBlock.name)
+            self.mirFunction.addBasicBlock(mirBasicBlock)
+            self.valueMap[basicBlock] = mirBasicBlock
+            self.translateBasicBlockPhis(basicBlock, mirBasicBlock)
+
+            basicBlock = basicBlock.nextBlock
+
+    def translateBasicBlockPhis(self, basicBlock: HIRBasicBlock, mirBasicBlock: MirBasicBlock):
+        self.builder.basicBlock = mirBasicBlock
+
+        instruction = basicBlock.firstInstruction
+        while instruction is not None and instruction.isPhiInstruction():
+            phiType = self.packageTranslator.translateValue(instruction.getType())
+            phiValue = phiType.emitPhiWithBuilder(self.builder, instruction.sourcePosition)
+            self.valueMap[instruction] = phiValue
+            
+            instruction = instruction.nextInstruction
+
+    def translateBasicBlocks(self):
+        block = self.hirFunction.firstBasicBlock
+        while block is not None:
+            self.builder.basicBlock = self.valueMap[block]
+            instruction = block.firstInstruction
+            while instruction is not None:
+                self.translateInstruction(instruction)
+                instruction = instruction.nextInstruction
+            block = block.nextBlock
+
+    def translateInstruction(self, instruction: HIRInstruction):
+        # Phis are crearted in the basic block creation pass
+        if instruction.isPhiInstruction():
+            assert instruction in self.valueMap
+            return
+
+        assert instruction not in self.valueMap
+        value = self.visitNextValue(instruction)
+        self.valueMap[instruction] = value
+    
+    def translateValue(self, value):
+        if value in self.valueMap:
+            return self.valueMap[value]
+        
+        assert not value.isInstruction()
+        translatedValue = self.visitNextValue(value)
+        self.valueMap[value] = translatedValue
+        return translatedValue
+    
+    def visitNextValue(self, value: HIRValue):
+        return value.accept(self)
+    
     def visitValue(self, value):
+        assert False
+
+    def visitArgument(self, argument: HIRArgument):
+        argumentType = self.packageTranslator.translateValue(argument.type)
+        argumentTemporary = argumentType.emitArgumentWithBuilder(self.builder, argument.sourcePosition)
+        self.valueMap[argument] = argumentTemporary
+
+    def visitCapture(self, capture: HIRCapture):
         assert False
 
     def visitAllocaInstruction(self, instruction):
@@ -187,13 +280,29 @@ class HirFunction2Mir(HIRVisitor):
         assert False
 
     def visitBranchInstruction(self, instruction):
-        assert False
+        self.builder.jump(self.valueMap[instruction.destination], instruction.sourcePosition)
 
     def visitConditionalBranchInstruction(self, instruction):
         assert False
 
     def visitCallInstruction(self, instruction):
+        if instruction.functional.isPrimitiveFunction():
+            primitiveName = instruction.functional.getPrimitiveName()
+            translator = self.packageTranslator.context.getPrimitiveTranslatorFor(primitiveName)
+            return translator(self, instruction)
+
         assert False
+
+    def callRuntimeFunctionWithName(self, instruction: HIRCallInstruction, runtimePrimitiveName):
+        primitive = self.packageTranslator.currentMirPackage.getOrCreateRuntimePrimitiveNamed(runtimePrimitiveName)
+        self.builder.beginCallAt(instruction.sourcePosition)
+        for argument in instruction.arguments:
+            argumentValue = self.translateValue(argument)
+            argumentType = self.packageTranslator.translateValue(argument.getType())
+            argumentType.emitCallArgumentWithBuilder(self.builder, argumentValue, argument.sourcePosition)
+
+        callType = self.packageTranslator.translateValue(instruction.getType())
+        return callType.emitCallWithBuilder(self.builder, primitive, instruction.sourcePosition)
 
     def visitSendInstruction(self, instruction):
         assert False
@@ -235,7 +344,11 @@ class HirFunction2Mir(HIRVisitor):
         assert False
 
     def visitReturnInstruction(self, instruction):
-        assert False
+        # TODO: handle return void
+        hirReturnType = instruction.valueToReturn.getType()
+        returnType = self.packageTranslator.translateValue(hirReturnType)
+        returnValue = self.translateValue(instruction.valueToReturn)
+        returnType.emitReturnWithBuilder(self.builder, returnValue, instruction.sourcePosition)
 
     def visitUnreachableInstruction(self, instruction):
         assert False

@@ -86,12 +86,18 @@ class MirPackage:
         self.context = context
         self.elementTable = []
         self.translatedPrimitiveMap = {}
+        self.translatedFunctionMap = {}
         self.name = name
 
     def addElement(self, element):
         assert element.module is None
         self.elementTable.append(element)
         element.module = self
+
+    def addMirFunction(self, mirFunction):
+        self.addElement(mirFunction)
+        assert mirFunction.sourceFunction not in self.translatedFunctionMap
+        self.translatedFunctionMap[mirFunction.sourceFunction] = mirFunction
 
     def dumpToConsole(self):
         for element in self.elementTable:
