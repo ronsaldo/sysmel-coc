@@ -81,6 +81,9 @@ MirOpcode = Enum('MirOpcode', [
 ])
 
 class MirVisitor:
+    def visitValue(self, value):
+        return value.accept(self)
+
     def visitPackage(self, package):
         pass
 
@@ -127,8 +130,10 @@ class MirPackage:
 
     def addElement(self, element):
         assert element.module is None
+        assert element.owner is None
         self.elementTable.append(element)
         element.module = self
+        element.owner = self
 
     def addMirFunction(self, mirFunction):
         self.addElement(mirFunction)
@@ -148,20 +153,35 @@ class MirPackage:
         self.translatedPrimitiveMap[primitiveRuntimeName] = primitive
         return primitive
     
+    def getSymbolName(self):
+        return self.name
+    
 class MirPackageElement:
-    def __init__(self):
+    def __init__(self, name):
+        self.name = name
+        self.anonSymbolName = None
         self.module: MirPackage = None
+        self.owner = None
+        self.isExternC = False
 
     def accept(self, visitor: MirVisitor):
         return visitor.visitPackageElement(self)
+    
+    def getSymbolName(self):
+        if self.name is None:
+            self.anonSymbolName = self.module.generateAnonymousSymbol()
+            return self.anonSymbolName
 
+        if self.isExternC:
+            return self.name
+        return self.owner.getSymbolName() + "::" + self.name
+    
     def isTemporary(self):
         return False
 
 class MirTypeWithMethodDictionary(MirPackageElement):
     def __init__(self, name, sourceType):
-        super().__init__()
-        self.name = name
+        super().__init__(name)
         self.sourceType = sourceType
         self.metaType = None
         self.children = []
@@ -172,8 +192,11 @@ class MirTypeWithMethodDictionary(MirPackageElement):
 
     def withSelectorAddMethod(self, selector, method):
         assert selector not in self.methodDictionary
+        assert method.module is None
         self.children.append(method)
         self.methodDictionary[selector] = method
+        method.owner = self
+        method.module = self.module
 
     def dumpToConsole(self):
         print(str(self))
@@ -185,8 +208,7 @@ class MirTypeWithMethodDictionary(MirPackageElement):
 
 class MirImportedFunction(MirPackageElement):
     def __init__(self, name):
-        super().__init__()
-        self.name = name
+        super().__init__(name)
         self.implementation = None
 
     def accept(self, visitor: MirVisitor):
@@ -198,17 +220,9 @@ class MirImportedFunction(MirPackageElement):
     def __str__(self):
         return 'importedFunction ' + self.name
 
-class MirGlobalData(MirPackageElement):
-    def __init__(self, data: bytes, name = None):
-        super().__init__()
-        self.data = data
-        self.name = name
-
-    def accept(self, visitor: MirVisitor):
-        return visitor.visitGlobalData(self)
-
-class MirGlobalConstant:
-    def __init__(self, value, type):
+class MirGlobalConstant(MirPackageElement):
+    def __init__(self, name, value, type):
+        super().__init__(name)
         self.value = value
         self.type = type
 
@@ -217,10 +231,9 @@ class MirGlobalConstant:
 
 class MirFunction(MirPackageElement):
     def __init__(self, name = ''):
-        super().__init__()
+        super().__init__(name)
         self.sourcePosition = None
         self.sourceFunction = None
-        self.name = name
         self.firstBasicBlock = None
         self.lastBasicBlock = None
         self.enumeratedInstructions = None

@@ -148,13 +148,13 @@ class HirPackage2Mir(HIRVisitor):
         return self.context.gcPointerType
     
     def visitConstantLiteralBooleanValue(self, value):
-        return MirGlobalConstant(value.value, self.context.boolean8Type)
+        return MirGlobalConstant(None, value.value, self.context.boolean8Type)
     
     def visitConstantLiteralVoidValue(self, value):
-        return MirGlobalConstant(None, self.context.voidType)
+        return MirGlobalConstant(None, None, self.context.voidType)
 
     def visitConstantLiteralNilValue(self, value):
-        return MirGlobalConstant(None, self.context.pointerType)
+        return MirGlobalConstant(None, None, self.context.pointerType)
     
     def visitMetaBuilderFactory(self, value):
         return None

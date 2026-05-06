@@ -6,9 +6,58 @@ class MirPackage2LirX64(MirVisitor):
         super().__init__()
         self.context = context
         self.lirModule: LirModule = None
+        self.valueMap = {}
+        self.pendingFunctionTranslationQueue = []
 
     def translateMirPackage(self, mirPackage: MirPackage):
         self.lirModule = LirModule()
         self.lirModule.name = mirPackage.name
+
+        self.lirModule.getOrCreateCommonSections()
+
+        self.asm = LirAssembler(self.lirModule)
+        self.asm.textSection()
+
+        self.translateValue(mirPackage)
+        self.translatePendingFunctions()
         return self.lirModule
+    
+    def translateValue(self, value):
+        if value in self.valueMap:
+            return self.valueMap[value]
         
+        translatedValue = self.visitValue(value)
+        self.valueMap[value] = translatedValue
+        return translatedValue
+
+    def visitPackage(self, package: MirPackage):
+        for element in package.elementTable:
+            self.translateValue(element)
+        return self.lirModule
+
+    def visitImportedFunction(self, importedFunction):
+        assert False
+
+    def visitGlobalConstant(self, globalConstant: MirGlobalConstant):
+        assert False
+
+    def visitFunction(self, function: MirFunction):
+        functionSymbolValue = function.getSymbolName()
+        functionSymbol = self.asm.makeGlobalFunctionSymbol(functionSymbolValue)
+        self.pendingFunctionTranslationQueue.append(function)
+        return functionSymbol
+
+    def translatePendingFunctions(self):
+        while len(self.pendingFunctionTranslationQueue) != 0:
+            toTranslate = self.pendingFunctionTranslationQueue
+            self.pendingFunctionTranslationQueue = []
+            for function in toTranslate:
+                self.translateFunction(function)
+    
+    def translateFunction(self, function: MirFunction):
+        functionSymbol = self.valueMap[function]
+        self.asm.textSection()
+
+        self.asm.setSymbolHere(functionSymbol)
+        self.asm.x86_endbr64()
+        self.asm.endFunctionSymbolHere(functionSymbol)
