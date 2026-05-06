@@ -743,5 +743,12 @@ class TestAnalysisAndEvaluation(unittest.TestCase):
         self.assertTrue(value.fields[1].isIntegerConstant())
         self.assertEqual(2, value.fields[1].value)
 
+    def testNilInteger(self):
+        function = self.evaluateTopLevelSourceString("{:: Integer | nil}")
+        self.assertTrue(function.isFunction())
+
+        value = function.evaluateWithArguments([])
+        self.assertEqual(value, self.context.coreTypes.nilValue)
+
 if __name__ == '__main__':
     unittest.main()

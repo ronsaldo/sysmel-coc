@@ -21,6 +21,9 @@ class HIRVisitor(ABC):
     def visitDynamicType(self, type):
         return self.visitType(type)
 
+    def visitUndefinedType(self, type):
+        return self.visitType(type)
+
     def visitVoidType(self, type):
         return self.visitType(type)
 
@@ -324,6 +327,9 @@ class HIRValue(ABC):
     def isDynamicType(self):
         return False
 
+    def isUndefinedType(self):
+        return False
+
     def isUniverseType(self):
         return False
 
@@ -459,6 +465,9 @@ class HIRType(HIRValue):
         super().__init__(sourcePosition)
         self.coreTypes = coreTypes
 
+    def isNullableType(self):
+        return False
+
     def accept(self, visitor: HIRVisitor):
         return visitor.visitType(self)
 
@@ -496,6 +505,9 @@ class HIRType(HIRValue):
         return self.isSatisfiedByType(value.getType())
 
     def isSatisfiedByType(self, subtype):
+        if self.isNullableType() and subtype.isUndefinedType():
+            return True
+
         return self == subtype
 
     def getType(self):
@@ -567,6 +579,9 @@ class HIRNominalType(HIRType):
     def getName(self):
         return self.name
 
+    def isNullableType(self):
+        return True
+
     def isNominalType(self):
         return True
 
@@ -628,6 +643,23 @@ class HIRPrimitiveType(HIRNominalType):
 
     def accept(self, visitor: HIRVisitor):
         return visitor.visitPrimitiveType(self)
+
+class HIRUndefinedType(HIRType):
+    def __init__(self, name: str, coreTypes, sourcePosition = None):
+        super().__init__(coreTypes, sourcePosition)
+        self.name = name
+
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitUndefinedType(self)
+
+    def getName(self):
+        return self.name
+
+    def isUndefinedType(self):
+        return True
+
+    def __str__(self):
+        return self.name
 
 class HIRVoidType(HIRType):
     def __init__(self, name: str, coreTypes, sourcePosition = None):
@@ -3081,7 +3113,7 @@ class HIRCoreTypes:
         self.booleanType   = HIRNominalType('Boolean', self, None);
         self.stringType    = HIRNominalType('String', self, None);
         self.symbolType    = HIRNominalType('Symbol', self, None);
-        self.undefinedType = HIRNominalType('Undefined', self, None);
+        self.undefinedType = HIRUndefinedType('Undefined', self, None);
 
         self.boolean8Type = HIRPrimitiveType('Boolean8', 1, 1, self, None)
 

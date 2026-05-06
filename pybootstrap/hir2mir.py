@@ -81,6 +81,9 @@ class HirPackage2Mir(HIRVisitor):
     def visitVoidType(self, type: HIRVoidType):
         return self.context.voidType
 
+    def visitUndefinedType(self, type: HIRUndefinedType):
+        return self.context.pointerType
+
     def visitControlFlowEscapeType(self, type: HIRControlFlowEscapeType):
         return self.context.voidType
 
