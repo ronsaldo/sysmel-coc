@@ -219,9 +219,6 @@ class HIRVisitor(ABC):
     def visitDynamicUnboxInstruction(self, instruction):
         return self.visitInstruction(instruction)
 
-    def visitDynamicUnboxInstruction(self, instruction):
-        return self.visitInstruction(instruction)
-
     def visitMakeAssociationInstruction(self, instruction):
         return self.visitInstruction(instruction)
 

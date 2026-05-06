@@ -401,10 +401,6 @@ class HirFunction2Mir(HIRVisitor):
         valueToStore.type.emitStoreWithBuilder(self.builder, aggregateField, valueToStore, instruction.sourcePosition)
         return None
 
-
-    def visitDynamicUnboxInstruction(self, instruction):
-        assert False
-
     def visitDynamicUnboxInstruction(self, instruction):
         assert False
 
