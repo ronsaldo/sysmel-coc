@@ -60,19 +60,31 @@ class MirPackage2LirX64(MirVisitor):
         MirFunction2LirX64(self, self.asm, functionSymbol).translateFunction(function)
 
 class MirFunction2LirX64(MirVisitor):
-    def __init__(self, packageTranslator, asm: LirAssembler, functionSymbol):
+    def __init__(self, packageTranslator: MirPackage2LirX64, asm: LirAssembler, functionSymbol):
         super().__init__()
         self.packageTranslator = packageTranslator
         self.asm = asm
         self.functionSymbol = functionSymbol
+        self.stackFrameLayout: MirFunctionStackFrameLayout = None
 
     def translateFunction(self, function: MirFunction):
-        #function.dumpToConsole()
+        function.dumpToConsole()
+
+        self.stackFrameLayout = MirFunctionStackFrameLayout(self.packageTranslator.context)
+        function.computeStackFrameLayoutIn(self.stackFrameLayout)
+
+        self.stackFrameLayout.addFramePointer()
+        self.stackFrameLayout.addReturnPointer()
+        self.stackFrameLayout.finish()
+
         self.asm.textSection()
 
         self.asm.setSymbolHere(self.functionSymbol)
         self.asm.x86_endbr64()
         self.asm.x86_push(X86_RBP)
+        self.asm.x86_sub64RegImmS32(X86_RSP, self.stackFrameLayout.stackFrameSubtractionSize)
+
+        self.asm.x86_add64RegImmS32(X86_RSP, self.stackFrameLayout.stackFrameSubtractionSize)
         self.asm.x86_pop(X86_RBP)
         self.asm.x86_ret()
         self.asm.endFunctionSymbolHere(self.functionSymbol)

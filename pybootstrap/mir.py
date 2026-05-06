@@ -1,5 +1,6 @@
 from enum import Enum
 from mirContext import *
+from hir import alignedTo
 
 MirOpcode = Enum('MirOpcode', [
     'Nop',
@@ -246,7 +247,11 @@ class MirFunction(MirPackageElement):
         temporary = MirTemporary(type, len(self.temporaries), sourcePosition, name)
         self.temporaries.append(temporary)
         return temporary
-
+    
+    def computeStackFrameLayoutIn(self, stackFrameLayout):
+        for temporary in self.temporaries:
+            stackFrameLayout.addTemporary(temporary)
+        
     def addBasicBlock(self, basicBlock):
         if self.firstBasicBlock is None:
             self.firstBasicBlock = self.lastBasicBlock = basicBlock
@@ -402,14 +407,23 @@ class MirBasicBlock(MirFunctionLocal):
 class MirLocation:
     def __init__(self):
         pass
+    
+    def isStackFrameLocation(self):
+        return False
+
+    def isStackFrameReferenceLocation(self):
+        return False
 
 class MirStackFrameLocation(MirLocation):
-    def __init__(self):
+    def __init__(self, offset, size, alignment):
         super().__init__()
-        self.offset = 0
-        self.size = 0
-        self.alignment = 0
+        self.offset = offset
+        self.size = size
+        self.alignment = alignment
         self.stackPointerRelativeOffset = 0
+
+    def isStackFrameLocation(self):
+        return True
 
 class MirFunctionStackFrameLayoutSection:
     def __init__(self):
@@ -419,13 +433,60 @@ class MirFunctionStackFrameLayoutSection:
         self.sectionOffset = 0
         self.callShadowSpace = 0
 
+    def addValueWithSizeAndAlignment(self, valueSize, valueAlignment):
+        self.alignment = max(valueAlignment, self.alignment)
+        offset = alignedTo(self.size, valueAlignment)
+        self.size = offset + valueSize
+        self.maxSize = max(self.maxSize, self.size)
+
+        location = MirStackFrameLocation(offset, valueSize, valueAlignment)
+        self.locations.append(location)
+        return location
+    
+    def computeSPRelativeOffsets(self):
+        for eachLocation in self.locations:
+            eachLocation.stackPointerRelativeOffset = self.sectionOffset + eachLocation.offset
+
 class MirFunctionStackFrameLayout:
-    def __init__(self):
+    def __init__(self, mirContext: MirContext):
+        self.mirContext = mirContext
+
         self.argumentsSection = MirFunctionStackFrameLayoutSection()
         self.framePrologueSection = MirFunctionStackFrameLayoutSection()
         self.gcPointerSection = MirFunctionStackFrameLayoutSection()
         self.calloutSection = MirFunctionStackFrameLayoutSection()
         self.callingConvention = None
+        self.returnPointerLocation = None
+        self.framePointerLocation = None
+        self.stackFrameSubtractionSize = None
+        self.temporaryLocationMap = {}
+
+    def addReturnPointer(self):
+        self.returnPointerLocation = self.framePrologueSection.addValueWithSizeAndAlignment(self.mirContext.pointerSize, self.mirContext.pointerAlignment)
+
+    def addFramePointer(self):
+        self.framePointerLocation = self.framePrologueSection.addValueWithSizeAndAlignment(self.mirContext.pointerSize, self.mirContext.pointerAlignment)
+
+    def addTemporary(self, temporary):
+        assert temporary not in self.temporaryLocationMap
+
+        isGCPointer = temporary.type.isGCPointerType()
+        alignment = temporary.type.valueAlignment
+        size = temporary.type.valueSize
+        if isGCPointer:
+            location = self.gcPointerSection.addValueWithSizeAndAlignment(size, alignment)
+        else:
+            location = self.framePrologueSection.addValueWithSizeAndAlignment(size, alignment)
+        self.temporaryLocationMap[temporary] = location
+
+    def finish(self):
+        sectionOffset = 0
+        for eachSection in [self.calloutSection, self.gcPointerSection, self.framePrologueSection, self.argumentsSection]:
+            eachSection.sectionOffset = alignedTo(sectionOffset, eachSection.alignment)
+            eachSection.computeSPRelativeOffsets()
+            sectionOffset = sectionOffset + alignedTo(eachSection.maxSize, eachSection.alignment)
+
+        self.stackFrameSubtractionSize = self.argumentsSection.sectionOffset - self.mirContext.pointerSize*2
 
 class MirMemorySimulation:
     def __init__(self, size):

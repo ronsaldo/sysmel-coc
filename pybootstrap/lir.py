@@ -582,6 +582,27 @@ class LirAssembler:
     def x86_add32RegReg(self, destination, source):
         self.x86_alu32RmReg(0x01, destination, source)
 
+    def x86_alu64RmImm32(self, opcode, destination, regOpcode, value):
+        self.x86_rexRm(True, destination)
+        self.x86_opcode(opcode)
+        self.x86_modRmOp(destination, regOpcode)
+        self.x86_imm32(value)
+
+    def x86_alu64RmImm32_S8(self, opcodeImm32, opcodeImm8, destination, regOpcode, value):
+        #if(value == (int32_t)(int8_t)value)
+        #    x86_alu64RmImm8(compiler, opcodeImm8, destination, regOpcode, (uint8_t)value)
+        return self.x86_alu64RmImm32(opcodeImm32, destination, regOpcode, value)
+
+    def x86_add64RegImmS32(self, destination, value):
+        if value == 0:
+            return
+        self.x86_alu64RmImm32_S8(0x81, 0x83, destination, 0, value)
+
+    def x86_sub64RegImmS32(self, destination, value):
+        if value == 0:
+            return
+        self.x86_alu64RmImm32_S8(0x81, 0x83, destination, 5, value)
+
     def x86_ret(self):
         self.addByte(0xC3)
 
