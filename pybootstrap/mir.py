@@ -80,6 +80,39 @@ MirOpcode = Enum('MirOpcode', [
     'ReturnGCPointer', 'ReturnVoid',
 ])
 
+class MirVisitor:
+    def visitPackage(self, package):
+        pass
+
+    def visitPackageElement(self, element):
+        pass
+
+    def visitTypeWithMethodDictionary(self, typeWithMethodDictionary):
+        pass
+
+    def visitImportedFunction(self, importedFunction):
+        pass
+    
+    def visitGlobalData(self, globalData):
+        pass
+
+    def visitGlobalConstant(self, globalConstant):
+        pass
+
+    def visitFunction(self, function):
+        pass
+
+    def visitTemporary(self, temporary):
+        pass
+
+    def visitFunctionLocal(self, functionLocal):
+        pass
+
+    def visitBasicBlock(self, basicBlock):
+        pass
+
+    def visitInstruction(self, instruction):
+        pass
 
 class MirPackage:
     def __init__(self, context: MirContext, name: str):
@@ -88,6 +121,9 @@ class MirPackage:
         self.translatedPrimitiveMap = {}
         self.translatedFunctionMap = {}
         self.name = name
+
+    def accept(self, visitor: MirVisitor):
+        return visitor.visitPackage(self)
 
     def addElement(self, element):
         assert element.module is None
@@ -116,6 +152,9 @@ class MirPackageElement:
     def __init__(self):
         self.module: MirPackage = None
 
+    def accept(self, visitor: MirVisitor):
+        return visitor.visitPackageElement(self)
+
     def isTemporary(self):
         return False
 
@@ -127,6 +166,9 @@ class MirTypeWithMethodDictionary(MirPackageElement):
         self.metaType = None
         self.children = []
         self.methodDictionary = {}
+
+    def accept(self, visitor: MirVisitor):
+        return visitor.visitTypeWithMethodDictionary(self)
 
     def withSelectorAddMethod(self, selector, method):
         assert selector not in self.methodDictionary
@@ -147,6 +189,9 @@ class MirImportedFunction(MirPackageElement):
         self.name = name
         self.implementation = None
 
+    def accept(self, visitor: MirVisitor):
+        return visitor.visitImportedFunction(self)
+
     def evaluateWithArguments(self, arguments):
         return self.implementation(*arguments)
 
@@ -159,10 +204,16 @@ class MirGlobalData(MirPackageElement):
         self.data = data
         self.name = name
 
+    def accept(self, visitor: MirVisitor):
+        return visitor.visitGlobalData(self)
+
 class MirGlobalConstant:
     def __init__(self, value, type):
         self.value = value
         self.type = type
+
+    def accept(self, visitor: MirVisitor):
+        return visitor.visitGlobalConstant(self)
 
 class MirFunction(MirPackageElement):
     def __init__(self, name = ''):
@@ -174,6 +225,9 @@ class MirFunction(MirPackageElement):
         self.lastBasicBlock = None
         self.enumeratedInstructions = None
         self.temporaries = []
+
+    def accept(self, visitor: MirVisitor):
+        return visitor.visitFunction(self)
 
     def newTemporary(self, type, sourcePosition, name):
         temporary = MirTemporary(type, len(self.temporaries), sourcePosition, name)
@@ -280,6 +334,9 @@ class MirTemporary:
         self.sourcePosition = sourcePosition
         self.name = name
 
+    def accept(self, visitor: MirVisitor):
+        return visitor.visitTemporary(self)
+
     def isTemporary(self):
         return True
 
@@ -291,7 +348,10 @@ class MirFunctionLocal:
         self.index = -1
         self.sourcePosition = sourcePosition
         self.name = name
-    
+
+    def accept(self, visitor: MirVisitor):
+        return visitor.visitFunctionLocal(self)
+
 class MirBasicBlock(MirFunctionLocal):
     def __init__(self, sourcePosition, name = ''):
         super().__init__(sourcePosition, name)
@@ -299,6 +359,9 @@ class MirBasicBlock(MirFunctionLocal):
         self.next = None
         self.firstInstruction = None
         self.lastInstruction = None
+
+    def accept(self, visitor: MirVisitor):
+        return visitor.visitBasicBlock(self)
 
     def addInstruction(self, instruction):
         if self.firstInstruction is None:
@@ -445,6 +508,9 @@ class MirInstruction(MirFunctionLocal):
         self.secondArgument = secondArgument
         self.previous = None
         self.next = None
+
+    def accept(self, visitor: MirVisitor):
+        return visitor.visitInstruction(self)
 
     def dumpToConsole(self):
         dumpString = "    "

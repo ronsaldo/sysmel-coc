@@ -3,6 +3,7 @@ from parser import parseSourceString, parseFileNamed
 from analysisAndEvaluation import *
 from hir import *
 from hir2mir import *
+from mir2lir_x64 import *
 import sys
 
 class FrontEndDriver:
@@ -61,16 +62,21 @@ class FrontEndDriver:
             print(error)
             return False
 
+        ## HIR Finalizaton
         self.context.finishPendingAnalysis()
+        
+        # HIR2MIR
         if outputFile is None or printMir:
             return True
-        
+
         self.mirPackage = HirPackage2Mir(self.context.coreTypes, self.mirContext).translateHirPackage2Mir(self.package)
         if printMir:
             self.mirPackage.dumpToConsole()
             return True
-
-        print("TODO: Make Mir->LirX64")
+        
+        ## MIR2Lir
+        self.lirModule = MirPackage2LirX64(self.mirContext).translateMirPackage(self.mirPackage)
+        self.lirModule.saveModuleToFile(outputFile)
         return True
     
 if __name__ == "__main__":
