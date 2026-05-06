@@ -280,5 +280,18 @@ class HIR2MIRTest(unittest.TestCase):
         result = mirFunction.evaluateWithArguments([])
         self.assertEqual(result, None)
 
+    def testClassInstantiation(self):
+        mirFunction = self.compileFunctionToMir("""
+        class TestPair definition: {
+            public field first type: Int32.
+            public field second type: Int32.
+        }.
+        public function makePair() => TestPair := TestPair()
+""")
+        result = mirFunction.evaluateWithArguments([])
+        self.assertTrue(result.isMirMemorySimulationPointer())
+        self.assertEqual(0, result.loadInt32())
+        self.assertEqual(0, (result + 4).loadInt32())
+        
 if __name__ == '__main__':
     unittest.main()

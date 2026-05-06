@@ -102,13 +102,14 @@ class HirPackage2Mir(HIRVisitor):
     def visitBehavior(self, type: HIRBehavior):
         assert False
 
-    def visitClass(self, type: HIRClass):
-        mirType = self.context.gcPointerType
-        self.valueMap[type] = mirType
+    def visitClass(self, classType: HIRClass):
+        mirType = MirBehaviorType(self, classType)
+        self.valueMap[type] = classType
 
-        self.makeNominalTypeWithMethods(type)
+        mirType.buildMemoryDescriptor(self)
+        self.makeNominalTypeWithMethods(classType)
         return mirType
-
+    
     def visitMetaclass(self, type: HIRMetaclass):
         assert False
         return self.context.gcPointerType
@@ -390,16 +391,18 @@ class HirFunction2Mir(HIRVisitor):
     def visitDynamicUnboxInstruction(self, instruction):
         assert False
 
-    def visitMakeAssociationInstructino(self, instruction):
+    def visitMakeAssociationInstruction(self, instruction):
         assert False
 
-    def visitMakeClosureInstructino(self, instruction):
+    def visitMakeClosureInstruction(self, instruction):
         assert False
 
-    def visitMakeObjectInstructino(self, instruction):
-        assert False
+    def visitMakeObjectInstruction(self, instruction):
+        objectType = self.packageTranslator.translateValue(instruction.getType())
+        memoryDescriptor = objectType.getMemoryDescriptor()
+        return self.builder.gcAllocateAt(memoryDescriptor, instruction.sourcePosition)
 
-    def visitMakeStructInstructino(self, instruction):
+    def visitMakeStructInstruction(self, instruction):
         assert False
 
     def visitPhiInstruction(self, instruction):

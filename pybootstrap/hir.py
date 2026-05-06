@@ -222,16 +222,16 @@ class HIRVisitor(ABC):
     def visitDynamicUnboxInstruction(self, instruction):
         return self.visitInstruction(instruction)
 
-    def visitMakeAssociationInstructino(self, instruction):
+    def visitMakeAssociationInstruction(self, instruction):
         return self.visitInstruction(instruction)
 
-    def visitMakeClosureInstructino(self, instruction):
+    def visitMakeClosureInstruction(self, instruction):
         return self.visitInstruction(instruction)
 
-    def visitMakeObjectInstructino(self, instruction):
+    def visitMakeObjectInstruction(self, instruction):
         return self.visitInstruction(instruction)
 
-    def visitMakeStructInstructino(self, instruction):
+    def visitMakeStructInstruction(self, instruction):
         return self.visitInstruction(instruction)
 
     def visitPhiInstruction(self, instruction):
@@ -2511,7 +2511,7 @@ class HIRMakeAssociationInstruction(HIRInstruction):
         self.value = value
 
     def accept(self, visitor: HIRVisitor):
-        return visitor.visitMakeAssociationInstructino(self)
+        return visitor.visitMakeAssociationInstruction(self)
 
     def evaluateInActivationContext(self, context):
         key = self.key.getValueInEvaluationContext(context)
@@ -2534,7 +2534,7 @@ class HIRMakeClosureInstruction(HIRInstruction):
         self.captureList = captureList
 
     def accept(self, visitor: HIRVisitor):
-        return visitor.visitMakeClosureInstructino(self)
+        return visitor.visitMakeClosureInstruction(self)
 
     def evaluateInActivationContext(self, context):
         functionValue = self.function.getValueInEvaluationContext(context)
@@ -2551,7 +2551,7 @@ class HIRMakeObjectInstruction(HIRInstruction):
         self.defaultElements = defaultElements
 
     def accept(self, visitor: HIRVisitor):
-        return visitor.visitMakeObjectInstructino(self)
+        return visitor.visitMakeObjectInstruction(self)
 
     def evaluateInActivationContext(self, context):
         context.setCurrentInstructionValue(HIRObjectValue(self.type, list(self.defaultElements), self.sourcePosition))
@@ -2565,7 +2565,7 @@ class HIRMakeStructInstruction(HIRInstruction):
         self.defaultElements = defaultElements
 
     def accept(self, visitor: HIRVisitor):
-        return visitor.visitMakeStructInstructino(self)
+        return visitor.visitMakeStructInstruction(self)
 
     def evaluateInActivationContext(self, context):
         context.setCurrentInstructionValue(HIRStructValue(self.type, list(self.defaultElements), self.sourcePosition))
@@ -3152,7 +3152,26 @@ class HIRCoreTypes:
         self.float32Type = HIRPrimitiveType('Float32', 4, 4, self, None)
         self.float64Type = HIRPrimitiveType('Float64', 8, 8, self, None)
 
+        self.characterType.defaultValue = HIRConstantLiteralCharacterValue(0, self.characterType, None)
         self.integerType.defaultValue = HIRConstantLiteralIntegerValue(0, self.integerType, None)
+        self.floatType.defaultValue = HIRConstantLiteralFloatValue(0.0, self.floatType, None)
+
+        self.char8Type.defaultValue  = HIRConstantLiteralCharacterValue(0, self.char8Type, None)
+        self.char16Type.defaultValue = HIRConstantLiteralCharacterValue(0, self.char16Type, None)
+        self.char32Type.defaultValue = HIRConstantLiteralCharacterValue(0, self.char32Type, None)
+
+        self.int8Type.defaultValue  = HIRConstantLiteralIntegerValue(0, self.int8Type, None)
+        self.int16Type.defaultValue = HIRConstantLiteralIntegerValue(0, self.int16Type, None)
+        self.int32Type.defaultValue = HIRConstantLiteralIntegerValue(0, self.int32Type, None)
+        self.int64Type.defaultValue = HIRConstantLiteralIntegerValue(0, self.int64Type, None)
+
+        self.uint8Type.defaultValue  = HIRConstantLiteralIntegerValue(0, self.uint8Type, None)
+        self.uint16Type.defaultValue = HIRConstantLiteralIntegerValue(0, self.uint16Type, None)
+        self.uint32Type.defaultValue = HIRConstantLiteralIntegerValue(0, self.uint32Type, None)
+        self.uint64Type.defaultValue = HIRConstantLiteralIntegerValue(0, self.uint64Type, None)
+
+        self.float32Type.defaultValue = HIRConstantLiteralFloatValue(0.0, self.float32Type, None)
+        self.float64Type.defaultValue = HIRConstantLiteralFloatValue(0.0, self.float64Type, None)
 
         self.dynamicType = HIRDynamicType('Dynamic', self, None)
         self.voidType    = HIRVoidType('Void', self, None);

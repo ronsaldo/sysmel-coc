@@ -269,11 +269,6 @@ class MirContext:
     def getRuntimePrimitiveImplementationOrNone(self, runtimeName):
         return self.runtimePrimitiveImplementations.get(runtimeName, None)
     
-    def createTypeForBehavior(self, behaviorType):
-        mirType = MirBehaviorType(self, behaviorType)
-        mirType.buildMemoryDescriptor()
-        return mirType
-
     def createTypeForStruct(self, behaviorType):
         mirType = MirStructType(self, behaviorType)
         mirType.buildMemoryDescriptor()
@@ -723,13 +718,31 @@ class MirBehaviorType(MirType):
     def isBehaviorType(self) -> bool:
         return True
 
-    def buildMemoryDescriptor(self):
+    def buildMemoryDescriptor(self, packageTranslator):
         self.memoryDescriptor = MemoryDescriptor(self.behavior.getInstanceSize(), self.behavior.getInstanceAlignment())
         for field in self.behavior.allFields:
-            fieldMirType = field.type.asMirTypeInContext(self.context)
+            fieldMirType = packageTranslator.translateValue(field.type)
             if fieldMirType.isGCPointerType():
                 assert False
 
+    def emitArgumentWithBuilder(self, builder, sourcePosition):
+        return builder.argumentGCPointerAt(sourcePosition)
+
+    def emitReturnWithBuilder(self, builder, returnValue, sourcePosition):
+        return builder.returnGCPointerAt(returnValue, sourcePosition)
+
+    def emitCallArgumentWithBuilder(self, builder, argument, sourcePosition):
+        return builder.callArgumentGCPointerAt(argument, sourcePosition)
+
+    def emitCallWithBuilder(self, builder, functional, sourcePosition):
+        return builder.callGCPointerResultAt(functional, sourcePosition)
+
+    def emitPhiWithBuilder(self, builder, sourcePosition):
+        return builder.phiGCPointerAt(sourcePosition)
+
+    def emitPhiSourceWithBuilder(self, builder, targetTemp, sourceTemp, sourcePosition):
+        return builder.phiSourceGCPointerAt(targetTemp, sourceTemp, sourcePosition)
+    
 class MirStructType(MirType):
     def __init__(self, context, structType):
         super().__init__(context, structType.name, structType.getValueSize(), structType.getValueAlignment())
