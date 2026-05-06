@@ -297,6 +297,10 @@ class HirFunction2Mir(HIRVisitor):
         constantType = self.packageTranslator.translateValue(constantLiteral.getType())
         return constantType.emitVoidConstantWithBuilder(self.prologueBuilder, constantLiteral.sourcePosition)
 
+    def visitConstantLiteralNilValue(self, constantLiteral: HIRConstantLiteralIntegerValue):
+        constantType = self.packageTranslator.translateValue(constantLiteral.getType())
+        return constantType.emitNilConstantWithBuilder(self.prologueBuilder, constantLiteral.sourcePosition)
+
     def visitArgument(self, argument: HIRArgument):
         argumentType = self.packageTranslator.translateValue(argument.type)
         argumentTemporary = argumentType.emitArgumentWithBuilder(self.builder, argument.sourcePosition)

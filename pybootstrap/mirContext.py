@@ -331,6 +331,9 @@ class MirType:
     def emitVoidConstantWithBuilder(self, builder, sourcePosition):
         assert False
 
+    def emitNilConstantWithBuilder(self, builder, sourcePosition):
+        assert False
+
     def isBehaviorType(self) -> bool:
         return False
 
@@ -674,6 +677,9 @@ class MirGCPointerType(MirType):
     def emitFloatConstantWithBuilder(self, builder, floatValue, sourcePosition):
         return builder.constFloatAt(floatValue, sourcePosition)
 
+    def emitNilConstantWithBuilder(self, builder, sourcePosition):
+        return builder.constGCPointerAt(0, sourcePosition)
+
     def emitPhiWithBuilder(self, builder, sourcePosition):
         return builder.phiGCPointerAt(sourcePosition)
 
@@ -688,7 +694,26 @@ class MirBasicBlockType(MirType):
     pass
 
 class MirPointerType(MirType):
-    pass
+    def emitArgumentWithBuilder(self, builder, sourcePosition):
+        return builder.argumentPointerAt(sourcePosition)
+
+    def emitReturnWithBuilder(self, builder, returnValue, sourcePosition):
+        return builder.returnPointerAt(returnValue, sourcePosition)
+
+    def emitCallArgumentWithBuilder(self, builder, argument, sourcePosition):
+        return builder.callArgumentPointerAt(argument, sourcePosition)
+
+    def emitCallWithBuilder(self, builder, functional, sourcePosition):
+        return builder.callPointerResultAt(functional, sourcePosition)
+
+    def emitNilConstantWithBuilder(self, builder, sourcePosition):
+        return builder.constPointerAt(0, sourcePosition)
+
+    def emitPhiWithBuilder(self, builder, sourcePosition):
+        return builder.phiPointerAt(sourcePosition)
+
+    def emitPhiSourceWithBuilder(self, builder, targetTemp, sourceTemp, sourcePosition):
+        return builder.phiSourcePointerAt(targetTemp, sourceTemp, sourcePosition)
 
 class MirBehaviorType(MirType):
     def __init__(self, context, behavior):

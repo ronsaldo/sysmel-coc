@@ -748,7 +748,8 @@ class TestAnalysisAndEvaluation(unittest.TestCase):
         self.assertTrue(function.isFunction())
 
         value = function.evaluateWithArguments([])
-        self.assertEqual(value, self.context.coreTypes.nilValue)
+        self.assertTrue(value.isNilConstant())
+        self.assertEqual(value.getType(), self.context.coreTypes.integerType)
 
 if __name__ == '__main__':
     unittest.main()

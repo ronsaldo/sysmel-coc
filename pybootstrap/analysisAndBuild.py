@@ -25,6 +25,11 @@ class AnalysisAndBuildPass(ParseTreeVisitor):
             return self.builder.dynamicUnbox(value, expectedType, sourcePosition)
         #if expectedType.isVoidType() and not value.isVoidValue():
         #    return self.builder.getVoidLiteral(sourcePosition)
+
+        # Undefine to nullable
+        if expectedType.isNullableType() and value.getType().isUndefinedType():
+            return HIRConstantLiteralNilValue(expectedType, sourcePosition)
+
         if not expectedType.isSatisfiedByValue(value):
             raise RuntimeError("%s: expected a value of type %s instead of %s." % (str(sourcePosition), str(expectedType), str(value.getType())))
 

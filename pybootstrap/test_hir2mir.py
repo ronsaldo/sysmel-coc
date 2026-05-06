@@ -122,6 +122,16 @@ class HIR2MIRTest(unittest.TestCase):
         result = mirFunction.evaluateWithArguments([])
         self.assertEqual(result, 42)
 
+    def testReturnNilInteger(self):
+        hirFunction = self.evaluateTopLevelSourceString('public function returnInteger() => Integer := nil')
+        self.assertTrue(hirFunction.isFunction())
+
+        mirPackage = self.compilePackageToMir()
+        mirFunction = mirPackage.translatedFunctionMap[hirFunction]
+
+        result = mirFunction.evaluateWithArguments([])
+        self.assertEqual(result, 0)
+
     def testReturnVoid(self):
         function = self.evaluateTopLevelSourceString('public function returnVoid() => Void := void')
         self.assertTrue(function.isFunction())

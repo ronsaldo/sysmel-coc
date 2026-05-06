@@ -505,9 +505,6 @@ class HIRType(HIRValue):
         return self.isSatisfiedByType(value.getType())
 
     def isSatisfiedByType(self, subtype):
-        if self.isNullableType() and subtype.isUndefinedType():
-            return True
-
         return self == subtype
 
     def getType(self):
@@ -615,7 +612,10 @@ class HIRDynamicType(HIRType):
 
     def isDynamicType(self):
         return True
-    
+
+    def isNullableType(self):
+        return True
+
     def isSatisfiedByValue(self, value):
         return True
 
@@ -641,6 +641,9 @@ class HIRPrimitiveType(HIRNominalType):
         self.size = size
         self.alignment = alignment
 
+    def isNullableType(self):
+        return False
+    
     def accept(self, visitor: HIRVisitor):
         return visitor.visitPrimitiveType(self)
 
@@ -758,6 +761,9 @@ class HIRAssociationType(HIRType):
     def isAssociationType(self):
         return True
     
+    def isNullableType(self):
+        return True
+    
     def __eq__(self, other):
         if not isinstance(other, self.__class__):
             return False
@@ -778,6 +784,9 @@ class HIRDictionaryType(HIRType):
     def isDictionaryType(self):
         return True
     
+    def isNullableType(self):
+        return True
+
     def __eq__(self, other):
         if not isinstance(other, self.__class__):
             return False
@@ -807,6 +816,9 @@ class HIREnumType(HIRType):
     def isEnumType(self):
         return True
     
+    def isNullableType(self):
+        return self.baseType.isNullableType()
+
     def analyzeAndBuildMessageSendNode(self, buildPass, node: ParseTreeMessageSendNode, receiver):
         selector = buildPass.evaluateSymbolNode(node.selector)
         if selector in self.valueTable:
@@ -925,6 +937,9 @@ class HIRBehavior(HIRNominalType):
         return visitor.visitBehavior(self)
 
     def isBehaviorType(self):
+        return True
+
+    def isNullableType(self):
         return True
 
     def getSupertype(self):
@@ -1080,6 +1095,9 @@ class HIRStructType(HIRNominalType):
 
     def isStructType(self):
         return True
+
+    def isNullableType(self):
+        return False
 
     def invalidateLayout(self):
         self.valueSize = None
