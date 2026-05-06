@@ -33,7 +33,7 @@ class HIR2MIRTest(unittest.TestCase):
     
     def compilePackageToMir(self) -> MirPackage:
         self.context.finishPendingAnalysis()
-        self.mirPackage = HirPackage2Mir(self.context.coreTypes, self.mirContext).translateHirPackage2Mir(self.package, )
+        self.mirPackage = HirPackage2Mir(self.context.coreTypes, self.mirContext).translateHirPackage2Mir(self.package)
         return self.mirPackage
     
     def compileFunctionToMir(self, sourceString) -> MirFunction:

@@ -2,6 +2,7 @@ from parsetree import *
 from parser import parseSourceString, parseFileNamed
 from analysisAndEvaluation import *
 from hir import *
+from hir2mir import *
 import sys
 
 class FrontEndDriver:
@@ -11,6 +12,9 @@ class FrontEndDriver:
         self.package.usePackage(self.context.corePackage)
         self.context.currentPackage = self.package
     
+        self.mirContext = MirContext()
+        self.mirPackage = None
+
     def parseSourceStringWithoutErrors(self, string: str) -> ParseTreeNode:
         ast = parseSourceString(string)
         ParseTreeErrorVisitor().checkPrintErrorsAndRaiseException(ast)
@@ -33,15 +37,23 @@ class FrontEndDriver:
         return AnalysisAndEvaluationPass(evaluationContext).visitDecayedNode(ast)
 
     def main(self, argv):
+        outputFile = None
+        printMir = False
+
         try: 
             i = 1
             while i < len(argv):
                 arg = argv[i]
                 if arg[0] == '-':
-                    if arg == '-print-eval':
+                    if arg == '-o':
+                        i += 1
+                        outputFile = argv[i]
+                    elif arg == '-print-eval':
                         i += 1
                         evalSource = argv[i]
                         self.evaluateAndPrintSource(evalSource)
+                    elif arg == '-print-mir':
+                        printMir = True
                 else:
                     self.evaluateSourceFile(arg)
                 i += 1
@@ -49,6 +61,16 @@ class FrontEndDriver:
             print(error)
             return False
 
+        self.context.finishPendingAnalysis()
+        if outputFile is None or printMir:
+            return True
+        
+        self.mirPackage = HirPackage2Mir(self.context.coreTypes, self.mirContext).translateHirPackage2Mir(self.package)
+        if printMir:
+            self.mirPackage.dumpToConsole()
+            return True
+
+        print("TODO: Make Mir->LirX64")
         return True
     
 if __name__ == "__main__":
