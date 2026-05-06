@@ -380,10 +380,19 @@ class HirFunction2Mir(HIRVisitor):
         assert False
 
     def visitExtractFieldReferenceInstruction(self, instruction):
-        assert False
+        fieldOffset = instruction.field.getValidOffset()
+        aggregate = self.translateValue(instruction.aggregate)
+        return self.builder.pointerAddConstantOffsetAt(aggregate, fieldOffset, instruction.sourcePosition)
 
     def visitSetAggregateFieldInstruction(self, instruction):
-        assert False
+        fieldOffset = instruction.field.getValidOffset()
+        aggregate = self.translateValue(instruction.aggregate)
+        aggregateField = self.builder.pointerAddConstantOffsetAt(aggregate, fieldOffset, instruction.sourcePosition)
+
+        valueToStore = self.translateValue(instruction.value)
+        valueToStore.type.emitStoreWithBuilder(self.builder, aggregateField, valueToStore, instruction.sourcePosition)
+        return None
+
 
     def visitDynamicUnboxInstruction(self, instruction):
         assert False

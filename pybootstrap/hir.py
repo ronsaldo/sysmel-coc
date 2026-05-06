@@ -647,6 +647,12 @@ class HIRPrimitiveType(HIRNominalType):
     def accept(self, visitor: HIRVisitor):
         return visitor.visitPrimitiveType(self)
 
+    def getValueSize(self):
+        return self.size
+    
+    def getValueAlignment(self):
+        return self.alignment
+
 class HIRUndefinedType(HIRType):
     def __init__(self, name: str, coreTypes, sourcePosition = None):
         super().__init__(coreTypes, sourcePosition)
