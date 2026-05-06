@@ -312,8 +312,10 @@ class HirFunction2Mir(HIRVisitor):
     def visitCapture(self, capture: HIRCapture):
         assert False
 
-    def visitAllocaInstruction(self, instruction):
-        assert False
+    def visitAllocaInstruction(self, instruction: HIRAllocaInstruction):
+        valueType = self.packageTranslator.translateValue(instruction.valueType)
+        memoryDescriptor = valueType.getMemoryDescriptor()
+        return self.builder.gcAllocateAt(memoryDescriptor, instruction.sourcePosition)
 
     def visitAssertInstruction(self, instruction):
         assert False
@@ -322,10 +324,14 @@ class HirFunction2Mir(HIRVisitor):
         assert False
 
     def visitLoadInstruction(self, instruction):
-        assert False
+        storage = self.translateValue(instruction.storage)
+        loadType = self.packageTranslator.translateValue(instruction.getType())
+        return loadType.emitLoadWithBuilder(self.builder, storage, instruction.sourcePosition)
 
     def visitStoreInstruction(self, instruction):
-        assert False
+        storage = self.translateValue(instruction.storage)
+        valueToStore = self.translateValue(instruction.valueToStore)
+        return valueToStore.type.emitStoreWithBuilder(self.builder, storage, valueToStore, instruction.sourcePosition)
 
     def visitBranchInstruction(self, instruction):
         self.builder.jump(self.valueMap[instruction.destination], instruction.sourcePosition)

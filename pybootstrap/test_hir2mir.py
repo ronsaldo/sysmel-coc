@@ -36,7 +36,7 @@ class HIR2MIRTest(unittest.TestCase):
         self.mirPackage = HirPackage2Mir(self.context.coreTypes, self.mirContext).translateHirPackage2Mir(self.package, )
         return self.mirPackage
     
-    def compileFunctionToMir(self, sourceString):
+    def compileFunctionToMir(self, sourceString) -> MirFunction:
         hirFunction = self.evaluateTopLevelSourceString(sourceString)
         self.assertTrue(hirFunction.isFunction())
         mirPackage = self.compilePackageToMir()
@@ -47,11 +47,60 @@ class HIR2MIRTest(unittest.TestCase):
         mirPackage = self.compilePackageToMir()
         self.assertTrue(len(mirPackage.elementTable) == 0)
 
-    def testIntegerAdd(self):
-        mirFunction = self.compileFunctionToMir('public function add(x: Integer. y: Integer) => Integer := x + y')
+    def testIntegerIdentityFunction(self):
+        mirFunction = self.compileFunctionToMir('public function identity(value: Integer) => Integer := value')
+        result = mirFunction.evaluateWithArguments([42])
+        self.assertEqual(result, 42)
 
+    def testIntegerSumFunction(self):
+        mirFunction = self.compileFunctionToMir('public function sum(first: Integer. second: Integer) => Integer := first + second')
         result = mirFunction.evaluateWithArguments([1, 2])
         self.assertEqual(result, 3)
+
+    def testIntegerCallSumFunction(self):
+        mirFunction = self.compileFunctionToMir("""
+            function sum(first: Integer. second: Integer) => Integer := first + second.
+            public function callSum(first: Integer. second: Integer) => Integer := sum(first. second).
+        """)
+        
+        result = mirFunction.evaluateWithArguments([1, 2])
+        self.assertEqual(result, 3)
+
+    def testIntegerConstant(self):
+        mirFunction = self.compileFunctionToMir('public function constant() => Integer := 42')
+        #mirFunction.dumpToConsole()
+        result = mirFunction.evaluateWithArguments([])
+        self.assertEqual(result, 42)
+
+    def testCharacterConstant(self):
+        mirFunction = self.compileFunctionToMir("public function constant() => Character := 'A'")
+        result = mirFunction.evaluateWithArguments([])
+        self.assertEqual(result, ord('A'))
+
+    def testFloatConstant(self):
+        mirFunction = self.compileFunctionToMir("public function constant() => Float := 42.5")
+        result = mirFunction.evaluateWithArguments([])
+        self.assertEqual(result, 42.5)
+
+    def testFloat32Constant(self):
+        mirFunction = self.compileFunctionToMir("public function constant() => Float32 := 42.5f32")
+        result = mirFunction.evaluateWithArguments([])
+        self.assertEqual(result, 42.5)
+
+    def testFloat64Constant(self):
+        mirFunction = self.compileFunctionToMir("public function constant() => Float64 := 42.5f64")
+        result = mirFunction.evaluateWithArguments([])
+        self.assertEqual(result, 42.5)
+
+    def testInt32Let(self):
+        mirFunction = self.compileFunctionToMir("public function constant(x: Int32) => Int32 := {let y := x. y + 5i32}")
+        result = mirFunction.evaluateWithArguments([0])
+        self.assertEqual(result, 5)
+
+    def testInt32LetMutable(self):
+        mirFunction = self.compileFunctionToMir("public function constant(x: Int32) => Int32 := {let y mutable := x. y := y + 5i32. y + 7i32}")
+        result = mirFunction.evaluateWithArguments([0])
+        self.assertEqual(result, 12)
 
     def testInt32Identity(self):
         mirFunction = self.compileFunctionToMir('public function identity(x: Int32) => Int32 := x')
@@ -97,6 +146,88 @@ class HIR2MIRTest(unittest.TestCase):
 
     def testInt32BitwiseFunction(self):
         mirFunction = self.compileFunctionToMir("public function bitwise(a: Int32. b: Int32. c: Int32. d: Int32. e: Int32. f: Int32) => Int32 := a bitInvert & b | c ^ d << e >> f")
+        result = mirFunction.evaluateWithArguments([1, 2, 3, 4, 5, 6])
+        self.assertEqual(result, 3)
+
+    def testIntUInt32MinFunction(self):
+        mirFunction = self.compileFunctionToMir('public function min(first: UInt32. second: UInt32) => UInt32 := if: first < second then: first else: second')
+        
+        result = mirFunction.evaluateWithArguments([1, 2])
+        self.assertEqual(result, 1)
+
+        result = mirFunction.evaluateWithArguments([2, 1])
+        self.assertEqual(result, 1)
+
+    def testUInt32CallSumFunction(self):
+        mirFunction = self.compileFunctionToMir("""
+            function sum(first: UInt32. second: UInt32) => UInt32 := first + second.
+            public function callSum() => UInt32 := sum(1u32. 2u32).
+        """)
+
+        result = mirFunction.evaluateWithArguments([])
+        self.assertEqual(result, 3)
+
+    def testUInt32ArithmeticFunction(self):
+        mirFunction = self.compileFunctionToMir("public function arithmetic(a: UInt32. b: UInt32. c: UInt32. d: UInt32. e: UInt32) => UInt32 := a negated + b - ((c * d) // e)")
+        result = mirFunction.evaluateWithArguments([1, 2, 3, 4, 5])
+        self.assertEqual(result, -1)
+
+    def testUInt32BitwiseFunction(self):
+        mirFunction = self.compileFunctionToMir("public function bitwise(a: UInt32. b: UInt32. c: UInt32. d: UInt32. e: UInt32. f: UInt32) => UInt32 := a bitInvert & b | c ^ d << e >> f")
+        result = mirFunction.evaluateWithArguments([1, 2, 3, 4, 5, 6])
+        self.assertEqual(result, 3)
+
+    def testInt64identityFunction(self):
+        mirFunction = self.compileFunctionToMir('public function identity(value: Int64) => Int64 := value')
+        result = mirFunction.evaluateWithArguments([42])
+        self.assertEqual(result, 42)
+
+    def testInt64SumFunction(self):
+        mirFunction = self.compileFunctionToMir('public function sum(first: Int64. second: Int64) => Int64 := first + second')
+        result = mirFunction.evaluateWithArguments([1, 2])
+        self.assertEqual(result, 3)
+
+
+    def testInt64CallSumFunction(self):
+        mirFunction = self.compileFunctionToMir("""
+            function sum(first: Int64. second: Int64) => Int64 := first + second.
+            public function callSum() => Int64 := sum(1i64. 2i64).
+        """)
+
+        result = mirFunction.evaluateWithArguments([])
+        self.assertEqual(result, 3)
+
+    def testInt64NegFunction(self):
+        mirFunction = self.compileFunctionToMir("public function int64Neg(a: Int64) => Int64 := a negated")
+        result = mirFunction.evaluateWithArguments([1])
+        self.assertEqual(result, -1)
+
+    def testInt64ArithmeticFunction(self):
+        mirFunction = self.compileFunctionToMir("public function arithmetic(a: Int64. b: Int64. c: Int64. d: Int64. e: Int64) => Int64 := a negated + b - ((c * d) // e)")
+        result = mirFunction.evaluateWithArguments([1, 2, 3, 4, 5])
+        self.assertEqual(result, -1)
+
+    def testInt64BitwiseFunction(self):
+        mirFunction = self.compileFunctionToMir("public function bitwise(a: Int64. b: Int64. c: Int64. d: Int64. e: Int64. f: Int64) => Int64 := a bitInvert & b | c ^ d << e >> f")
+        result = mirFunction.evaluateWithArguments([1, 2, 3, 4, 5, 6])
+        self.assertEqual(result, 3)
+
+    def testUInt64CallSumFunction(self):
+        mirFunction = self.compileFunctionToMir("""
+            function sum(first: UInt64. second: UInt64) => UInt64 := first + second.
+            public function callSum() => UInt64 := sum(1u64. 2u64).
+        """)
+
+        result = mirFunction.evaluateWithArguments([])
+        self.assertEqual(result, 3)
+
+    def testUInt64ArithmeticFunction(self):
+        mirFunction = self.compileFunctionToMir("public function arithmetic(a: UInt64. b: UInt64. c: UInt64. d: UInt64. e: UInt64) => UInt64 := a negated + b - ((c * d) // e)")
+        result = mirFunction.evaluateWithArguments([1, 2, 3, 4, 5])
+        self.assertEqual(result, -1)
+
+    def testUInt64BitwiseFunction(self):
+        mirFunction = self.compileFunctionToMir("public function bitwise(a: UInt64. b: UInt64. c: UInt64. d: UInt64. e: UInt64. f: UInt64) => UInt64 := a bitInvert & b | c ^ d << e >> f")
         result = mirFunction.evaluateWithArguments([1, 2, 3, 4, 5, 6])
         self.assertEqual(result, 3)
 
