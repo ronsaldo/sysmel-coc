@@ -135,13 +135,13 @@ class HirPackage2Mir(HIRVisitor):
         return self.context.gcPointerType
     
     def visitConstantLiteralBooleanValue(self, value):
-        return MirInlineConstant(value.value, self.context.boolean8Type)
+        return MirGlobalConstant(value.value, self.context.boolean8Type)
     
     def visitConstantLiteralVoidValue(self, value):
-        return MirInlineConstant(None, self.context.voidType)
+        return MirGlobalConstant(None, self.context.voidType)
 
     def visitConstantLiteralNilValue(self, value):
-        return MirInlineConstant(None, self.context.pointerType)
+        return MirGlobalConstant(None, self.context.pointerType)
     
     def visitMetaBuilderFactory(self, value):
         return None
@@ -263,7 +263,7 @@ class HirFunction2Mir(HIRVisitor):
         if value in self.valueMap:
             return self.valueMap[value]
         
-        assert not value.isInstruction()
+        assert not value.isFunctionLocalValue()
         translatedValue = self.visitNextValue(value)
         self.valueMap[value] = translatedValue
         return translatedValue
@@ -273,6 +273,14 @@ class HirFunction2Mir(HIRVisitor):
     
     def visitValue(self, value):
         assert False
+
+    def visitConstantLiteralIntegerValue(self, constantLiteral: HIRConstantLiteralIntegerValue):
+        constantType = self.packageTranslator.translateValue(constantLiteral.getType())
+        return constantType.emitIntegerConstantWithBuilder(self.prologueBuilder, constantLiteral.value, constantLiteral.sourcePosition)
+
+    def visitConstantLiteralVoidValue(self, constantLiteral: HIRConstantLiteralIntegerValue):
+        constantType = self.packageTranslator.translateValue(constantLiteral.getType())
+        return constantType.emitVoidConstantWithBuilder(self.prologueBuilder, constantLiteral.sourcePosition)
 
     def visitArgument(self, argument: HIRArgument):
         argumentType = self.packageTranslator.translateValue(argument.type)
@@ -364,6 +372,9 @@ class HirFunction2Mir(HIRVisitor):
     def visitReturnInstruction(self, instruction):
         # TODO: handle return void
         hirReturnType = instruction.valueToReturn.getType()
+        if hirReturnType.isVoidType():
+            return self.builder.returnVoidAt(instruction.sourcePosition)
+
         returnType = self.packageTranslator.translateValue(hirReturnType)
         returnValue = self.translateValue(instruction.valueToReturn)
         returnType.emitReturnWithBuilder(self.builder, returnValue, instruction.sourcePosition)

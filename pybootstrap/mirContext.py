@@ -328,6 +328,9 @@ class MirType:
     def emitFloatConstantWithBuilder(self, builder, integer, sourcePosition):
         assert False
 
+    def emitVoidConstantWithBuilder(self, builder, sourcePosition):
+        assert False
+
     def isBehaviorType(self) -> bool:
         return False
 
@@ -380,6 +383,12 @@ class MirVoidType(MirType):
     def isVoidType(self) -> bool:
         return True
     
+    def emitReturnWithBuilder(self, builder, returnValue, sourcePosition):
+        return builder.returnVoidAt(sourcePosition)
+            
+    def emitVoidConstantWithBuilder(self, builder, sourcePosition):
+        return builder.constVoidAt(sourcePosition)
+
 class MirBoolean8Type(MirType):
     def isBoolean8Type(self) -> bool:
         return True

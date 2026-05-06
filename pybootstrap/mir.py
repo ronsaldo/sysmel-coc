@@ -73,7 +73,7 @@ MirOpcode = Enum('MirOpcode', [
 
     ## Constants
     'ConstInt32', 'ConstInt64', 'ConstPointer', 'ConstFloat32', 'ConstFloat64',
-    'ConstGCPointer', 'ConstInteger', 'ConstCharacter', 'ConstFloat',
+    'ConstGCPointer', 'ConstInteger', 'ConstCharacter', 'ConstFloat', 'ConstVoid',
 
     ## Returns
     'ReturnInt32', 'ReturnInt64', 'ReturnPointer', 'ReturnFloat32', 'ReturnFloat64',
@@ -159,7 +159,7 @@ class MirGlobalData(MirPackageElement):
         self.data = data
         self.name = name
 
-class MirInlineConstant:
+class MirGlobalConstant:
     def __init__(self, value, type):
         self.value = value
         self.type = type
@@ -621,7 +621,7 @@ class MirInstruction(MirFunctionLocal):
 
             ## Constants
             case MirOpcode.ConstInt32 | MirOpcode.ConstInt64 | MirOpcode.ConstPointer | MirOpcode.ConstFloat32 | MirOpcode.ConstFloat64 | MirOpcode.ConstGCPointer | \
-                MirOpcode.ConstCharacter | MirOpcode.ConstInteger | MirOpcode.ConstFloat:
+                MirOpcode.ConstCharacter | MirOpcode.ConstInteger | MirOpcode.ConstFloat | MirOpcode.ConstVoid:
                 context.setTempValue(self.result, self.firstArgument)
 
             ## Returns
@@ -1284,6 +1284,12 @@ class MirBuilder:
     def constFloatAt(self, value, sourcePosition):
         temp = self.function.newTemporary(self.function.module.context.gcPointerType, sourcePosition, None)
         instruction = MirInstruction(temp, MirOpcode.ConstFloat, value, None, sourcePosition)
+        self.addInstruction(instruction)
+        return temp
+
+    def constVoidAt(self, sourcePosition):
+        temp = self.function.newTemporary(self.function.module.context.voidType, sourcePosition, None)
+        instruction = MirInstruction(temp, MirOpcode.ConstVoid, None, None, sourcePosition)
         self.addInstruction(instruction)
         return temp
 

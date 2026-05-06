@@ -57,10 +57,30 @@ class HIR2MIRTest(unittest.TestCase):
 
         mirPackage = self.compilePackageToMir()
         addMirFunction = mirPackage.translatedFunctionMap[addFunction]
-        addMirFunction.dumpToConsole()
 
         result = addMirFunction.evaluateWithArguments([1, 2])
         self.assertEqual(result, 3)
+
+    def testReturnInteger(self):
+        addFunction = self.evaluateTopLevelSourceString('public function returnInteger() => Integer := 42')
+        self.assertTrue(addFunction.isFunction())
+
+        mirPackage = self.compilePackageToMir()
+        addMirFunction = mirPackage.translatedFunctionMap[addFunction]
+
+        result = addMirFunction.evaluateWithArguments([])
+        self.assertEqual(result, 42)
+
+    def testReturnVoid(self):
+        function = self.evaluateTopLevelSourceString('public function returnVoid() => Void := void')
+        self.assertTrue(function.isFunction())
+
+        mirPackage = self.compilePackageToMir()
+        mirFunction = mirPackage.translatedFunctionMap[function]
+        mirFunction.dumpToConsole()
+
+        result = mirFunction.evaluateWithArguments([])
+        self.assertEqual(result, None)
 
 if __name__ == '__main__':
     unittest.main()
