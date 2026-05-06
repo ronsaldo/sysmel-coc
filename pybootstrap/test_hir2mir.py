@@ -367,5 +367,29 @@ class HIR2MIRTest(unittest.TestCase):
         result = mirFunction.evaluateWithArguments([structPointer])
         self.assertEqual(result, 2)
 
+    def testEnumAccess(self):
+        mirFunction = self.compileFunctionToMir("""
+        enum MyEnum baseType: Int32 values: #{First: 1i32. Second: 2i32. Third:}.
+        public function getThird() => MyEnum := MyEnum Third
+""")
+        result = mirFunction.evaluateWithArguments([])
+        self.assertEqual(3, result)
+
+    def testEnumValueAccess(self):
+        mirFunction = self.compileFunctionToMir("""
+        enum MyEnum baseType: Int32 values: #{First: 1i32. Second: 2i32. Third:}.
+        public function access(e: MyEnum) => Int32 := e value.
+""")
+        result = mirFunction.evaluateWithArguments([2])
+        self.assertEqual(2, result)
+
+    def testEnumValueMake(self):
+        mirFunction = self.compileFunctionToMir("""
+        enum MyEnum baseType: Int32 values: #{First: 1i32. Second: 2i32. Third:}.
+        public function access(v: Int32) => MyEnum := MyEnum value: v.
+""")
+        result = mirFunction.evaluateWithArguments([2])
+        self.assertEqual(2, result)
+
 if __name__ == '__main__':
     unittest.main()

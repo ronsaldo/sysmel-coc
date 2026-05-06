@@ -96,8 +96,8 @@ class HirPackage2Mir(HIRVisitor):
     def visitDictionaryType(self, type: HIRDictionaryType):
         assert False
 
-    def visitEnumType(self, type: HIREnumType):
-        assert False
+    def visitEnumType(self, enumType: HIREnumType):
+        return self.translateValue(enumType.baseType)
 
     def visitBehavior(self, type: HIRBehavior):
         assert False
@@ -306,7 +306,10 @@ class HirFunction2Mir(HIRVisitor):
     def visitConstantLiteralNilValue(self, constantLiteral: HIRConstantLiteralIntegerValue):
         constantType = self.packageTranslator.translateValue(constantLiteral.getType())
         return constantType.emitNilConstantWithBuilder(self.prologueBuilder, constantLiteral.sourcePosition)
-    
+
+    def visitConstantEnum(self, constantLiteral: HIRConstantEnum):
+        return self.translateValue(constantLiteral.value)
+
     def visitFunction(self, hirFunction):
         return self.packageTranslator.translateValue(hirFunction)
 
@@ -378,11 +381,11 @@ class HirFunction2Mir(HIRVisitor):
     def visitSendInstruction(self, instruction):
         assert False
 
-    def visitEnumBoxValueInstruction(self, instruction):
-        assert False
+    def visitEnumBoxValueInstruction(self, instruction: HIREnumBoxValueInstruction):
+        return self.translateValue(instruction.value)
 
-    def visitEnumUnboxValueInstruction(self, instruction):
-        assert False
+    def visitEnumUnboxValueInstruction(self, instruction: HIREnumUnboxValueInstruction):
+        return self.translateValue(instruction.enumValue)
 
     def visitExtractFieldReferenceInstruction(self, instruction):
         fieldOffset = instruction.field.getValidOffset()

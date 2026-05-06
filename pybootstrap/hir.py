@@ -1621,6 +1621,9 @@ class HIRConstantAssociation(HIRConstant):
 
         return self.type == other.type and self.key == other.key and self.value == other.value
 
+    def __hash__(self):
+        return hash(self.type) ^ hash(self.key) ^ hash(self.value)
+    
     def __str__(self):
         return 'association(%s : %s)' % (str(self.key), str(self.value))
 
@@ -1644,6 +1647,9 @@ class HIRConstantDictionary(HIRConstant):
             return False
 
         return self.type == other.type and self.elements == other.elements
+
+    def __hash__(self):
+        return hash(self.type) ^ hash(self.elements)
 
     def __str__(self):
         return 'dictionary(%s)' % (str(self.elements))
@@ -1669,6 +1675,9 @@ class HIRConstantEnum(HIRConstant):
             return False
 
         return self.type == other.type and self.value == other.value
+
+    def __hash__(self):
+        return hash(self.type) ^ hash(self.value)
 
     def __str__(self):
         return 'enumValue(%s: %s)' % (str(self.name), str(self.value))
