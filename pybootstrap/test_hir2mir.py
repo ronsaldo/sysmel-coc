@@ -75,6 +75,16 @@ class HIR2MIRTest(unittest.TestCase):
         result = mirFunction.evaluateWithArguments([1, 2])
         self.assertEqual(result, 3)
 
+    def testInt32MinFunction(self):
+        mirFunction = self.compileFunctionToMir('public function min(first: Int32. second: Int32) => Int32 := if: first < second then: first else: second')
+        mirFunction.dumpToConsole()
+        
+        result = mirFunction.evaluateWithArguments([1, 2])
+        self.assertEqual(result, 1)
+
+        result = mirFunction.evaluateWithArguments([2, 1])
+        self.assertEqual(result, 1)
+
     def testReturnChar8(self):
         mirFunction = self.compileFunctionToMir("public function testReturnChar8() => Char8 := 'A'c8")
 

@@ -331,7 +331,10 @@ class HirFunction2Mir(HIRVisitor):
         self.builder.jump(self.valueMap[instruction.destination], instruction.sourcePosition)
 
     def visitConditionalBranchInstruction(self, instruction):
-        assert False
+        condition = self.translateValue(instruction.condition)
+        trueDestination = self.translateValue(instruction.trueDestination)
+        falseDestination = self.translateValue(instruction.falseDestination)
+        self.builder.conditionalBranchAt(condition, trueDestination, falseDestination, instruction.sourcePosition)
 
     def visitCallInstruction(self, instruction):
         if instruction.functional.isPrimitiveFunction():
@@ -394,10 +397,14 @@ class HirFunction2Mir(HIRVisitor):
         assert False
 
     def visitPhiInstruction(self, instruction):
-        assert False
+        raise RuntimeError("Phi should be translated during the basic block creation pass")
 
     def visitPhiSourceInstruction(self, instruction):
-        assert False
+        targetPhi = self.valueMap[instruction.targetPhi]
+        sourceValue = self.translateValue(instruction.sourceValue)
+        sourceValueType = sourceValue.type
+        return sourceValueType.emitPhiSourceWithBuilder(self.builder, targetPhi, sourceValue, instruction.sourcePosition)
+
 
     def visitReturnInstruction(self, instruction):
         # TODO: handle return void
@@ -407,7 +414,7 @@ class HirFunction2Mir(HIRVisitor):
 
         returnType = self.packageTranslator.translateValue(hirReturnType)
         returnValue = self.translateValue(instruction.valueToReturn)
-        returnType.emitReturnWithBuilder(self.builder, returnValue, instruction.sourcePosition)
+        return returnType.emitReturnWithBuilder(self.builder, returnValue, instruction.sourcePosition)
 
     def visitUnreachableInstruction(self, instruction):
         assert False
