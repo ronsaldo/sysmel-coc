@@ -56,8 +56,18 @@ class MirPackage2LirX64(MirVisitor):
     
     def translateFunction(self, function: MirFunction):
         functionSymbol = self.valueMap[function]
+        MirFunction2LirX64(self, self.asm, functionSymbol).translateFunction(function)
+
+class MirFunction2LirX64(MirVisitor):
+    def __init__(self, packageTranslator, asm, functionSymbol):
+        super().__init__()
+        self.packageTranslator = packageTranslator
+        self.asm = asm
+        self.functionSymbol = functionSymbol
+
+    def translateFunction(self, function: MirFunction):
         self.asm.textSection()
 
-        self.asm.setSymbolHere(functionSymbol)
+        self.asm.setSymbolHere(self.functionSymbol)
         self.asm.x86_endbr64()
-        self.asm.endFunctionSymbolHere(functionSymbol)
+        self.asm.endFunctionSymbolHere(self.functionSymbol)
