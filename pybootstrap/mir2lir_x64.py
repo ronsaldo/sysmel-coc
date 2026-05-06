@@ -6,6 +6,7 @@ class MirPackage2LirX64(MirVisitor):
         super().__init__()
         self.context = context
         self.lirModule: LirModule = None
+        self.asm: LirAssembler = None
         self.valueMap = {}
         self.pendingFunctionTranslationQueue = []
 
@@ -59,15 +60,19 @@ class MirPackage2LirX64(MirVisitor):
         MirFunction2LirX64(self, self.asm, functionSymbol).translateFunction(function)
 
 class MirFunction2LirX64(MirVisitor):
-    def __init__(self, packageTranslator, asm, functionSymbol):
+    def __init__(self, packageTranslator, asm: LirAssembler, functionSymbol):
         super().__init__()
         self.packageTranslator = packageTranslator
         self.asm = asm
         self.functionSymbol = functionSymbol
 
     def translateFunction(self, function: MirFunction):
+        #function.dumpToConsole()
         self.asm.textSection()
 
         self.asm.setSymbolHere(self.functionSymbol)
         self.asm.x86_endbr64()
+        self.asm.x86_push(X86_RBP)
+        self.asm.x86_pop(X86_RBP)
+        self.asm.x86_ret()
         self.asm.endFunctionSymbolHere(self.functionSymbol)

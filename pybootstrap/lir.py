@@ -585,6 +585,17 @@ class LirAssembler:
     def x86_ret(self):
         self.addByte(0xC3)
 
+    def x86_rexPlusReg(self, W, registerIndex):
+        self.x86_rex(W, False, False, registerIndex > X86_REG_HALF_MASK )
+
+    def x86_push(self, reg):
+        self.x86_rexPlusReg(False, reg)
+        self.addByte(0x50 + (reg & X86_REG_HALF_MASK))
+
+    def x86_pop(self, reg):
+        self.x86_rexPlusReg(False, reg)
+        self.addByte(0x58 + (reg & X86_REG_HALF_MASK))
+
     def x86_syscall(self):
         self.addByte(0x0F)
         self.addByte(0x05)

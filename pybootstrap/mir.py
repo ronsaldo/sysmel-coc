@@ -399,6 +399,34 @@ class MirBasicBlock(MirFunctionLocal):
     def __str__(self):
         return str(self.index) + '|' + self.name
 
+class MirLocation:
+    def __init__(self):
+        pass
+
+class MirStackFrameLocation(MirLocation):
+    def __init__(self):
+        super().__init__()
+        self.offset = 0
+        self.size = 0
+        self.alignment = 0
+        self.stackPointerRelativeOffset = 0
+
+class MirFunctionStackFrameLayoutSection:
+    def __init__(self):
+        self.size = self.maxSize = 0
+        self.alignment = 16
+        self.locations = []
+        self.sectionOffset = 0
+        self.callShadowSpace = 0
+
+class MirFunctionStackFrameLayout:
+    def __init__(self):
+        self.argumentsSection = MirFunctionStackFrameLayoutSection()
+        self.framePrologueSection = MirFunctionStackFrameLayoutSection()
+        self.gcPointerSection = MirFunctionStackFrameLayoutSection()
+        self.calloutSection = MirFunctionStackFrameLayoutSection()
+        self.callingConvention = None
+
 class MirMemorySimulation:
     def __init__(self, size):
         self.size = size
