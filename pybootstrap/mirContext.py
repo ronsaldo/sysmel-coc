@@ -740,6 +740,18 @@ class MirBehaviorType(MirType):
     def emitCallWithBuilder(self, builder, functional, sourcePosition):
         return builder.callGCPointerResultAt(functional, sourcePosition)
 
+    def emitCharacterConstantWithBuilder(self, builder, character, sourcePosition):
+        return builder.constCharacterAt(character, sourcePosition)
+    
+    def emitIntegerConstantWithBuilder(self, builder, integer, sourcePosition):
+        return builder.constIntegerAt(integer, sourcePosition)
+
+    def emitFloatConstantWithBuilder(self, builder, floatValue, sourcePosition):
+        return builder.constFloatAt(floatValue, sourcePosition)
+
+    def emitNilConstantWithBuilder(self, builder, sourcePosition):
+        return builder.constGCPointerAt(0, sourcePosition)
+    
     def emitPhiWithBuilder(self, builder, sourcePosition):
         return builder.phiGCPointerAt(sourcePosition)
 

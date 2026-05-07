@@ -3232,13 +3232,23 @@ class HIRCoreTypes:
     def __init__(self):
         self.pointerSize = 8
         self.pointerAlignment = 8
+        self.coreTypeList = []
 
-        self.integerType   = HIRNominalType('Integer', self, None);
-        self.characterType = HIRNominalType('Character', self, None);
-        self.floatType     = HIRNominalType('Float', self, None);
-        self.booleanType   = HIRNominalType('Boolean', self, None);
-        self.stringType    = HIRNominalType('String', self, None);
-        self.symbolType    = HIRNominalType('Symbol', self, None);
+        self.createCoreClassDefinitions()
+
+        self.integerType = self.makeCoreClassDefinition('Integer', self.numberClass, [], [])
+        self.characterType = self.makeCoreClassDefinition('Character', self.magnitudeClass, [], [])
+        self.floatType = self.makeCoreClassDefinition('Float', self.numberClass, [], [])
+        self.booleanType = self.makeCoreClassDefinition('Boolean', self.objectClass, [], [])
+        self.falseClass = self.makeCoreClassDefinition('False', self.booleanType, [], [])
+        self.trueClass = self.makeCoreClassDefinition('True', self.booleanType, [], [])
+
+        self.collectionClass = self.makeCoreClassDefinition('Collection', self.objectClass, [], [])
+        self.sequenceableCollectionClass = self.makeCoreClassDefinition('SequenceableCollection', self.collectionClass, [], [])
+        self.arrayedCollectionClass = self.makeCoreClassDefinition('ArrayedCollection', self.sequenceableCollectionClass, [], [])
+
+        self.stringType = self.makeCoreClassDefinition('String', self.arrayedCollectionClass, [], [])
+        self.symbolType = self.makeCoreClassDefinition('Symbol', self.arrayedCollectionClass, [], [])
         self.undefinedType = HIRUndefinedType('Undefined', self, None);
 
         self.boolean8Type = HIRPrimitiveType('Boolean8', 1, 1, self.booleanType, self, None)
@@ -3310,11 +3320,18 @@ class HIRCoreTypes:
         self.trueValue = HIRConstantLiteralBooleanValue(True, self.boolean8Type, None)
         self.nilValue = HIRConstantLiteralNilValue(self.undefinedType, None)
 
-        self.coreTypeList = [
+        self.coreTypeList += [
             self.integerType,
             self.characterType,
             self.floatType,
             self.booleanType,
+            self.falseClass,
+            self.trueClass,
+
+            self.collectionClass,
+            self.sequenceableCollectionClass,
+            self.arrayedCollectionClass,
+
             self.stringType,
             self.symbolType,
             self.undefinedType,
@@ -3356,7 +3373,6 @@ class HIRCoreTypes:
             (self.nilValue,   'nil'),
         ]
         
-        self.createCoreClassDefinitions()
         self.createCorePrimitiveMacros()
         self.createCorePrimitiveMetaBuilders()
         self.createCorePrimitiveFunctions()
@@ -3399,6 +3415,9 @@ class HIRCoreTypes:
             self.metaclassType
         ])
 
+        self.magnitudeClass = self.makeCoreClassDefinition('Magnitude', self.objectClass, [], [])
+        self.numberClass = self.makeCoreClassDefinition('Number', self.magnitudeClass, [], [])
+
         self.coreTypeList += [
             self.protoObjectClass,
             self.objectClass,
@@ -3409,6 +3428,9 @@ class HIRCoreTypes:
             self.behaviorClass,
             self.classClass,
             self.metaclassType,
+
+            self.magnitudeClass,
+            self.numberClass,
         ]
 
     def createCorePrimitiveMacros(self):
