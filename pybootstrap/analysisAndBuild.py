@@ -23,6 +23,8 @@ class AnalysisAndBuildPass(ParseTreeVisitor):
         #if valueType.isControlFlowEscapeType():
         #    return value
         if valueType.isDynamicType():
+            if expectedType.isDynamicType():
+                return value
             return self.builder.dynamicUnbox(value, expectedType, sourcePosition)
         #if expectedType.isVoidType() and not value.isVoidValue():
         #    return self.builder.getVoidLiteral(sourcePosition)

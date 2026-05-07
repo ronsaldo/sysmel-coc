@@ -2550,7 +2550,12 @@ class HIRDynamicBoxInstruction(HIRInstruction):
         return visitor.visitDynamicBoxInstruction(self)
 
     def evaluateInActivationContext(self, context):
-        assert False
+        valueToBox = self.valueToBox.getValueInEvaluationContext(context)
+        if not valueToBox.isConstantLiteralValue():
+            raise RuntimeError('%s: Expected a constant literal value for dynamic boxing.' %(str(self.sourcePosition)))
+
+        boxedValue = valueToBox.copyWithType(self.type)
+        context.setCurrentInstructionValue(boxedValue)
 
     def fullPrintString(self):
         return "%s := dynamicBox %s :: %s" % (str(self), str(self.valueToBox), str(self.type))

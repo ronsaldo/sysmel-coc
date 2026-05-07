@@ -751,5 +751,19 @@ class TestAnalysisAndEvaluation(unittest.TestCase):
         self.assertTrue(value.isNilConstant())
         self.assertEqual(value.getType(), self.context.coreTypes.integerType)
 
+    def testBoxInt32(self):
+        function = self.evaluateTopLevelSourceString("""
+            function dynamicIdentity(x: Dynamic) => Dynamic := x.
+            function callDynamic(x: Int32) => Dynamic
+                := dynamicIdentity(x).
+        """)
+        self.assertTrue(function.isFunction())
+        #function.dumpToConsole()
+
+        value = function.evaluateWithArguments(([HIRConstantLiteralIntegerValue(42, self.context.coreTypes.int32Type, None)]))
+        self.assertTrue(value.isIntegerConstant())
+        self.assertEqual(value.getType(), self.context.coreTypes.integerType)
+        self.assertEqual(value.value, 42)
+
 if __name__ == '__main__':
     unittest.main()
