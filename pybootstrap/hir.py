@@ -399,6 +399,9 @@ class HIRValue(ABC):
     def isConstantValue(self):
         return False
 
+    def isConstantLiteralValue(self):
+        return False
+
     def isIntegerConstant(self):
         return False
 
@@ -1415,6 +1418,12 @@ class HIRConstantLiteralValue(HIRConstant):
     def getType(self):
         return self.type
 
+    def isConstantLiteralValue(self):
+        return True
+    
+    def copyWithType(self, newType):
+        assert False
+
 class HIRConstantLiteralIntegerValue(HIRConstantLiteralValue):
     def __init__(self, value: int, type: HIRType, sourcePosition):
         super().__init__(type, sourcePosition)
@@ -1440,7 +1449,10 @@ class HIRConstantLiteralIntegerValue(HIRConstantLiteralValue):
 
     def isIntegerConstant(self):
         return True
-    
+
+    def copyWithType(self, newType):
+        return HIRConstantLiteralIntegerValue(self.value, newType, self.sourcePosition)
+
     def plusOne(self):
         return HIRConstantLiteralIntegerValue(self.value + 1, self.type, self.sourcePosition)
 
@@ -1463,6 +1475,9 @@ class HIRConstantLiteralFloatValue(HIRConstantLiteralValue):
     
     def __repr__(self):
         return 'float(%f)' % self.value
+
+    def copyWithType(self, newType):
+        return HIRConstantLiteralFloatValue(self.value, newType, self.sourcePosition)
 
     def isFloatConstant(self):
         return True
@@ -1490,6 +1505,9 @@ class HIRConstantLiteralBooleanValue(HIRConstantLiteralValue):
         else:
             return 'false'
 
+    def copyWithType(self, newType):
+        return HIRConstantLiteralBooleanValue(self.value, newType, self.sourcePosition)
+
     def isBooleanConstant(self):
         return True
 
@@ -1512,6 +1530,9 @@ class HIRConstantLiteralCharacterValue(HIRConstantLiteralValue):
     
     def __repr__(self):
         return 'character(%d)' % self.value
+
+    def copyWithType(self, newType):
+        return HIRConstantLiteralCharacterValue(self.value, newType, self.sourcePosition)
 
     def isCharacterConstant(self):
         return True
@@ -2534,6 +2555,13 @@ class HIRDynamicBoxInstruction(HIRInstruction):
     def fullPrintString(self):
         return "%s := dynamicBox %s :: %s" % (str(self), str(self.valueToBox), str(self.type))
 
+    def simplifyWithBuilder(self, builder):
+        if not self.valueToBox.isConstantLiteralValue():
+            return self
+        
+        simplified = self.valueToBox.copyWithType(self.type)
+        return simplified
+    
 class HIRDynamicUnboxInstruction(HIRInstruction):
     def __init__(self, boxedValue, type, name=None, sourcePosition=None):
         super().__init__(type, name, sourcePosition)
@@ -3829,8 +3857,10 @@ class HIRBuilder:
 
     def dynamicBox(self, boxedType, valueToBox, sourcePosition):
         instruction = HIRDynamicBoxInstruction(boxedType, valueToBox, None, sourcePosition)
-        self.addInstruction(instruction)
-        return instruction
+        simplified = instruction.simplifyWithBuilder(self)
+        if instruction == simplified:
+            self.addInstruction(instruction)
+        return simplified
 
     def dynamicUnbox(self, boxedValue, type, sourcePosition):
         instruction = HIRDynamicUnboxInstruction(boxedValue, type, None, sourcePosition)
