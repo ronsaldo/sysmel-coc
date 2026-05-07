@@ -1,0 +1,5 @@
+function sumInteger(a: Integer. b: Integer) => Integer
+    := a + b.
+
+public function SysmelMain() => Integer
+    := sumInteger(1. 2)

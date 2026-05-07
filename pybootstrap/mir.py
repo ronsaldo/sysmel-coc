@@ -150,6 +150,7 @@ class MirPackage:
             return self.translatedPrimitiveMap[primitiveRuntimeName]
 
         primitive = MirImportedFunction(primitiveRuntimeName)
+        primitive.owner = self
         primitive.implementation = self.context.getRuntimePrimitiveImplementationOrNone(primitiveRuntimeName)
         self.translatedPrimitiveMap[primitiveRuntimeName] = primitive
         return primitive
