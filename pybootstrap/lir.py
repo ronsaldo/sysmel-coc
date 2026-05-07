@@ -416,9 +416,9 @@ class LirSymbol:
 class LirPrivateSymbol:
     def __init__(self):
         self.delayedRelocations = []
-        self.definitionSection = None
         self.value = 0
         self.sectionIndex = 0
+        self.isDefined = False
 
     def isPrivateSymbol(self):
         return True
@@ -427,6 +427,7 @@ class LirPrivateSymbol:
         self.delayedRelocations.append(relocation)
 
     def solveRelocations(self):
+        self.isDefined = True
         for relocation in self.delayedRelocations:
             relocation.symbolIndex = self.sectionIndex
             relocation.addend += self.value
@@ -504,7 +505,12 @@ class LirAssembler:
         relocation.offset = len(self.currentSection.data)
         relocation.addend = addend
         if symbol.isPrivateSymbol():
-            symbol.addPendingRelocation(relocation)
+            if symbol.isDefined:
+                relocation.addend += symbol.value
+                relocation.symbolIndex = symbol.sectionIndex
+                assert False
+            else:
+                symbol.addPendingRelocation(relocation)
         else:
             relocation.symbolIndex = symbol.index
         self.currentSection.relocations.append(relocation)

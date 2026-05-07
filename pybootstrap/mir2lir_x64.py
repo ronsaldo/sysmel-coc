@@ -123,6 +123,7 @@ class MirFunction2LirX64(MirVisitor):
                 pass
 
             case MirOpcode.ReturnInt32:
+                #TODO: Move to EAX
                 self.emitFrameReturn()
 
             case _:
