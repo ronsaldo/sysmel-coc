@@ -3284,8 +3284,8 @@ class HIRCoreTypes:
         self.metaBuilderType = HIRNominalType('MetaBuilder', self, None)
 
         self.voidValue = HIRConstantLiteralVoidValue(self.voidType, None)
-        self.falseValue = HIRConstantLiteralBooleanValue(False, self.booleanType, None)
-        self.trueValue = HIRConstantLiteralBooleanValue(True, self.booleanType, None)
+        self.falseValue = HIRConstantLiteralBooleanValue(False, self.boolean8Type, None)
+        self.trueValue = HIRConstantLiteralBooleanValue(True, self.boolean8Type, None)
         self.nilValue = HIRConstantLiteralNilValue(self.undefinedType, None)
 
         self.coreTypeList = [
@@ -3505,9 +3505,9 @@ class HIRCoreTypes:
         def booleanOr(macroContext: HIRMacroContext, left: ParseTreeNode, right: ParseTreeNode):
             return ParseTreeIfSelectionNode(macroContext.sourcePosition, left, ParseTreeLiteralValueNode(macroContext.sourcePosition, self.trueValue), right)
         
-        self.booleanType.addMethod(HIRPrimitiveFunction('not', 'Boolean::not', self.getOrCreateSimpleFunctionType((self.booleanType,), self.booleanType), booleanNot, None, isPure = True, isCompileTime = True))
-        self.booleanType.withSelectorAddMethod('&&', HIRPrimitiveMacro('&&', self.primitiveMacroType, booleanAnd, None))
-        self.booleanType.withSelectorAddMethod('||', HIRPrimitiveMacro('||', self.primitiveMacroType, booleanOr, None))
+        self.boolean8Type.addMethod(HIRPrimitiveFunction('not', 'Boolean::not', self.getOrCreateSimpleFunctionType((self.boolean8Type,), self.boolean8Type), booleanNot, None, isPure = True, isCompileTime = True))
+        self.boolean8Type.withSelectorAddMethod('&&', HIRPrimitiveMacro('&&', self.primitiveMacroType, booleanAnd, None))
+        self.boolean8Type.withSelectorAddMethod('||', HIRPrimitiveMacro('||', self.primitiveMacroType, booleanOr, None))
 
 
     def createIntegerPrimitiveFunctions(self, anIntegerType):
@@ -3598,12 +3598,12 @@ class HIRCoreTypes:
         anIntegerType.addMethod(HIRPrimitiveFunction('<<', primitivePrefix + '<<',  self.getOrCreateSimpleFunctionType((anIntegerType, anIntegerType), anIntegerType), integerBitShiftLeft, None, isPure = True, isCompileTime = True))
         anIntegerType.addMethod(HIRPrimitiveFunction('>>', primitivePrefix + '>>',  self.getOrCreateSimpleFunctionType((anIntegerType, anIntegerType), anIntegerType), integerBitShiftRight, None, isPure = True, isCompileTime = True))
 
-        anIntegerType.addMethod(HIRPrimitiveFunction('=',  primitivePrefix + '=',  self.getOrCreateSimpleFunctionType((anIntegerType, anIntegerType), self.booleanType), integerEquals, None, isPure = True, isCompileTime = True))
-        anIntegerType.addMethod(HIRPrimitiveFunction('~=', primitivePrefix + '~=', self.getOrCreateSimpleFunctionType((anIntegerType, anIntegerType), self.booleanType), integerNotEquals, None, isPure = True, isCompileTime = True))
-        anIntegerType.addMethod(HIRPrimitiveFunction('<',  primitivePrefix + '<',  self.getOrCreateSimpleFunctionType((anIntegerType, anIntegerType), self.booleanType), integerLessThan, None, isPure = True, isCompileTime = True))
-        anIntegerType.addMethod(HIRPrimitiveFunction('<=', primitivePrefix + '<=', self.getOrCreateSimpleFunctionType((anIntegerType, anIntegerType), self.booleanType), integerLessOrEquals, None, isPure = True, isCompileTime = True))
-        anIntegerType.addMethod(HIRPrimitiveFunction('>',  primitivePrefix + '>',  self.getOrCreateSimpleFunctionType((anIntegerType, anIntegerType), self.booleanType), integerGreaterThan, None, isPure = True, isCompileTime = True))
-        anIntegerType.addMethod(HIRPrimitiveFunction('>=', primitivePrefix + '>=', self.getOrCreateSimpleFunctionType((anIntegerType, anIntegerType), self.booleanType), integerGreaterOrEquals, None, isPure = True, isCompileTime = True))
+        anIntegerType.addMethod(HIRPrimitiveFunction('=',  primitivePrefix + '=',  self.getOrCreateSimpleFunctionType((anIntegerType, anIntegerType), self.boolean8Type), integerEquals, None, isPure = True, isCompileTime = True))
+        anIntegerType.addMethod(HIRPrimitiveFunction('~=', primitivePrefix + '~=', self.getOrCreateSimpleFunctionType((anIntegerType, anIntegerType), self.boolean8Type), integerNotEquals, None, isPure = True, isCompileTime = True))
+        anIntegerType.addMethod(HIRPrimitiveFunction('<',  primitivePrefix + '<',  self.getOrCreateSimpleFunctionType((anIntegerType, anIntegerType), self.boolean8Type), integerLessThan, None, isPure = True, isCompileTime = True))
+        anIntegerType.addMethod(HIRPrimitiveFunction('<=', primitivePrefix + '<=', self.getOrCreateSimpleFunctionType((anIntegerType, anIntegerType), self.boolean8Type), integerLessOrEquals, None, isPure = True, isCompileTime = True))
+        anIntegerType.addMethod(HIRPrimitiveFunction('>',  primitivePrefix + '>',  self.getOrCreateSimpleFunctionType((anIntegerType, anIntegerType), self.boolean8Type), integerGreaterThan, None, isPure = True, isCompileTime = True))
+        anIntegerType.addMethod(HIRPrimitiveFunction('>=', primitivePrefix + '>=', self.getOrCreateSimpleFunctionType((anIntegerType, anIntegerType), self.boolean8Type), integerGreaterOrEquals, None, isPure = True, isCompileTime = True))
 
     def createFloatPrimitiveFunctions(self, aFloatType):
         def floatNegated(operand, resultType):
@@ -3666,12 +3666,12 @@ class HIRCoreTypes:
         aFloatType.addMethod(HIRPrimitiveFunction('*', primitivePrefix + '*', self.getOrCreateSimpleFunctionType((aFloatType, aFloatType), aFloatType), floatMultiply, None, isPure = True, isCompileTime = True))
         aFloatType.addMethod(HIRPrimitiveFunction('/', primitivePrefix + '/', self.getOrCreateSimpleFunctionType((aFloatType, aFloatType), aFloatType), floatDivide, None, isPure = True, isCompileTime = True))
 
-        aFloatType.addMethod(HIRPrimitiveFunction('=',  primitivePrefix + '=',  self.getOrCreateSimpleFunctionType((aFloatType, aFloatType), self.booleanType), floatEquals, None, isPure = True, isCompileTime = True))
-        aFloatType.addMethod(HIRPrimitiveFunction('~=', primitivePrefix + '~=', self.getOrCreateSimpleFunctionType((aFloatType, aFloatType), self.booleanType), floatNotEquals, None, isPure = True, isCompileTime = True))
-        aFloatType.addMethod(HIRPrimitiveFunction('<',  primitivePrefix + '<',  self.getOrCreateSimpleFunctionType((aFloatType, aFloatType), self.booleanType), floatLessThan, None, isPure = True, isCompileTime = True))
-        aFloatType.addMethod(HIRPrimitiveFunction('<=', primitivePrefix + '<=', self.getOrCreateSimpleFunctionType((aFloatType, aFloatType), self.booleanType), floatLessOrEquals, None, isPure = True, isCompileTime = True))
-        aFloatType.addMethod(HIRPrimitiveFunction('>',  primitivePrefix + '>',  self.getOrCreateSimpleFunctionType((aFloatType, aFloatType), self.booleanType), floatGreaterThan, None, isPure = True, isCompileTime = True))
-        aFloatType.addMethod(HIRPrimitiveFunction('>=', primitivePrefix + '>=', self.getOrCreateSimpleFunctionType((aFloatType, aFloatType), self.booleanType), floatGreaterOrEquals, None, isPure = True, isCompileTime = True))
+        aFloatType.addMethod(HIRPrimitiveFunction('=',  primitivePrefix + '=',  self.getOrCreateSimpleFunctionType((aFloatType, aFloatType), self.boolean8Type), floatEquals, None, isPure = True, isCompileTime = True))
+        aFloatType.addMethod(HIRPrimitiveFunction('~=', primitivePrefix + '~=', self.getOrCreateSimpleFunctionType((aFloatType, aFloatType), self.boolean8Type), floatNotEquals, None, isPure = True, isCompileTime = True))
+        aFloatType.addMethod(HIRPrimitiveFunction('<',  primitivePrefix + '<',  self.getOrCreateSimpleFunctionType((aFloatType, aFloatType), self.boolean8Type), floatLessThan, None, isPure = True, isCompileTime = True))
+        aFloatType.addMethod(HIRPrimitiveFunction('<=', primitivePrefix + '<=', self.getOrCreateSimpleFunctionType((aFloatType, aFloatType), self.boolean8Type), floatLessOrEquals, None, isPure = True, isCompileTime = True))
+        aFloatType.addMethod(HIRPrimitiveFunction('>',  primitivePrefix + '>',  self.getOrCreateSimpleFunctionType((aFloatType, aFloatType), self.boolean8Type), floatGreaterThan, None, isPure = True, isCompileTime = True))
+        aFloatType.addMethod(HIRPrimitiveFunction('>=', primitivePrefix + '>=', self.getOrCreateSimpleFunctionType((aFloatType, aFloatType), self.boolean8Type), floatGreaterOrEquals, None, isPure = True, isCompileTime = True))
 
     def createNumericalPrimitiveConversionMethods(self, numericalType):
         def asPrimitiveCharacter(operand, resultType):

@@ -28,7 +28,7 @@ class AnalysisAndEvaluationPass(ParseTreeVisitor):
         return value
     
     def visitBooleanNode(self, node: ParseTreeNode):
-        evaluatedNode = self.visitNodeWithExpectedType(node, self.evaluationContext.context.coreTypes.booleanType)
+        evaluatedNode = self.visitNodeWithExpectedType(node, self.evaluationContext.context.coreTypes.boolean8Type)
         assert evaluatedNode.isBooleanConstant()
         return evaluatedNode.value
 

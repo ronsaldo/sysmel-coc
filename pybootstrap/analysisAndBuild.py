@@ -53,7 +53,7 @@ class AnalysisAndBuildPass(ParseTreeVisitor):
         return value
 
     def visitBooleanCondition(self, node: ParseTreeNode):
-        return self.visitNodeWithExpectedType(node, self.builder.context.coreTypes.booleanType)
+        return self.visitNodeWithExpectedType(node, self.builder.context.coreTypes.boolean8Type)
 
     def evaluateSymbolNode(self, symbolNode: ParseTreeNode):
         symbolValue = self.visitDecayedNode(symbolNode)
