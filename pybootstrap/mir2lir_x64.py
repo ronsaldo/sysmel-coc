@@ -66,6 +66,7 @@ class MirFunction2LirX64(MirVisitor):
         self.asm = asm
         self.functionSymbol = functionSymbol
         self.stackFrameLayout: MirFunctionStackFrameLayout = None
+        self.basicBlockToLabelMap = {}
 
     def translateFunction(self, function: MirFunction):
         function.dumpToConsole()
@@ -77,6 +78,8 @@ class MirFunction2LirX64(MirVisitor):
         self.stackFrameLayout.addReturnPointer()
         self.stackFrameLayout.finish()
 
+        self.createBasicBlockLabels(function)
+
         self.asm.textSection()
 
         self.asm.setSymbolHere(self.functionSymbol)
@@ -84,7 +87,49 @@ class MirFunction2LirX64(MirVisitor):
         self.asm.x86_push(X86_RBP)
         self.asm.x86_sub64RegImmS32(X86_RSP, self.stackFrameLayout.stackFrameSubtractionSize)
 
+        self.translateBasicBlocks(function)
+
+        self.asm.endFunctionSymbolHere(self.functionSymbol)
+
+    def createBasicBlockLabels(self, function: MirFunction):
+        basicBlock = function.firstBasicBlock
+        while basicBlock is not None:
+            basicBlockSymbol = self.asm.makePrivateSymbol(basicBlock.name)
+            self.basicBlockToLabelMap[basicBlock] = basicBlockSymbol
+            basicBlock = basicBlock.next
+
+    def translateBasicBlocks(self, function: MirFunction):
+        basicBlock = function.firstBasicBlock
+        while basicBlock is not None:
+            self.translateBasicBlock(basicBlock)
+            basicBlock = basicBlock.next
+
+    def translateBasicBlock(self, basicBlock: MirBasicBlock):
+        self.asm.setSymbolHere(self.basicBlockToLabelMap[basicBlock])
+        instruction = basicBlock.firstInstruction
+        while instruction is not None:
+            self.translateInstruction(instruction)
+            instruction = instruction.next
+
+    def translateInstruction(self, instruction: MirInstruction):
+        match instruction.opcode:
+            case MirOpcode.ArgumentInt32:
+                pass
+            case MirOpcode.Jump:
+                destinationLabel = self.basicBlockToLabelMap[instruction.firstArgument]
+                self.asm.x86_jmpLsv(destinationLabel)
+
+            case MirOpcode.Int32Add:
+                pass
+
+            case MirOpcode.ReturnInt32:
+                self.emitFrameReturn()
+
+            case _:
+                raise RuntimeError("Unimplemented instruction " + instruction.opcode.name)
+
+
+    def emitFrameReturn(self):
         self.asm.x86_add64RegImmS32(X86_RSP, self.stackFrameLayout.stackFrameSubtractionSize)
         self.asm.x86_pop(X86_RBP)
         self.asm.x86_ret()
-        self.asm.endFunctionSymbolHere(self.functionSymbol)

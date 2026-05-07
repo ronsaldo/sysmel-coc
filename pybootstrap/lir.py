@@ -410,6 +410,27 @@ class LirSymbol:
         self.type = SmoSymbolType.NOTYPE.value
         self.index = 0
 
+    def isPrivateSymbol(self):
+        return False
+
+class LirPrivateSymbol:
+    def __init__(self):
+        self.delayedRelocations = []
+        self.definitionSection = None
+        self.value = 0
+        self.sectionIndex = 0
+
+    def isPrivateSymbol(self):
+        return True
+    
+    def addPendingRelocation(self, relocation):
+        self.delayedRelocations.append(relocation)
+
+    def solveRelocations(self):
+        for relocation in self.delayedRelocations:
+            relocation.symbolIndex = self.sectionIndex
+            relocation.addend += self.value
+
 class LirStringTable(LirModuleElement):
     def __init__(self):
         self.data = bytearray()
@@ -480,9 +501,12 @@ class LirAssembler:
     def addInstructionRelocation(self, kind, symbol, addend):
         relocation = SmoRelocation()
         relocation.kind = kind
-        relocation.symbolIndex = symbol.index
         relocation.offset = len(self.currentSection.data)
         relocation.addend = addend
+        if symbol.isPrivateSymbol():
+            symbol.addPendingRelocation(relocation)
+        else:
+            relocation.symbolIndex = symbol.index
         self.currentSection.relocations.append(relocation)
 
     def makeGlobalFunctionSymbol(self, name) -> LirSymbol:
@@ -498,9 +522,16 @@ class LirAssembler:
         self.setSymbolHere(symbol)
         return symbol
 
+    def makePrivateSymbol(self, name) -> LirSymbol:
+        symbol = LirPrivateSymbol()
+        symbol.name = name
+        return symbol
+
     def setSymbolHere(self, symbol) -> LirSymbol:
         symbol.sectionIndex = self.currentSection.index
         symbol.value = len(self.currentSection.data)
+        if symbol.isPrivateSymbol():
+            symbol.solveRelocations()
         return symbol
 
     def endFunctionSymbolHere(self, symbol: LirSymbol):
@@ -549,6 +580,12 @@ class LirAssembler:
         self.addByte(0xE8)
         self.addInstructionRelocation(LirRelocation.Relative32AtPlt, symbol, -4)
         self.addEmptyFourBytes()
+
+    def x86_jmpLsv(self, symbol):
+        self.addByte(0xE9)
+        self.addInstructionRelocation(LirRelocation.Relative32, symbol, -4)
+        self.addEmptyFourBytes()
+
 
     def x86_mov64RegReg_nopt(self, destination, source):
         self.x86_rexRmReg(True, source, destination)
