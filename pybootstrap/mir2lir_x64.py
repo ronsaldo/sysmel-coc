@@ -162,6 +162,9 @@ class MirFunction2LirX64(MirVisitor):
         self.integerArgumentCount = 0
         self.floatArgumentCount = 0
 
+        self.calloutIntegerArgumentCount = 0
+        self.calloutFloatArgumentCount = 0
+
         basicBlock = function.firstBasicBlock
         while basicBlock is not None:
             instruction = basicBlock.firstInstruction
@@ -206,6 +209,8 @@ class MirFunction2LirX64(MirVisitor):
     def computeInstructionConstraints(self, instruction: MirInstruction):
         firstIntegerRegister = self.callingConvention.allocatableIntegerRegisters[0]
         secondIntegerRegister = self.callingConvention.allocatableIntegerRegisters[1]
+        resultIntegerRegister = firstIntegerRegister
+
         match instruction.opcode:
             case MirOpcode.ArgumentInt32 | MirOpcode.ArgumentInt64 | MirOpcode.ArgumentPointer | MirOpcode.ArgumentGCPointer:
                 if self.integerArgumentCount < len(self.callingConvention.integerPassingRegister):
@@ -215,6 +220,25 @@ class MirFunction2LirX64(MirVisitor):
                 if self.floatArgumentCount < len(self.callingConvention.floatPassingRegisters):
                     instruction.resultLocation = MirFloatRegisterLocation(self.callingConvention.floatPassingRegisters[self.floatArgumentCount], instruction.result.type.valueSize)
                 self.floatArgumentCount += 1
+
+            case MirOpcode.BeginCall:
+                self.calloutIntegerArgumentCount = 0
+                self.calloutFloatArgumentCount = 0
+
+            case MirOpcode.CallArgumentInt32:
+                assert self.calloutIntegerArgumentCount < len(self.callingConvention.integerPassingRegister)
+                argumentRegister = self.callingConvention.integerPassingRegister[self.calloutIntegerArgumentCount]
+                instruction.firstArgumentLocation = MirRegisterLocation(argumentRegister, instruction.firstArgument.type.valueSize)
+
+                self.calloutIntegerArgumentCount += 1
+
+            case MirOpcode.CallInt32Result:
+                instruction.resultLocation = MirRegisterLocation(self.callingConvention.firstIntegerResultRegister, instruction.result.type.valueSize)
+
+            case MirOpcode.ConstInt32 | MirOpcode.ConstInt64 | MirOpcode.ConstPointer | MirOpcode.ConstGCPointer| MirOpcode.ConstCharacter | MirOpcode.ConstInteger:
+                instruction.resultLocation = MirRegisterLocation(resultIntegerRegister, instruction.result.type.valueSize)
+            case MirOpcode.ConstVoid:
+                pass
 
             case MirOpcode.Jump:
                 pass
@@ -265,6 +289,21 @@ class MirFunction2LirX64(MirVisitor):
         match instruction.opcode:
             case MirOpcode.ArgumentInt32 | MirOpcode.ArgumentInt64 | MirOpcode.ArgumentPointer |MirOpcode.ArgumentGCPointer | MirOpcode.ArgumentFloat32 | MirOpcode.ArgumentFloat64:
                 pass
+
+            case MirOpcode.BeginCall:
+                pass
+
+            case MirOpcode.CallArgumentInt32:
+                pass
+
+            case MirOpcode.CallInt32Result | MirOpcode.CallInt64Result | MirOpcode.CallPointerResult | MirOpcode.CallGCPointerResult :
+                calledFunction = self.packageTranslator.translateValue(instruction.firstArgument)
+                self.asm.x86_callGsv(calledFunction)
+
+            case MirOpcode.ConstInt32:
+                self.asm.x86_mov32RegImm32(instruction.resultLocation.value, instruction.firstArgument)
+                pass
+
             case MirOpcode.Jump:
                 destinationLabel = self.basicBlockToLabelMap[instruction.firstArgument]
                 self.asm.x86_jmpLsv(destinationLabel)

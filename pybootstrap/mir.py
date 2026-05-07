@@ -173,7 +173,7 @@ class MirPackageElement:
             self.anonSymbolName = self.module.generateAnonymousSymbol()
             return self.anonSymbolName
 
-        if self.isExternC:
+        if self.isExternC or self.name == 'SysmelMain':
             return self.name
         return self.owner.getSymbolName() + "::" + self.name
     

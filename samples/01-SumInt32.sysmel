@@ -1,2 +1,5 @@
-public function sumInt32(a: Int32. b: Int32) => Int32
+function sumInt32(a: Int32. b: Int32) => Int32
     := a + b.
+
+public function SysmelMain() => Int32
+    := sumInt32(1i32. 2i32)
