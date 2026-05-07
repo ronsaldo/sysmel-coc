@@ -404,10 +404,45 @@ class MirBasicBlock(MirFunctionLocal):
     def __str__(self):
         return str(self.index) + '|' + self.name
 
+class MirCallingConvention:
+    def __init__(self):
+        self.stackAlignment = 16
+        self.stackParameterAlignment = 8
+        self.calloutShadowSpace = 0
+
+        self.integerPassingRegister = []
+        self.firstIntegerResultRegister = None
+        self.secondIntegerResultRegister = None
+
+        self.closureRegister = None
+        self.closureGCRegister = None
+
+        self.floatPassingRegisters = []
+        self.firstFloatResultRegister = None
+        self.secondFloatResultRegister = None
+
+        self.allocatableIntegerRegisters = []
+        self.allocatableFloatRegisters = []
+
+        self.callTouchedIntegerRegisters = []
+        self.callTouchedFloatRegisters = []
+
+        self.callPreservedIntegerRegisters = []
+        self.callPreservedFloatRegisters = []
+
+        self.variadicCountRegister = None
+
+
 class MirLocation:
     def __init__(self):
         pass
+
+    def isRegisterLocation(self):
+        return False
     
+    def isFloatRegisterLocation(self):
+        return False
+
     def isStackFrameLocation(self):
         return False
 
@@ -423,6 +458,19 @@ class MirStackFrameLocation(MirLocation):
         self.stackPointerRelativeOffset = 0
 
     def isStackFrameLocation(self):
+        return True
+
+class MirRegisterLocation(MirLocation):
+    def __init__(self, value, size):
+        super().__init__()
+        self.value = value
+        self.size = size
+
+    def isRegisterLocation(self):
+        return True
+
+class MirFloatRegisterLocation(MirRegisterLocation):
+    def isFloatRegisterLocation(self):
         return True
 
 class MirFunctionStackFrameLayoutSection:
@@ -611,6 +659,10 @@ class MirInstruction(MirFunctionLocal):
         self.previous = None
         self.next = None
 
+        self.firstArgumentLocation = None
+        self.secondArgumentLocation = None
+        self.resultLocation = None
+
     def accept(self, visitor: MirVisitor):
         return visitor.visitInstruction(self)
 
@@ -626,13 +678,13 @@ class MirInstruction(MirFunctionLocal):
     def evaluateInContext(self, context: MirFunctionActivationContext):
         match self.opcode:
             ## Calling and being called
-            case MirOpcode.ArgumentInt32 | MirOpcode.ArgumentInt64 | MirOpcode.ArgumentPointer |MirOpcode.ArgumentGCPointer:
+            case MirOpcode.ArgumentInt32 | MirOpcode.ArgumentInt64 | MirOpcode.ArgumentPointer |MirOpcode.ArgumentGCPointer | MirOpcode.ArgumentFloat32 | MirOpcode.ArgumentFloat64:
                 context.setTempValue(self.result, context.arguments[self.index - 1])
 
             case MirOpcode.BeginCall:
                 context.beginCall()
             
-            case MirOpcode.CallArgumentInt32 | MirOpcode.CallArgumentInt64 | MirOpcode.CallArgumentPointer | MirOpcode.CallArgumentGCPointer:
+            case MirOpcode.CallArgumentInt32 | MirOpcode.CallArgumentInt64 | MirOpcode.CallArgumentPointer | MirOpcode.CallArgumentGCPointer | MirOpcode.CallArgumentFloat32 | MirOpcode.CallArgumentFloat64:
                 context.addCallArgument(context.getTempValue(self.firstArgument))
 
             case MirOpcode.CallInt32Result | MirOpcode.CallInt64Result | MirOpcode.CallPointerResult | MirOpcode.CallGCPointerResult:

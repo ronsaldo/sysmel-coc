@@ -66,6 +66,23 @@ X86_R13D = 13
 X86_R14D = 14
 X86_R15D = 15
 
+X86_XMM0  = 0
+X86_XMM1  = 1
+X86_XMM2  = 2
+X86_XMM3  = 3
+X86_XMM4  = 4
+X86_XMM5  = 5
+X86_XMM6  = 6
+X86_XMM7  = 7
+X86_XMM8  = 8
+X86_XMM9  = 9
+X86_XMM10 = 10
+X86_XMM11 = 11
+X86_XMM12 = 12
+X86_XMM13 = 13
+X86_XMM14 = 14
+X86_XMM15 = 15
+
 def setInt32InByteArray(ba: bytearray, offset: int, value: int):
     ba[offset    ] = value & 0xff
     ba[offset + 1] = (value >> 8) & 0xff
@@ -579,6 +596,33 @@ class LirAssembler:
     def x86_modRmOp(self, rm, opcode):
         self.addByte(self.x86_modRmByte(rm, opcode, 3))
 
+    def x86_sibOnlyBase(self, reg):
+        return (reg & X86_REG_HALF_MASK) | (4 << 3)
+
+    def x86_modRmoReg(self, base, offset, reg):
+        base &= X86_REG_HALF_MASK;
+        reg &= X86_REG_HALF_MASK;
+
+        if offset == 0 and base != X86_RBP:
+            if base == X86_RSP: 
+                self.addByte(self.x86_modRmByte(X86_RSP, reg, 0));
+                self.addByte(self.x86_sibOnlyBase(base));
+            else:
+                self.addByte(self.x86_modRmByte(base, reg, 0));
+            return;
+
+        # TODO: Check for this case
+        hasByteOffset = False
+        if hasByteOffset:
+            self.addByte(self.x86_modRmByte(base, reg, 1))
+            assert False
+        else:
+            self.addByte(self.x86_modRmByte(base, reg, 2))
+            if(base == X86_RSP):
+                self.addByte(self.x86_sibOnlyBase(base));
+
+            self.x86_imm32(offset)
+
     def x86_endbr64(self):
         self.addByteList([0xF3, 0x0F, 0x1E, 0xFA])
 
@@ -602,6 +646,17 @@ class LirAssembler:
         if dest != source:
             self.x86_mov64RegReg_nopt(dest, source)
 
+    def x86_mov64RmoReg(self, base, offset, source):
+        self.x86_rexRmReg(True, base, source);
+        self.x86_opcode(0x89);
+        self.x86_modRmoReg(base, offset, source);
+
+    def x86_mov64RegRmo(self, destination, base, offset):
+        self.x86_rexRmReg(True, base, destination);
+        self.x86_opcode(0x8B);
+        self.x86_modRmoReg(base, offset, destination);
+
+
     def x86_alu32RmReg(self, opcode, destination, source):
         self.x86_rexRmReg(False, destination, source)
         self.x86_opcode(opcode)
@@ -621,6 +676,16 @@ class LirAssembler:
     def x86_mov32RegReg(self, dest, source):
         if dest != source:
             self.x86_mov32RegReg_nopt(dest, source)
+
+    def x86_mov32RmoReg(self, base, offset, source):
+        self.x86_rexRmReg(False, base, source);
+        self.x86_opcode(0x89);
+        self.x86_modRmoReg(base, offset, source);
+
+    def x86_mov32RegRmo(self, destination, base, offset):
+        self.x86_rexRmReg(False, base, destination);
+        self.x86_opcode(0x8B);
+        self.x86_modRmoReg(base, offset, destination);
 
     def x86_add32RegReg(self, destination, source):
         self.x86_alu32RmReg(0x01, destination, source)
