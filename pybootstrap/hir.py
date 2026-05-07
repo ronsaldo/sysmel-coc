@@ -216,6 +216,9 @@ class HIRVisitor(ABC):
     def visitSetAggregateFieldInstruction(self, instruction):
         return self.visitInstruction(instruction)
 
+    def visitDynamicBoxInstruction(self, instruction):
+        return self.visitInstruction(instruction)
+
     def visitDynamicUnboxInstruction(self, instruction):
         return self.visitInstruction(instruction)
 
@@ -641,10 +644,14 @@ class HIRDynamicType(HIRType):
         return self.name
     
 class HIRPrimitiveType(HIRNominalType):
-    def __init__(self, name, size, alignment, coreTypes, sourcePosition=None):
+    def __init__(self, name, size, alignment, boxedType, coreTypes, sourcePosition=None):
         super().__init__(name, coreTypes, sourcePosition)
         self.size = size
         self.alignment = alignment
+        self.boxedType = boxedType
+
+    def getDynamicBoxedType(self):
+        return self.boxedType
 
     def hasDirectDynamicCast(self):
         return False
@@ -2513,6 +2520,20 @@ class HIRSetAggregateFieldInstruction(HIRInstruction):
     def fullPrintString(self):
         return "setAggregateField %s.%s to %s:: %s" % (str(self.aggregate), str(self.field), str(self.value), str(self.type))
 
+class HIRDynamicBoxInstruction(HIRInstruction):
+    def __init__(self, boxedType, valueToBox, name=None, sourcePosition=None):
+        super().__init__(boxedType, name, sourcePosition)
+        self.valueToBox = valueToBox
+
+    def accept(self, visitor: HIRVisitor):
+        return visitor.visitDynamicBoxInstruction(self)
+
+    def evaluateInActivationContext(self, context):
+        assert False
+
+    def fullPrintString(self):
+        return "%s := dynamicBox %s :: %s" % (str(self), str(self.valueToBox), str(self.type))
+
 class HIRDynamicUnboxInstruction(HIRInstruction):
     def __init__(self, boxedValue, type, name=None, sourcePosition=None):
         super().__init__(type, name, sourcePosition)
@@ -3165,24 +3186,24 @@ class HIRCoreTypes:
         self.symbolType    = HIRNominalType('Symbol', self, None);
         self.undefinedType = HIRUndefinedType('Undefined', self, None);
 
-        self.boolean8Type = HIRPrimitiveType('Boolean8', 1, 1, self, None)
+        self.boolean8Type = HIRPrimitiveType('Boolean8', 1, 1, self.booleanType, self, None)
 
-        self.char8Type  = HIRPrimitiveType('Char8',  1, 1, self, None)
-        self.char16Type = HIRPrimitiveType('Char16', 2, 2, self, None)
-        self.char32Type = HIRPrimitiveType('Char32', 4, 4, self, None)
+        self.char8Type  = HIRPrimitiveType('Char8',  1, 1, self.characterType, self, None)
+        self.char16Type = HIRPrimitiveType('Char16', 2, 2, self.characterType, self, None)
+        self.char32Type = HIRPrimitiveType('Char32', 4, 4, self.characterType, self, None)
 
-        self.int8Type  = HIRPrimitiveType('Int8',  1, 1, self, None)
-        self.int16Type = HIRPrimitiveType('Int16', 2, 2, self, None)
-        self.int32Type = HIRPrimitiveType('Int32', 4, 4, self, None)
-        self.int64Type = HIRPrimitiveType('Int64', 8, 8, self, None)
+        self.int8Type  = HIRPrimitiveType('Int8',  1, 1, self.integerType, self, None)
+        self.int16Type = HIRPrimitiveType('Int16', 2, 2, self.integerType, self, None)
+        self.int32Type = HIRPrimitiveType('Int32', 4, 4, self.integerType, self, None)
+        self.int64Type = HIRPrimitiveType('Int64', 8, 8, self.integerType, self, None)
 
-        self.uint8Type  = HIRPrimitiveType('UInt8',  1, 1, self, None)
-        self.uint16Type = HIRPrimitiveType('UInt16', 2, 2, self, None)
-        self.uint32Type = HIRPrimitiveType('UInt32', 4, 4, self, None)
-        self.uint64Type = HIRPrimitiveType('UInt64', 8, 8, self, None)
+        self.uint8Type  = HIRPrimitiveType('UInt8',  1, 1, self.integerType, self, None)
+        self.uint16Type = HIRPrimitiveType('UInt16', 2, 2, self.integerType, self, None)
+        self.uint32Type = HIRPrimitiveType('UInt32', 4, 4, self.integerType, self, None)
+        self.uint64Type = HIRPrimitiveType('UInt64', 8, 8, self.integerType, self, None)
 
-        self.float32Type = HIRPrimitiveType('Float32', 4, 4, self, None)
-        self.float64Type = HIRPrimitiveType('Float64', 8, 8, self, None)
+        self.float32Type = HIRPrimitiveType('Float32', 4, 4, self.floatType, self, None)
+        self.float64Type = HIRPrimitiveType('Float64', 8, 8, self.floatType, self, None)
 
         self.characterType.defaultValue = HIRConstantLiteralCharacterValue(0, self.characterType, None)
         self.integerType.defaultValue = HIRConstantLiteralIntegerValue(0, self.integerType, None)
@@ -3805,7 +3826,12 @@ class HIRBuilder:
         instruction = HIRSendInstruction(receiver, selector, arguments, resultTyoe, None, sourcePosition)
         self.addInstruction(instruction)
         return instruction
-    
+
+    def dynamicBox(self, boxedType, valueToBox, sourcePosition):
+        instruction = HIRDynamicBoxInstruction(boxedType, valueToBox, None, sourcePosition)
+        self.addInstruction(instruction)
+        return instruction
+
     def dynamicUnbox(self, boxedValue, type, sourcePosition):
         instruction = HIRDynamicUnboxInstruction(boxedValue, type, None, sourcePosition)
         self.addInstruction(instruction)

@@ -32,7 +32,7 @@ class AnalysisAndBuildPass(ParseTreeVisitor):
             return HIRConstantLiteralNilValue(expectedType, sourcePosition)
         
         if expectedType.isDynamicType() and not valueType.hasDirectDynamicCast():
-            return self.builder.dynamicBox(value, sourcePosition)
+            return self.builder.dynamicBox(valueType.getDynamicBoxedType(), value, sourcePosition)
 
         if not expectedType.isSatisfiedByValue(value):
             raise RuntimeError("%s: expected a value of type %s instead of %s." % (str(sourcePosition), str(expectedType), str(value.getType())))
