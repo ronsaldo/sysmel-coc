@@ -1,0 +1,4 @@
+public function SysmelMain() => Integer := {
+    printLine(42i32).
+    0
+}

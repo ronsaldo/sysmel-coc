@@ -39,6 +39,7 @@ class FrontEndDriver:
 
     def main(self, argv):
         outputFile = None
+        printHir = False
         printMir = False
 
         try: 
@@ -53,6 +54,8 @@ class FrontEndDriver:
                         i += 1
                         evalSource = argv[i]
                         self.evaluateAndPrintSource(evalSource)
+                    elif arg == '-print-hir':
+                        printHir = True
                     elif arg == '-print-mir':
                         printMir = True
                 else:
@@ -64,9 +67,12 @@ class FrontEndDriver:
 
         ## HIR Finalizaton
         self.context.finishPendingAnalysis()
+
+        if printHir:
+            self.package.dumpToConsole()
         
         # HIR2MIR
-        if outputFile is None or printMir:
+        if outputFile is None and not printMir:
             return True
 
         self.mirPackage = HirPackage2Mir(self.context.coreTypes, self.mirContext).translateHirPackage2Mir(self.package)

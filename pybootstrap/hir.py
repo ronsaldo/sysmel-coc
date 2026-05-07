@@ -1418,7 +1418,7 @@ class HIRConstantLiteralIntegerValue(HIRConstantLiteralValue):
         return str(self.value)
 
     def __repr__(self):
-        return 'integer(%d)' % self.value
+        return 'integer(%s: %d)' % (str(self.type), self.value)
 
     def isIntegerConstant(self):
         return True
@@ -2032,6 +2032,9 @@ class HIRFunction(HIRConstant):
             basicBlock = basicBlock.nextBlock
 
         return self.enumeratedInstructions
+
+    def dumpToConsole(self):
+        print(self.fullPrintString())
 
     def fullPrintString(self) -> str:
         self.ensureAnalysis()
@@ -2739,6 +2742,12 @@ class HIRPackage(HIRValue):
     def usePackage(self, package):
         if package not in self.usedPackages:
             self.usedPackages.append(package)
+
+    def dumpToConsole(self):
+        print('package %s {' % self.name)
+        for child in self.children:
+            child.dumpToConsole()
+        print('}')
 
 class HIREnvironment:
     def __init__(self):
