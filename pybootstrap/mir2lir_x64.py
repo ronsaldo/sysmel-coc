@@ -316,10 +316,15 @@ class MirFunction2LirX64(MirVisitor):
                 self.asm.x86_mov32RegImm32(instruction.resultLocation.value, instruction.firstArgument)
                 pass
 
+            case MirOpcode.ConstCharacter:
+                # Integer encoding
+                # TODO: Handle large integers
+                self.asm.x86_mov32RegImm32(instruction.resultLocation.value, (instruction.firstArgument << 3) | 2)
+
             case MirOpcode.ConstInteger:
                 # Integer encoding
                 # TODO: Handle large integers
-                self.asm.x86_mov32RegImm32((instruction.resultLocation.value << 3) | 1, instruction.firstArgument)
+                self.asm.x86_mov32RegImm32(instruction.resultLocation.value, (instruction.firstArgument << 3) | 1)
 
             case MirOpcode.Jump:
                 destinationLabel = self.basicBlockToLabelMap[instruction.firstArgument]
