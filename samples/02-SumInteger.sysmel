@@ -3,3 +3,4 @@ function sumInteger(a: Integer. b: Integer) => Integer
 
 public function SysmelMain() => Integer
     := sumInteger(1. 2)
+

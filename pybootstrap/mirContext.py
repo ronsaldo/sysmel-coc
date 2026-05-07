@@ -381,6 +381,9 @@ class MirVoidType(MirType):
     def isVoidType(self) -> bool:
         return True
     
+    def emitCallWithBuilder(self, builder, functional, sourcePosition):
+        return builder.callVoidResultAt(functional, sourcePosition)
+
     def emitReturnWithBuilder(self, builder, returnValue, sourcePosition):
         return builder.returnVoidAt(sourcePosition)
             

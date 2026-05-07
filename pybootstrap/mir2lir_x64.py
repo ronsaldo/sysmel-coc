@@ -308,7 +308,7 @@ class MirFunction2LirX64(MirVisitor):
             case MirOpcode.CallArgumentInt32 | MirOpcode.CallArgumentInt64 | MirOpcode.CallArgumentPointer | MirOpcode.CallArgumentGCPointer | MirOpcode.CallArgumentFloat32 | MirOpcode.CallArgumentFloat64:
                 pass
 
-            case MirOpcode.CallInt32Result | MirOpcode.CallInt64Result | MirOpcode.CallPointerResult | MirOpcode.CallGCPointerResult :
+            case MirOpcode.CallInt32Result | MirOpcode.CallInt64Result | MirOpcode.CallPointerResult | MirOpcode.CallGCPointerResult | MirOpcode.CallVoidResult:
                 calledFunction = self.packageTranslator.translateValue(instruction.firstArgument)
                 self.asm.x86_callGsv(calledFunction)
 
