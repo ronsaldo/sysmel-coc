@@ -761,6 +761,7 @@ class HIRUniverseType(HIRType):
             return self.coreTypes.getOrCreateSimpleFunctionType(arguments, resultType, node.sourcePosition)
 
         return super().analyzeAndBuildMessageSendNodeOnType(buildPass, node, receiver)
+
     def __eq__(self, other):
         if not isinstance(other, self.__class__):
             return False
@@ -1101,6 +1102,27 @@ class HIRMetaclass(HIRBehavior):
 
     def isMetaclassType(self):
         return True
+
+    def analyzeAndEvaluateMessageSendNodeOnType(self, evaluator, node, receiver):
+        selector = evaluator.visitSymbolNode(node.selector)
+
+        # FIXME: Remove this hack by using a method dictionary
+        if selector == '=>':
+            arguments = tuple(receiver.asArrowArguments())
+            resultType = evaluator.visitNodeExpectingType(node.arguments[0])
+            return self.coreTypes.getOrCreateSimpleFunctionType(arguments, resultType, node.sourcePosition)
+
+        return super().analyzeAndEvaluateMessageSendNodeOnType(evaluator, node, receiver)
+    
+    def analyzeAndBuildMessageSendNodeOnType(self, buildPass, node, receiver):
+        selector = buildPass.evaluateSymbolNode(node.selector)
+        
+        # FIXME: Remove this hack by using a method dictionary
+        if selector == '=>':
+            arguments = tuple(receiver.asArrowArguments())
+            resultType = buildPass.visitNodeExpectingType(node.arguments[0])
+            return self.coreTypes.getOrCreateSimpleFunctionType(arguments, resultType, node.sourcePosition)
+        return super().analyzeAndBuildMessageSendNodeOnType(buildPass, node, receiver)
 
     def __str__(self):
         return str(self.thisClass) + " class"
