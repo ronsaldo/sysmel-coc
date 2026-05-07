@@ -321,6 +321,9 @@ class HIRValue(ABC):
     def isNominalType(self):
         return False
 
+    def hasDirectDynamicCast(self):
+        return False
+
     def isDynamicType(self):
         return False
 
@@ -579,6 +582,9 @@ class HIRNominalType(HIRType):
     def isNominalType(self):
         return True
 
+    def hasDirectDynamicCast(self):
+        return True
+
     def __repr__(self):
         return self.name
 
@@ -613,8 +619,10 @@ class HIRDynamicType(HIRType):
     def isNullableType(self):
         return True
 
-    def isSatisfiedByValue(self, value):
-        return True
+    def isSatisfiedByType(self, subtype: HIRType):
+        if subtype.hasDirectDynamicCast():
+            return True
+        return super().isSatisfiedByType(subtype)
 
     def analyzeAndBuildMessageSendNodeOnType(self, buildPass, node: ParseTreeMessageSendNode, receiver):
         selector = buildPass.evaluateSymbolNode(node.selector)
@@ -637,6 +645,9 @@ class HIRPrimitiveType(HIRNominalType):
         super().__init__(name, coreTypes, sourcePosition)
         self.size = size
         self.alignment = alignment
+
+    def hasDirectDynamicCast(self):
+        return False
 
     def isNullableType(self):
         return False

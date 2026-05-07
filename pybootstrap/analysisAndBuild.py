@@ -19,16 +19,20 @@ class AnalysisAndBuildPass(ParseTreeVisitor):
         if expectedType is None:
             return value
 
-        #if value.getType().isControlFlowEscapeType():
+        valueType = value.getType()
+        #if valueType.isControlFlowEscapeType():
         #    return value
-        if value.getType().isDynamicType():
+        if valueType.isDynamicType():
             return self.builder.dynamicUnbox(value, expectedType, sourcePosition)
         #if expectedType.isVoidType() and not value.isVoidValue():
         #    return self.builder.getVoidLiteral(sourcePosition)
 
         # Undefine to nullable
-        if expectedType.isNullableType() and value.getType().isUndefinedType():
+        if expectedType.isNullableType() and valueType.isUndefinedType():
             return HIRConstantLiteralNilValue(expectedType, sourcePosition)
+        
+        if expectedType.isDynamicType() and not valueType.hasDirectDynamicCast():
+            return self.builder.dynamicBox(value, sourcePosition)
 
         if not expectedType.isSatisfiedByValue(value):
             raise RuntimeError("%s: expected a value of type %s instead of %s." % (str(sourcePosition), str(expectedType), str(value.getType())))
