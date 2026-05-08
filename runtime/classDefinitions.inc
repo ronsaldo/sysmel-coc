@@ -1,28 +1,28 @@
-SysmelClassDefinition(ProtoObject);
-    SysmelClassDefinition(Object);
+SysmelClassDefinitionNoSuper(ProtoObject);
+    SysmelClassDefinition(Object, ProtoObject);
 
-SysmelClassDefinition(Type);
-    SysmelClassDefinition(TypeUniverse);
-    SysmelClassDefinition(NominalType);
-    SysmelClassDefinition(Behavior);
-        SysmelClassDefinition(Class);
-        SysmelClassDefinition(Metaclass);
+SysmelClassDefinition(Type, Object);
+    SysmelClassDefinition(TypeUniverse, Type);
+    SysmelClassDefinition(NominalType, Type);
+        SysmelClassDefinition(Behavior, NominalType);
+            SysmelClassDefinition(Class, Behavior);
+            SysmelClassDefinition(Metaclass, Behavior);
 
-SysmelClassDefinition(Boolean);
-    SysmelClassDefinition(True);
-    SysmelClassDefinition(False);
+SysmelClassDefinition(Boolean, Object);
+    SysmelClassDefinition(True, Boolean);
+    SysmelClassDefinition(False, Boolean);
 
-SysmelClassDefinition(Magnitude);
-    SysmelClassDefinition(Character);
-    SysmelClassDefinition(Number);
-        SysmelClassDefinition(Float);
-            SysmelClassDefinition(BoxedFloat);
-            SysmelClassDefinition(SmallFloat);
-        SysmelClassDefinition(Integer);
-            SysmelClassDefinition(SmallInteger);
+SysmelClassDefinition(Magnitude, Object);
+    SysmelClassDefinition(Character, Magnitude);
+    SysmelClassDefinition(Number, Magnitude);
+        SysmelClassDefinition(Float, Number);
+            SysmelClassDefinition(BoxedFloat, Float);
+            SysmelClassDefinition(SmallFloat, Float);
+        SysmelClassDefinition(Integer, Number);
+            SysmelClassDefinition(SmallInteger, Integer);
 
-SysmelClassDefinition(Collection);
-    SysmelClassDefinition(SequenceableCollection);
-    SysmelClassDefinition(ArrayedCollection);
-        SysmelClassDefinition(String);
-        SysmelClassDefinition(SymbolString);
+SysmelClassDefinition(Collection, Object);
+    SysmelClassDefinition(SequenceableCollection, Collection);
+    SysmelClassDefinition(ArrayedCollection, SequenceableCollection);
+        SysmelClassDefinition(String, ArrayedCollection);
+        SysmelClassDefinition(Symbol, ArrayedCollection);

@@ -15,12 +15,15 @@ typedef enum sysmel_ImmediateObjectTagBits_e {
 typedef intptr_t Oop;
 
 // Declare the classes.
-#define SysmelClassDefinition(className) \
+#define SysmelClassDefinitionNoSuper(className) \
     typedef struct className className; \
     extern struct Class className ## _Class; \
     extern struct Metaclass className ## _Metaclass;
+
+#define SysmelClassDefinition(className, superClassName) SysmelClassDefinitionNoSuper(className)
 #include "classDefinitions.inc"
 #undef SysmelClassDefinition
+#undef SysmelClassDefinitionNoSuper
 
 // Define the structs
 struct ProtoObject
@@ -61,11 +64,13 @@ struct Behavior
 struct Class
 {
     Behavior super;
+    Symbol *name;
 };
 
 struct Metaclass
 {
     Behavior super;
+    Class *thisClass;
 };
 
 // Boolean
