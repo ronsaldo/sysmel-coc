@@ -1,38 +1,38 @@
-SysmelClassDefinitionNoSuper(ProtoObject);
-    SysmelClassDefinition(Object, ProtoObject);
+SysmelClassDefinitionNoSuper(ProtoObject)
+    SysmelClassDefinition(Object, ProtoObject)
 
-SysmelClassDefinition(Type, Object);
-    SysmelClassDefinition(TypeUniverse, Type);
-    SysmelClassDefinition(DerivedType, Type);
-        SysmelClassDefinition(PointerLikeType, DerivedType);
-            SysmelClassDefinition(PointerType, PointerLikeType);
-            SysmelClassDefinition(ReferenceType, PointerLikeType);
-    SysmelClassDefinition(DynamicType, Type);
-    SysmelClassDefinition(NominalType, Type);
-        SysmelClassDefinition(PrimitiveType, NominalType);
-        SysmelClassDefinition(Behavior, NominalType);
-            SysmelClassDefinition(Class, Behavior);
-            SysmelClassDefinition(Metaclass, Behavior);
+SysmelClassDefinition(Type, Object)
+    SysmelClassDefinition(TypeUniverse, Type)
+    SysmelClassDefinition(DerivedType, Type)
+        SysmelClassDefinition(PointerLikeType, DerivedType)
+            SysmelClassDefinition(PointerType, PointerLikeType)
+            SysmelClassDefinition(ReferenceType, PointerLikeType)
+    SysmelClassDefinition(DynamicType, Type)
+    SysmelClassDefinition(NominalType, Type)
+        SysmelClassDefinition(PrimitiveType, NominalType)
+        SysmelClassDefinition(Behavior, NominalType)
+            SysmelClassDefinition(Class, Behavior)
+            SysmelClassDefinition(Metaclass, Behavior)
 
-SysmelClassDefinition(Boolean, Object);
-    SysmelClassDefinition(True, Boolean);
-    SysmelClassDefinition(False, Boolean);
+SysmelClassDefinition(Boolean, Object)
+    SysmelClassDefinition(True, Boolean)
+    SysmelClassDefinition(False, Boolean)
 
-SysmelClassDefinition(Magnitude, Object);
-    SysmelClassDefinition(Character, Magnitude);
-    SysmelClassDefinition(Number, Magnitude);
-        SysmelClassDefinition(Float, Number);
-            SysmelClassDefinition(BoxedFloat, Float);
-            SysmelClassDefinition(SmallFloat, Float);
-        SysmelClassDefinition(Integer, Number);
-            SysmelClassDefinition(SmallInteger, Integer);
+SysmelClassDefinition(Magnitude, Object)
+    SysmelClassDefinition(Character, Magnitude)
+    SysmelClassDefinition(Number, Magnitude)
+        SysmelClassDefinition(Float, Number)
+            SysmelClassDefinition(BoxedFloat, Float)
+            SysmelClassDefinition(SmallFloat, Float)
+        SysmelClassDefinition(Integer, Number)
+            SysmelClassDefinition(SmallInteger, Integer)
 
-SysmelClassDefinition(Collection, Object);
-    SysmelClassDefinition(SequenceableCollection, Collection);
-    SysmelClassDefinition(ArrayedCollection, SequenceableCollection);
-        SysmelClassDefinition(Array, ArrayedCollection);
-        SysmelClassDefinition(String, ArrayedCollection);
-        SysmelClassDefinition(Symbol, ArrayedCollection);
-    SysmelClassDefinition(HashedCollection, Collection);
-        SysmelClassDefinition(InternedSymbolSet, HashedCollection);
-        SysmelClassDefinition(MethodDictionary, HashedCollection);
+SysmelClassDefinition(Collection, Object)
+    SysmelClassDefinition(SequenceableCollection, Collection)
+    SysmelClassDefinition(ArrayedCollection, SequenceableCollection)
+        SysmelClassDefinition(Array, ArrayedCollection)
+        SysmelClassDefinition(String, ArrayedCollection)
+        SysmelClassDefinition(Symbol, ArrayedCollection)
+    SysmelClassDefinition(HashedCollection, Collection)
+        SysmelClassDefinition(InternedSymbolSet, HashedCollection)
+        SysmelClassDefinition(MethodDictionary, HashedCollection)

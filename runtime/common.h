@@ -221,6 +221,26 @@ struct MethodDictionary
     HashedCollection super;
 };
 
+typedef struct RuntimeClasses
+{
+#define SysmelClassDefinitionNoSuper(className) \
+    struct Class *className ## _Class; \
+    struct Metaclass *className ## _Metaclass;
+
+#define SysmelClassDefinition(className, superClassName) SysmelClassDefinitionNoSuper(className)
+#include "classDefinitions.inc"
+#undef SysmelClassDefinition
+#undef SysmelClassDefinitionNoSuper
+} RuntimeClasses;
+
+typedef struct RuntimeRoots
+{
+    RuntimeClasses classes;
+
+} RuntimeRoots;
+
+extern RuntimeRoots sysmel_RuntimeRoots;
+
 Symbol *sysmel_internCString(const char *string);
 void sysmel_initializeClasses(void);
 void sysmel_initializeRuntime(void);
