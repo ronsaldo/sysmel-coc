@@ -17,12 +17,92 @@ __sysmel_encodeInteger(intptr_t integer)
 }
 
 SYSMEL_RUNTIME_EXPORT Oop
+__sysmel_integer_negated(Oop operand)
+{
+    intptr_t operandInteger = __sysmel_decodeInteger(operand);
+    return __sysmel_encodeInteger(-operandInteger);
+}
+
+SYSMEL_RUNTIME_EXPORT Oop
 __sysmel_integer_add(Oop left, Oop right)
 {
     intptr_t leftInteger = __sysmel_decodeInteger(left);
     intptr_t rightInteger = __sysmel_decodeInteger(right);
     return __sysmel_encodeInteger(leftInteger + rightInteger);
 }
+
+SYSMEL_RUNTIME_EXPORT Oop
+__sysmel_integer_sub(Oop left, Oop right)
+{
+    intptr_t leftInteger = __sysmel_decodeInteger(left);
+    intptr_t rightInteger = __sysmel_decodeInteger(right);
+    return __sysmel_encodeInteger(leftInteger - rightInteger);
+}
+
+SYSMEL_RUNTIME_EXPORT Oop
+__sysmel_integer_mul(Oop left, Oop right)
+{
+    intptr_t leftInteger = __sysmel_decodeInteger(left);
+    intptr_t rightInteger = __sysmel_decodeInteger(right);
+    return __sysmel_encodeInteger(leftInteger * rightInteger);
+}
+
+SYSMEL_RUNTIME_EXPORT Oop
+__sysmel_integer_div(Oop left, Oop right)
+{
+    intptr_t leftInteger = __sysmel_decodeInteger(left);
+    intptr_t rightInteger = __sysmel_decodeInteger(right);
+    return __sysmel_encodeInteger(leftInteger / rightInteger);
+}
+
+SYSMEL_RUNTIME_EXPORT Oop
+__sysmel_integer_mod(Oop left, Oop right)
+{
+    intptr_t leftInteger = __sysmel_decodeInteger(left);
+    intptr_t rightInteger = __sysmel_decodeInteger(right);
+    return __sysmel_encodeInteger(leftInteger % rightInteger);
+}
+
+SYSMEL_RUNTIME_EXPORT Oop
+__sysmel_integer_and(Oop left, Oop right)
+{
+    intptr_t leftInteger = __sysmel_decodeInteger(left);
+    intptr_t rightInteger = __sysmel_decodeInteger(right);
+    return __sysmel_encodeInteger(leftInteger & rightInteger);
+}
+
+SYSMEL_RUNTIME_EXPORT Oop
+__sysmel_integer_or(Oop left, Oop right)
+{
+    intptr_t leftInteger = __sysmel_decodeInteger(left);
+    intptr_t rightInteger = __sysmel_decodeInteger(right);
+    return __sysmel_encodeInteger(leftInteger | rightInteger);
+}
+
+SYSMEL_RUNTIME_EXPORT Oop
+__sysmel_integer_xor(Oop left, Oop right)
+{
+    intptr_t leftInteger = __sysmel_decodeInteger(left);
+    intptr_t rightInteger = __sysmel_decodeInteger(right);
+    return __sysmel_encodeInteger(leftInteger ^ rightInteger);
+}
+
+SYSMEL_RUNTIME_EXPORT Oop
+__sysmel_integer_shiftLeft(Oop left, Oop right)
+{
+    intptr_t leftInteger = __sysmel_decodeInteger(left);
+    intptr_t rightInteger = __sysmel_decodeInteger(right);
+    return __sysmel_encodeInteger(leftInteger << rightInteger);
+}
+
+SYSMEL_RUNTIME_EXPORT Oop
+__sysmel_integer_shiftRight(Oop left, Oop right)
+{
+    intptr_t leftInteger = __sysmel_decodeInteger(left);
+    intptr_t rightInteger = __sysmel_decodeInteger(right);
+    return __sysmel_encodeInteger(leftInteger >> rightInteger);
+}
+
 
 SYSMEL_RUNTIME_EXPORT int32_t
 __sysmel_integer_asInt32(Oop value)
@@ -42,6 +122,20 @@ __sysmel_integer_printString(Oop value)
 void
 sysmel_initializeNumberPrimitives(void)
 {
+    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "negated", __sysmel_integer_negated);
+    
+    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "+",  __sysmel_integer_add);
+    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "-",  __sysmel_integer_sub);
+    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "*",  __sysmel_integer_mul);
+    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "//", __sysmel_integer_div);
+    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "%",  __sysmel_integer_mod);
+
+    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "&",  __sysmel_integer_and);
+    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "|",  __sysmel_integer_or);
+    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "^",  __sysmel_integer_xor);
+    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "<<",  __sysmel_integer_shiftLeft);
+    sysmel_type_addPrimitive(&Integer_Class.super.super.super, ">>",  __sysmel_integer_shiftRight);
+
     sysmel_type_addPrimitive(&Integer_Class.super.super.super, "asString", __sysmel_integer_printString);
     sysmel_type_addPrimitive(&Integer_Class.super.super.super, "printString", __sysmel_integer_printString);
 }

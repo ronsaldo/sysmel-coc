@@ -5,7 +5,7 @@ MethodDictionaryRef
 sysmel_MethodDictionary_new(void)
 {
     MethodDictionaryRef dictionary = SysmelClassAllocate(MethodDictionary);
-    dictionary->super.array = SysmelClassAllocateWithSlotVariableSizedData(Array, 16);
+    dictionary->super.array = SysmelClassAllocateWithSlotVariableSizedData(Array, 32);
     return dictionary;
 }
 
@@ -37,8 +37,24 @@ sysmel_MethodDictionary_scanFor(MethodDictionaryRef self, SymbolRef selector)
 void
 sysmel_MethodDictionary_increaseCapacity(MethodDictionaryRef self)
 {
-    (void)self;
-    abort();
+    ArrayRef oldStorage = self->super.array;
+    size_t oldCapacity = sysmel_oop_getVariablePointerSize((Oop)oldStorage) / 2;
+
+    size_t newCapacity = oldCapacity*2;
+    if(newCapacity < 16)
+        newCapacity = 16;
+
+    ArrayRef newStorage = SysmelClassAllocateWithSlotVariableSizedData(Array, newCapacity*2);
+    self->super.tally = 0;
+    self->super.array = newStorage;
+
+    for(size_t i = 0; i < oldCapacity; ++i)
+    {
+        Oop oldKey = oldStorage->__elements__[i*2 + 0];
+        Oop oldValue = oldStorage->__elements__[i*2 + 1];
+        if(oldKey)
+            sysmel_MethodDictionary_atPut(self, (SymbolRef)oldKey, oldValue);
+    }
 }
 
 Oop

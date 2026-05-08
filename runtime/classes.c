@@ -211,3 +211,8 @@ sysmel_type_addPrimitive(Type *type, const char *selector, void* primitiveImplem
     nativeMethod->nativeFunction = primitiveImplementation;
     sysmel_MethodDictionary_atPut(type->methodDictionary, selectorSymbol, (Oop)nativeMethod);
 }
+
+void
+sysmel_initializeObjectPrimitives(void)
+{
+}

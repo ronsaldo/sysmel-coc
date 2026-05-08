@@ -3,6 +3,7 @@
 extern Oop SysmelMain(void);
 
 void sysmel_initializeNumberPrimitives(void);
+void sysmel_initializeObjectPrimitives(void);
 
 void
 sysmel_initializePrimitives(void)
