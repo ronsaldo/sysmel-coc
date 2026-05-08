@@ -43,11 +43,12 @@ extern struct GCSmallLayout Class_GCLayout;
 
 void sysmel_initializeClasses(void)
 {
-    // Superclasses
+    // Name and Superclasses
 #define SysmelClassDefinitionNoSuper(className)
 #define SysmelClassDefinition(className, superclassName) \
+    className ## _Class.name = sysmel_internCString(#className); \
     className ## _Class.super.superclass = &superclassName##_Class.super; \
-    className ## _Metaclass.super.superclass = &superclassName##_Metaclass.super; \
+    className ## _Metaclass.super.superclass = &superclassName##_Metaclass.super;
 
 #include "classDefinitions.inc"
 
