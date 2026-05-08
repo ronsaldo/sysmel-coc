@@ -132,6 +132,8 @@ struct Type
 {
     Object super;
     GCLayoutRef gcLayout;
+    MethodDictionaryRef methodDictionary;
+    TypeRef supertype;
     size_t instanceAlignment;
     size_t instanceSize;
 };
@@ -165,7 +167,6 @@ struct DynamicType
 struct NominalType
 {
     Type super;
-    MethodDictionaryRef methodDictionary;
 };
 
 struct PrimitiveType
@@ -181,7 +182,6 @@ struct TypeUniverse
 struct Behavior
 {
     NominalType super;
-    BehaviorRef superclass;
 };
 
 struct Class
@@ -350,10 +350,11 @@ SYSMEL_RUNTIME_EXPORT StringRef sysmel_object_printString(Oop receiver);
 
 SYSMEL_RUNTIME_EXPORT SymbolRef sysmel_symbol_internCString(const char *string);
 SYSMEL_RUNTIME_EXPORT SymbolRef sysmel_symbol_internStringData(size_t stringSize, const char *string);
+SYSMEL_RUNTIME_EXPORT size_t sysmel_symbol_getSize(SymbolRef string);
 
 SYSMEL_RUNTIME_EXPORT bool sysmel_symbol_equals(SymbolRef left, SymbolRef right);
 
-SYSMEL_RUNTIME_EXPORT void sysmel_nominalType_addPrimitive(NominalType *nominalType, const char *selector, void* primitiveImplementation);;
+SYSMEL_RUNTIME_EXPORT void sysmel_type_addPrimitive(Type *type, const char *selector, void* primitiveImplementation);;
 
 SYSMEL_RUNTIME_EXPORT void sysmel_initializeClasses(void);
 SYSMEL_RUNTIME_EXPORT void sysmel_initializeRuntime(void);

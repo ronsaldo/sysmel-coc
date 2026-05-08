@@ -42,6 +42,6 @@ __sysmel_integer_printString(Oop value)
 void
 sysmel_initializeNumberPrimitives(void)
 {
-    sysmel_nominalType_addPrimitive(&Integer_Class.super.super, "asString", __sysmel_integer_printString);
-    sysmel_nominalType_addPrimitive(&Integer_Class.super.super, "printString", __sysmel_integer_printString);
+    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "asString", __sysmel_integer_printString);
+    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "printString", __sysmel_integer_printString);
 }

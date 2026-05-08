@@ -41,6 +41,17 @@ sysmel_MethodDictionary_increaseCapacity(MethodDictionaryRef self)
     abort();
 }
 
+Oop
+sysmel_MethodDictionary_atOrNil(MethodDictionaryRef self, SymbolRef selector)
+{
+    intptr_t index = sysmel_MethodDictionary_scanFor(self, selector);
+    if(index < 0)
+        return sysmel_nil;
+
+    ArrayRef array = self->super.array;
+    return array->__elements__[index*2 + 1];
+}
+
 void
 sysmel_MethodDictionary_atPut(MethodDictionaryRef self, SymbolRef selector, Oop binding)
 {

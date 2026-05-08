@@ -106,10 +106,10 @@ sysmel_initializeClasses(void)
     // Name, Superclasses and method dict
 #define SysmelClassDefinitionNoSuper(className)
 #define SysmelClassDefinition(className, superclassName) \
-    className ## _Class.super.super.methodDictionary = sysmel_MethodDictionary_new(); \
+    className ## _Class.super.super.super.methodDictionary = sysmel_MethodDictionary_new(); \
     className ## _Class.name = sysmel_symbol_internCString(#className); \
-    className ## _Class.super.superclass = &superclassName##_Class.super; \
-    className ## _Metaclass.super.superclass = &superclassName##_Metaclass.super;
+    className ## _Class.super.super.super.supertype = &superclassName##_Class.super.super.super; \
+    className ## _Metaclass.super.super.super.supertype = &superclassName##_Metaclass.super.super.super;
 
 #include "classDefinitions.inc"
 
@@ -117,7 +117,7 @@ sysmel_initializeClasses(void)
 #undef SysmelClassDefinition
 
     // Short circuit
-    ProtoObject_Metaclass.super.superclass = &Class_Class.super;
+    ProtoObject_Metaclass.super.super.super.supertype = &Class_Class.super.super.super;
 
     // Class layouts
     GCSmallLayout *currentLayout;
@@ -130,12 +130,15 @@ sysmel_initializeClasses(void)
     sysmel_SmallGCLayout_setSlotType(currentLayout, offsetof(className, fieldName), slotType)
 
     sysmel_SmallGCLayout_setSlotType(&ProtoObject_GCLayout, offsetof(ObjectHeader, __type__), SlotType_StrongRef);
+    ProtoObject_Class.super.super.super.methodDictionary = sysmel_MethodDictionary_new();
 
     SysmelBeginClassLayout(Object, ProtoObject);
 
     SysmelBeginClassLayout(GCLayout, Object);
     SysmelBeginClassLayout(Type, Object);
         GCLayoutAddField(Type, gcLayout, SlotType_StrongRef);
+        GCLayoutAddField(Type, methodDictionary, SlotType_StrongRef);
+            GCLayoutAddField(Type, supertype, SlotType_StrongRef);
         
         SysmelBeginClassLayout(TypeUniverse, Type);
 
@@ -151,11 +154,9 @@ sysmel_initializeClasses(void)
         SysmelBeginClassLayout(DynamicType, Type);
         
         SysmelBeginClassLayout(NominalType, Type);
-            GCLayoutAddField(NominalType, methodDictionary, SlotType_StrongRef);
             
             SysmelBeginClassLayout(PrimitiveType, NominalType);
             SysmelBeginClassLayout(Behavior, NominalType);
-                GCLayoutAddField(Behavior, superclass, SlotType_StrongRef);
                 
                 SysmelBeginClassLayout(Class, Behavior);
                 GCLayoutAddField(Class, name, SlotType_StrongRef);
@@ -203,10 +204,10 @@ SysmelBeginClassLayout(Collection, Object);
 }
 
 void
-sysmel_nominalType_addPrimitive(NominalType *nominalType, const char *selector, void* primitiveImplementation)
+sysmel_type_addPrimitive(Type *type, const char *selector, void* primitiveImplementation)
 {
     SymbolRef selectorSymbol = sysmel_symbol_internCString(selector);
     NativeMethodRef nativeMethod = SysmelClassAllocate(NativeMethod);
     nativeMethod->nativeFunction = primitiveImplementation;
-    sysmel_MethodDictionary_atPut(nominalType->methodDictionary, selectorSymbol, (Oop)nativeMethod);
+    sysmel_MethodDictionary_atPut(type->methodDictionary, selectorSymbol, (Oop)nativeMethod);
 }

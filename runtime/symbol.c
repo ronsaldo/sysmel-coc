@@ -17,6 +17,12 @@ sysmel_symbol_internStringData(size_t stringSize, const char *string)
     return symbol;
 }
 
+size_t
+sysmel_symbol_getSize(SymbolRef symbol)
+{
+    return sysmel_oop_getVariableByteSize((Oop)symbol);
+}
+
 bool sysmel_symbol_equals(SymbolRef left, SymbolRef right)
 {
     if(left == right)
@@ -27,9 +33,11 @@ bool sysmel_symbol_equals(SymbolRef left, SymbolRef right)
         return false;
 
     // Compare the size
-    if(left->super.super.super.super.super.super.__byteSize__ != right->super.super.super.super.super.super.__byteSize__)
+    size_t leftSize = sysmel_symbol_getSize(left);
+    size_t rightSize = sysmel_symbol_getSize(right);
+    if(leftSize != rightSize)
         return false;
 
     // Compare the data
-    return memcmp(left->__elements__, right->__elements__, left->super.super.super.super.super.super.__byteSize__) == 0;
+    return memcmp(left->__elements__, right->__elements__, leftSize) == 0;
 }

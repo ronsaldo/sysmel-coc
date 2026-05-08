@@ -30,7 +30,7 @@ sysmel_string_formStringData(size_t stringSize, const char *string)
 size_t
 sysmel_string_getSize(StringRef string)
 {
-    return string->super.super.super.super.super.super.__byteSize__;
+    return sysmel_oop_getVariableByteSize((Oop)string);
 }
 
 StringRef
