@@ -14,6 +14,8 @@ typedef enum sysmel_ImmediateObjectTagBits_e {
 
 typedef intptr_t Oop;
 
+typedef struct ObjectHeader ObjectHeader;
+
 // Declare the classes.
 #define SysmelClassDefinitionNoSuper(className) \
     typedef struct className className; \
@@ -26,12 +28,17 @@ typedef intptr_t Oop;
 #undef SysmelClassDefinitionNoSuper
 
 // Define the structs
-struct ProtoObject
+struct ObjectHeader
 {
     Type *__type__;
     size_t __byteSize__;
     uint8_t __gcColor__;
     uint32_t __identityHash__;
+};
+
+struct ProtoObject
+{
+    ObjectHeader super;
 };
 
 struct Object
@@ -148,13 +155,16 @@ struct ArrayedCollection
 struct String
 {
     SequenceableCollection ArrayedCollection;
+    char __elements__[];
 };
 
 struct Symbol
 {
     SequenceableCollection ArrayedCollection;
+    char __elements__[];
 };
 
+Symbol *sysmel_internCString(const char *);
 void sysmel_initializeClasses(void);
 void sysmel_initializeRuntime(void);
 
