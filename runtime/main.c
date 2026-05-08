@@ -1,6 +1,12 @@
 #include "common.h"
 
-extern sysmel_oop_t SysmelMain(void);
+extern Oop SysmelMain(void);
+
+void
+sysmel_initializeRuntime(void)
+{
+    sysmel_initializeClasses()
+}
 
 int main(int argc, const char *argv[])
 {
