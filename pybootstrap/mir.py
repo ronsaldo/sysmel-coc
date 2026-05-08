@@ -97,10 +97,19 @@ class MirVisitor:
     def visitImportedFunction(self, importedFunction):
         pass
     
-    def visitGlobalData(self, globalData):
+    def visitBooleanConstant(self, globalConstant):
         pass
 
-    def visitGlobalConstant(self, globalConstant):
+    def visitVoidConstant(self, globalConstant):
+        pass
+
+    def visitNilConstant(self, globalConstant):
+        pass
+
+    def visitStringConstant(self, globalConstant):
+        pass
+
+    def visitSymbolConstant(self, globalConstant):
         pass
 
     def visitFunction(self, function):
@@ -223,14 +232,65 @@ class MirImportedFunction(MirPackageElement):
     def __str__(self):
         return 'importedFunction ' + self.name
 
-class MirGlobalConstant(MirPackageElement):
-    def __init__(self, name, value, type):
-        super().__init__(name)
+class MirBooleanConstant(MirPackageElement):
+    def __init__(self, value, type):
+        super().__init__(None)
         self.value = value
         self.type = type
 
     def accept(self, visitor: MirVisitor):
-        return visitor.visitGlobalConstant(self)
+        return visitor.visitBooleanConstant(self)
+    
+    def dumpToConsole(self):
+        print('booleanConstant %s' % str(self.value))
+
+class MirVoidConstant(MirPackageElement):
+    def __init__(self, value, type):
+        super().__init__(None)
+        self.value = value
+        self.type = type
+
+    def accept(self, visitor: MirVisitor):
+        return visitor.visitVoidConstant(self)
+
+    def dumpToConsole(self):
+        print('voidConstant')
+
+class MirNilConstant(MirPackageElement):
+    def __init__(self, value, type):
+        super().__init__(None)
+        self.value = value
+        self.type = type
+
+    def accept(self, visitor: MirVisitor):
+        return visitor.visitNilConstant(self)
+
+    def dumpToConsole(self):
+        print('nilConstant')
+
+class MirStringConstant(MirPackageElement):
+    def __init__(self, value, type):
+        super().__init__(None)
+        self.value = value
+        self.type = type
+
+    def accept(self, visitor: MirVisitor):
+        return visitor.visitStringConstant(self)
+
+    def dumpToConsole(self):
+        print('string "%s"' % self.value)
+
+class MirSymbolConstant(MirPackageElement):
+    def __init__(self, value, type):
+        super().__init__(None)
+        self.value = value
+        self.type = type
+
+    def accept(self, visitor: MirVisitor):
+        return visitor.visitSymbolConstant(self)
+
+    def dumpToConsole(self):
+        print('symbol #"%s"' % self.value)
 
 class MirFunction(MirPackageElement):
     def __init__(self, name = ''):
@@ -687,7 +747,7 @@ class MirInstruction(MirFunctionLocal):
                 context.beginCall()
             
             case MirOpcode.CallArgumentInt32 | MirOpcode.CallArgumentInt64 | MirOpcode.CallArgumentPointer | MirOpcode.CallArgumentGCPointer | MirOpcode.CallArgumentFloat32 | MirOpcode.CallArgumentFloat64:
-                context.addCallArgument(context.getTempValue(self.firstArgument))
+                context.addCallArgument(context.getTempOrConstantValue(self.firstArgument))
 
             case MirOpcode.CallInt32Result | MirOpcode.CallInt64Result | MirOpcode.CallPointerResult | MirOpcode.CallGCPointerResult:
                 functional = context.getTempOrConstantValue(self.firstArgument)
@@ -774,11 +834,11 @@ class MirInstruction(MirFunctionLocal):
             case MirOpcode.Jump:
                 context.pc = self.firstArgument.index
             case MirOpcode.JumpIfTrue:
-                condition = context.getTempValue(self.firstArgument)
+                condition = context.getTempOrConstantValue(self.firstArgument)
                 if condition:
                     context.pc = self.secondArgument.index
             case MirOpcode.JumpIfFalse:
-                condition = context.getTempValue(self.firstArgument)
+                condition = context.getTempOrConstantValue(self.firstArgument)
                 if not condition:
                     context.pc = self.secondArgument.index
 
@@ -848,7 +908,7 @@ class MirInstruction(MirFunctionLocal):
 
             ## Returns
             case MirOpcode.ReturnInt32 | MirOpcode.ReturnInt64 | MirOpcode.ReturnPointer | MirOpcode.ReturnFloat32 | MirOpcode.ReturnFloat64 | MirOpcode.ReturnGCPointer:
-                context.setReturnValue(context.getTempValue(self.firstArgument))
+                context.setReturnValue(context.getTempOrConstantValue(self.firstArgument))
             case MirOpcode.ReturnVoid:
                 context.setReturnValue(None)
             case _:

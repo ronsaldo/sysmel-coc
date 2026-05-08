@@ -92,6 +92,16 @@ class HIR2MIRTest(unittest.TestCase):
         result = mirFunction.evaluateWithArguments([])
         self.assertEqual(result, 42.5)
 
+    def testStringConstant(self):
+        mirFunction = self.compileFunctionToMir('public function constant() => String := "Hello World"')
+        result = mirFunction.evaluateWithArguments([])
+        self.assertEqual(result.value, "Hello World")
+
+    def testSymbolConstant(self):
+        mirFunction = self.compileFunctionToMir('public function constant() => Symbol := #test')
+        result = mirFunction.evaluateWithArguments([])
+        self.assertEqual(result.value, "test")
+
     def testInt32Let(self):
         mirFunction = self.compileFunctionToMir("public function constant(x: Int32) => Int32 := {let y := x. y + 5i32}")
         result = mirFunction.evaluateWithArguments([0])

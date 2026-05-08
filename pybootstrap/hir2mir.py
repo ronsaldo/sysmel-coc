@@ -148,14 +148,24 @@ class HirPackage2Mir(HIRVisitor):
         return self.context.gcPointerType
     
     def visitConstantLiteralBooleanValue(self, value):
-        return MirGlobalConstant(None, value.value, self.context.boolean8Type)
+        return MirBooleanConstant(value.value, self.context.boolean8Type)
     
     def visitConstantLiteralVoidValue(self, value):
-        return MirGlobalConstant(None, None, self.context.voidType)
+        return MirVoidConstant(None, self.context.voidType)
 
     def visitConstantLiteralNilValue(self, value):
-        return MirGlobalConstant(None, None, self.context.pointerType)
+        return MirNilConstant(None, self.context.pointerType)
     
+    def visitConstantLiteralStringValue(self, constantLiteral: HIRConstantLiteralStringValue):
+        constant = MirStringConstant(constantLiteral.value, self.context.gcPointerType)
+        self.currentMirPackage.addElement(constant)
+        return constant
+
+    def visitConstantLiteralSymbolValue(self, constantLiteral: HIRConstantLiteralSymbolValue):
+        constant = MirSymbolConstant(constantLiteral.value, self.context.gcPointerType)
+        self.currentMirPackage.addElement(constant)
+        return constant
+
     def visitMetaBuilderFactory(self, value):
         return None
     
@@ -306,6 +316,12 @@ class HirFunction2Mir(HIRVisitor):
     def visitConstantLiteralNilValue(self, constantLiteral: HIRConstantLiteralIntegerValue):
         constantType = self.packageTranslator.translateValue(constantLiteral.getType())
         return constantType.emitNilConstantWithBuilder(self.prologueBuilder, constantLiteral.sourcePosition)
+
+    def visitConstantLiteralStringValue(self, constantLiteral: HIRConstantLiteralStringValue):
+        return self.packageTranslator.translateValue(constantLiteral)
+
+    def visitConstantLiteralSymbolValue(self, constantLiteral: HIRConstantLiteralSymbolValue):
+        return self.packageTranslator.translateValue(constantLiteral)
 
     def visitConstantEnum(self, constantLiteral: HIRConstantEnum):
         return self.translateValue(constantLiteral.value)

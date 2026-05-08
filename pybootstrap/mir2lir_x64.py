@@ -103,7 +103,19 @@ class MirPackage2LirX64(MirVisitor):
         functionSymbolValue = importedFunction.getSymbolName()
         return self.asm.makeGlobalFunctionSymbol(functionSymbolValue)
 
-    def visitGlobalConstant(self, globalConstant: MirGlobalConstant):
+    def visitBooleanConstant(self, globalConstant):
+        assert False
+
+    def visitVoidConstant(self, globalConstant):
+        assert False
+
+    def visitNilConstant(self, globalConstant):
+        assert False
+
+    def visitStringConstant(self, globalConstant):
+        assert False
+
+    def visitSymbolConstant(self, globalConstant):
         assert False
 
     def visitFunction(self, function: MirFunction):
