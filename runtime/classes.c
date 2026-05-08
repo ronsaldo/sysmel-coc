@@ -1,6 +1,9 @@
 #include "common.h"
+#include "dict.h"
+#include "memory.h"
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 extern struct GCSmallLayout Class_GCLayout;
 
@@ -18,10 +21,10 @@ extern struct GCSmallLayout Class_GCLayout;
                     .__byteSize__ = sizeof(Class), \
                     .__type__ = &className ## _Metaclass.super.super.super \
                 }, \
-                .gcLayout = (GCLayout*)&className ## _GCLayout\
+                .gcLayout = (GCLayout*)&className ## _GCLayout, \
+                .instanceAlignment = 16, \
+                .instanceSize = sizeof(className), \
             },\
-            .instanceAlignment = 16, \
-            .instanceSize = sizeof(className), \
         }, \
     }; \
     struct Metaclass className ## _Metaclass = {\
@@ -31,9 +34,9 @@ extern struct GCSmallLayout Class_GCLayout;
                     .__byteSize__ = sizeof(Metaclass), \
                     .__type__ = &Metaclass_Class.super.super.super \
                 }, \
-                .gcLayout = (GCLayout*)&Class_GCLayout\
+                .gcLayout = (GCLayout*)&Class_GCLayout, \
+                .instanceSize = sizeof(Class), \
             }, \
-            .instanceSize = sizeof(Class), \
         },\
         .thisClass = &className ## _Class, \
     };
@@ -43,7 +46,51 @@ extern struct GCSmallLayout Class_GCLayout;
 #undef SysmelClassDefinition
 #undef SysmelClassDefinitionNoSuper
 
-void sysmel_SmallGCLayout_setSlotType(GCSmallLayout *layout, size_t offset, sysmel_SlotType_t slotType)
+uint32_t
+sysmel_oop_getIdentityHash(Oop object)
+{
+    if(!sysmel_oop_isImmediate(object))
+        return ((ObjectHeader*)object)->__identityHash__;
+
+    return (uint32_t)(object *1664525);
+}
+
+TypeRef
+sysmel_oop_getType(Oop object)
+{
+    if(!sysmel_oop_isImmediate(object))
+        return ((ObjectHeader*)object)->__type__;
+    
+    Oop tag = object & ImmediateObjectTag_BitMask;
+    switch(tag)
+    {
+    case 0: return &UndefinedObject_Class.super.super.super;
+    case ImmediateObjectTag_SmallInteger: return &SmallInteger_Class.super.super.super;
+    case ImmediateObjectTag_Character: return &Character_Class.super.super.super;
+    case ImmediateObjectTag_SmallFloat: return &SmallFloat_Class.super.super.super;
+    default: abort();
+    }
+}
+
+size_t
+sysmel_oop_getVariableByteSize(Oop value)
+{
+    if(sysmel_oop_isImmediate(value))
+        return 0;
+
+    ObjectHeader* header = (ObjectHeader*)value;
+    assert(header->__byteSize__ >= header->__type__->instanceSize);
+    return header->__byteSize__ - header->__type__->instanceSize;
+}
+
+size_t
+sysmel_oop_getVariablePointerSize(Oop object)
+{
+    return sysmel_oop_getVariableByteSize(object) / sizeof(Oop);
+}
+
+void
+sysmel_SmallGCLayout_setSlotType(GCSmallLayout *layout, size_t offset, sysmel_SlotType_t slotType)
 {
     size_t slotIndex = offset / sizeof(Oop);
 
@@ -56,9 +103,10 @@ void sysmel_SmallGCLayout_setSlotType(GCSmallLayout *layout, size_t offset, sysm
 void
 sysmel_initializeClasses(void)
 {
-    // Name and Superclasses
+    // Name, Superclasses and method dict
 #define SysmelClassDefinitionNoSuper(className)
 #define SysmelClassDefinition(className, superclassName) \
+    className ## _Class.super.super.methodDictionary = sysmel_MethodDictionary_new(); \
     className ## _Class.name = sysmel_symbol_internCString(#className); \
     className ## _Class.super.superclass = &superclassName##_Class.super; \
     className ## _Metaclass.super.superclass = &superclassName##_Metaclass.super;
@@ -81,8 +129,9 @@ sysmel_initializeClasses(void)
 #define GCLayoutAddField(className, fieldName, slotType) \
     sysmel_SmallGCLayout_setSlotType(currentLayout, offsetof(className, fieldName), slotType)
 
+    sysmel_SmallGCLayout_setSlotType(&ProtoObject_GCLayout, offsetof(ObjectHeader, __type__), SlotType_StrongRef);
+
     SysmelBeginClassLayout(Object, ProtoObject);
-    sysmel_SmallGCLayout_setSlotType(currentLayout, offsetof(ObjectHeader, __type__), SlotType_StrongRef);
 
     SysmelBeginClassLayout(GCLayout, Object);
     SysmelBeginClassLayout(Type, Object);
@@ -114,9 +163,14 @@ sysmel_initializeClasses(void)
                 SysmelBeginClassLayout(Metaclass, Behavior);
                 GCLayoutAddField(Metaclass, thisClass, SlotType_StrongRef);
 
+    SysmelBeginClassLayout(NativeMethod, Object);
+
     SysmelBeginClassLayout(Boolean, Object);
     SysmelBeginClassLayout(True, Boolean);
     SysmelBeginClassLayout(False, Boolean);
+
+    SysmelBeginClassLayout(UndefinedObject, Object);
+    SysmelBeginClassLayout(Void, Object);
 
 SysmelBeginClassLayout(Magnitude, Object);
     SysmelBeginClassLayout(Character, Magnitude);
@@ -146,4 +200,13 @@ SysmelBeginClassLayout(Collection, Object);
 
 #undef SysmelBeginClassLayout
 #undef GCLayoutAddField
+}
+
+void
+sysmel_nominalType_addPrimitive(NominalType *nominalType, const char *selector, void* primitiveImplementation)
+{
+    SymbolRef selectorSymbol = sysmel_symbol_internCString(selector);
+    NativeMethodRef nativeMethod = SysmelClassAllocate(NativeMethod);
+    nativeMethod->nativeFunction = primitiveImplementation;
+    sysmel_MethodDictionary_atPut(nominalType->methodDictionary, selectorSymbol, (Oop)nativeMethod);
 }

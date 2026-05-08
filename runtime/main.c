@@ -2,10 +2,19 @@
 
 extern Oop SysmelMain(void);
 
+void sysmel_initializeNumberPrimitives(void);
+
+void
+sysmel_initializePrimitives(void)
+{
+    sysmel_initializeNumberPrimitives();
+}
+
 void
 sysmel_initializeRuntime(void)
 {
     sysmel_initializeClasses();
+    sysmel_initializePrimitives();
 }
 
 int main(int argc, const char *argv[])

@@ -5,5 +5,6 @@ sysmel_oop_lookupSelector(SymbolRef selector, Oop receiver)
 {
     (void)selector;
     (void)receiver;
+    printf("TODO: sysmel_oop_lookupSelector\n");
     return NULL;
 }

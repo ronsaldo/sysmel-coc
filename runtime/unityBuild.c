@@ -1,4 +1,5 @@
 #include "classes.c"
+#include "dict.c"
 #include "io.c"
 #include "main.c"
 #include "memory.c"

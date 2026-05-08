@@ -15,10 +15,13 @@ SysmelClassDefinition(Type, Object)
             SysmelClassDefinition(Class, Behavior)
             SysmelClassDefinition(Metaclass, Behavior)
 
+SysmelClassDefinition(NativeMethod, Object)
+
 SysmelClassDefinition(Boolean, Object)
     SysmelClassDefinition(True, Boolean)
     SysmelClassDefinition(False, Boolean)
 
+SysmelClassDefinition(UndefinedObject, Object)
 SysmelClassDefinition(Void, Object)
 
 SysmelClassDefinition(Magnitude, Object)

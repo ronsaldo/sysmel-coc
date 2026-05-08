@@ -42,6 +42,11 @@ extern True  sysmel_trueValue;
 extern False sysmel_falseValue;
 extern Void  sysmel_voidValue;
 
+typedef Oop (*sysmel_NativeMethodFunction_t)(...);
+
+uint32_t sysmel_oop_getIdentityHash(Oop object);
+TypeRef sysmel_oop_getType(Oop object);
+
 static inline bool
 sysmel_oop_isImmediate(Oop object)
 {
@@ -83,6 +88,11 @@ static inline Oop sysmel_oop_encodeUInt32(uint32_t value)
     return sysmel_oop_encodeSmallInteger(value);
 }
 
+size_t
+sysmel_oop_getVariableByteSize(Oop object);
+size_t
+sysmel_oop_getVariablePointerSize(Oop object);
+
 // Define the structs
 struct ObjectHeader
 {
@@ -122,6 +132,8 @@ struct Type
 {
     Object super;
     GCLayoutRef gcLayout;
+    size_t instanceAlignment;
+    size_t instanceSize;
 };
 
 struct DerivedType
@@ -170,8 +182,6 @@ struct Behavior
 {
     NominalType super;
     BehaviorRef superclass;
-    size_t instanceAlignment;
-    size_t instanceSize;
 };
 
 struct Class
@@ -184,6 +194,12 @@ struct Metaclass
 {
     Behavior super;
     ClassRef thisClass;
+};
+// Native method.
+struct NativeMethod
+{
+    Object super;
+    sysmel_NativeMethodFunction_t nativeFunction;
 };
 
 // Boolean
@@ -200,6 +216,11 @@ struct True
 struct False
 {
     Boolean super;
+};
+
+struct UndefinedObject
+{
+    Object super;
 };
 
 // Void
@@ -318,6 +339,8 @@ typedef struct RuntimeRoots
 
 extern RuntimeRoots sysmel_RuntimeRoots;
 
+SYSMEL_RUNTIME_EXPORT uint32_t sysmel_string_computeHash(size_t stringSize, const char *string);
+
 SYSMEL_RUNTIME_EXPORT StringRef sysmel_string_fromCString(const char *string);
 SYSMEL_RUNTIME_EXPORT StringRef sysmel_string_formStringData(size_t stringSize, const char *string);
 SYSMEL_RUNTIME_EXPORT size_t sysmel_string_getSize(StringRef string);
@@ -327,6 +350,10 @@ SYSMEL_RUNTIME_EXPORT StringRef sysmel_object_printString(Oop receiver);
 
 SYSMEL_RUNTIME_EXPORT SymbolRef sysmel_symbol_internCString(const char *string);
 SYSMEL_RUNTIME_EXPORT SymbolRef sysmel_symbol_internStringData(size_t stringSize, const char *string);
+
+SYSMEL_RUNTIME_EXPORT bool sysmel_symbol_equals(SymbolRef left, SymbolRef right);
+
+SYSMEL_RUNTIME_EXPORT void sysmel_nominalType_addPrimitive(NominalType *nominalType, const char *selector, void* primitiveImplementation);;
 
 SYSMEL_RUNTIME_EXPORT void sysmel_initializeClasses(void);
 SYSMEL_RUNTIME_EXPORT void sysmel_initializeRuntime(void);

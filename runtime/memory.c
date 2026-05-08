@@ -25,9 +25,9 @@ static sysmel_ObjectAllocationHeader_t *firstAllocatedObject;
 static sysmel_ObjectAllocationHeader_t *lastAllocatedObject;
 
 Oop
-sysmel_behavior_allocateWithByteVariableSizedData(BehaviorRef behavior, size_t byteVariableSizedData)
+sysmel_type_allocateWithByteVariableSizedData(TypeRef type, size_t byteVariableSizedData)
 {
-    size_t classInstanceSize = behavior->instanceSize;
+    size_t classInstanceSize = type->instanceSize;
     size_t objectByteSize = classInstanceSize + byteVariableSizedData;
     size_t totalByteSize = sizeof(sysmel_ObjectAllocationHeader_t) + objectByteSize;
     
@@ -45,17 +45,18 @@ sysmel_behavior_allocateWithByteVariableSizedData(BehaviorRef behavior, size_t b
 
     ObjectHeader* objectHeader = (ObjectHeader*)(allocationHeader + 1);
     objectHeader->__gcColor__ = sysmel_gc_whiteColor;
-    objectHeader->__type__ = &behavior->super.super;
+    objectHeader->__type__ = type;
     objectHeader->__byteSize__ = objectByteSize;
+    objectHeader->__identityHash__ = (uint32_t)((Oop)objectHeader * 1664525);
     sysmel_memory_allocatedSize += totalByteSize;
 
     return (Oop)objectHeader;
 }
 
 Oop
-sysmel_behavior_allocate(BehaviorRef behavior)
+sysmel_type_allocate(TypeRef type)
 {
-    return sysmel_behavior_allocateWithByteVariableSizedData(behavior, 0);
+    return sysmel_type_allocateWithByteVariableSizedData(type, 0);
 }
 
 void
