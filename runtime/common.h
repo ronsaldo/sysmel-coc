@@ -266,19 +266,19 @@ struct ArrayedCollection
 
 struct Array
 {
-    SequenceableCollection ArrayedCollection;
+    ArrayedCollection super;
     Oop __elements__[];
 };
 
 struct String
 {
-    SequenceableCollection ArrayedCollection;
+    ArrayedCollection super;
     char __elements__[];
 };
 
 struct Symbol
 {
-    SequenceableCollection ArrayedCollection;
+    ArrayedCollection super;
     char __elements__[];
 };
 
@@ -317,6 +317,13 @@ typedef struct RuntimeRoots
 } RuntimeRoots;
 
 extern RuntimeRoots sysmel_RuntimeRoots;
+
+SYSMEL_RUNTIME_EXPORT StringRef sysmel_string_fromCString(const char *string);
+SYSMEL_RUNTIME_EXPORT StringRef sysmel_string_formStringData(size_t stringSize, const char *string);
+SYSMEL_RUNTIME_EXPORT size_t sysmel_string_getSize(StringRef string);
+
+SYSMEL_RUNTIME_EXPORT StringRef sysmel_object_asString(Oop receiver);
+SYSMEL_RUNTIME_EXPORT StringRef sysmel_object_printString(Oop receiver);
 
 SYSMEL_RUNTIME_EXPORT SymbolRef sysmel_symbol_internCString(const char *string);
 SYSMEL_RUNTIME_EXPORT SymbolRef sysmel_symbol_internStringData(size_t stringSize, const char *string);
