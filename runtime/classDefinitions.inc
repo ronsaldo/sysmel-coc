@@ -1,6 +1,7 @@
 SysmelClassDefinitionNoSuper(ProtoObject)
     SysmelClassDefinition(Object, ProtoObject)
 
+SysmelClassDefinition(GCLayout, Object)
 SysmelClassDefinition(Type, Object)
     SysmelClassDefinition(TypeUniverse, Type)
     SysmelClassDefinition(DerivedType, Type)

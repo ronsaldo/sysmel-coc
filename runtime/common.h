@@ -16,6 +16,8 @@ typedef intptr_t Oop;
 
 typedef struct ObjectHeader ObjectHeader;
 
+typedef struct GCSmallLayout GCSmallLayout;
+
 // Declare the classes.
 #define SysmelClassDefinitionNoSuper(className) \
     typedef struct className className; \
@@ -47,9 +49,24 @@ struct Object
 };
 
 // Type system
+struct GCLayout
+{
+    Object super;
+    uint8_t variableDataFormat;
+    uint32_t __elements__[];
+};
+
+struct GCSmallLayout
+{
+    Object super;
+    uint8_t variableDataFormat;
+    uint32_t __elements__[2];
+};
+
 struct Type
 {
     Object super;
+    GCLayout *gcLayout;
 };
 
 struct DerivedType
