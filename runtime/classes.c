@@ -1,5 +1,6 @@
 #include "common.h"
 #include <assert.h>
+#include <stdio.h>
 
 extern struct GCSmallLayout Class_GCLayout;
 
@@ -44,8 +45,10 @@ extern struct GCSmallLayout Class_GCLayout;
 
 void sysmel_SmallGCLayout_setSlotType(GCSmallLayout *layout, size_t offset, sysmel_SlotType_t slotType)
 {
-    size_t wordIndex = offset / 16;
-    size_t bitIndex = (offset % 16) * 2;
+    size_t slotIndex = offset / sizeof(Oop);
+
+    size_t wordIndex = slotIndex / 16;
+    size_t bitIndex = (slotIndex % 16) * 2;
     assert(wordIndex < GCSmallLayoutSize);
     layout->__elements__[wordIndex] |= slotType << bitIndex;
 }
@@ -56,7 +59,7 @@ sysmel_initializeClasses(void)
     // Name and Superclasses
 #define SysmelClassDefinitionNoSuper(className)
 #define SysmelClassDefinition(className, superclassName) \
-    className ## _Class.name = sysmel_internCString(#className); \
+    className ## _Class.name = sysmel_symbol_internCString(#className); \
     className ## _Class.super.superclass = &superclassName##_Class.super; \
     className ## _Metaclass.super.superclass = &superclassName##_Metaclass.super;
 

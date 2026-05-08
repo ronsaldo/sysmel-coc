@@ -24,7 +24,8 @@ static size_t sysmel_gc_triggerLimit = 1024*4;
 static sysmel_ObjectAllocationHeader_t *firstAllocatedObject;
 static sysmel_ObjectAllocationHeader_t *lastAllocatedObject;
 
-Oop sysmel_class_allocateWithByteVariableSizedData(BehaviorRef behavior, size_t byteVariableSizedData)
+Oop
+sysmel_behavior_allocateWithByteVariableSizedData(BehaviorRef behavior, size_t byteVariableSizedData)
 {
     size_t classInstanceSize = behavior->instanceSize;
     size_t objectByteSize = classInstanceSize + byteVariableSizedData;
@@ -51,9 +52,10 @@ Oop sysmel_class_allocateWithByteVariableSizedData(BehaviorRef behavior, size_t 
     return (Oop)objectHeader;
 }
 
-Oop sysmel_class_allocate(BehaviorRef behavior)
+Oop
+sysmel_behavior_allocate(BehaviorRef behavior)
 {
-    return sysmel_class_allocateWithByteVariableSizedData(behavior, 0);
+    return sysmel_behavior_allocateWithByteVariableSizedData(behavior, 0);
 }
 
 void

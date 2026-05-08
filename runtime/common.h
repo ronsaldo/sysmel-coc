@@ -265,7 +265,9 @@ typedef struct RuntimeRoots
 
 extern RuntimeRoots sysmel_RuntimeRoots;
 
-Symbol *sysmel_internCString(const char *string);
+SymbolRef sysmel_symbol_internCString(const char *string);
+SymbolRef sysmel_symbol_internStringData(size_t stringSize, const char *string);
+
 void sysmel_initializeClasses(void);
 void sysmel_initializeRuntime(void);
 
