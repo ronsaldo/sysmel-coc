@@ -12,6 +12,12 @@ typedef enum sysmel_ImmediateObjectTagBits_e {
     ImmediateObjectTag_SmallFloat = 4,
 } sysmel_ImmediateObjectTagBits_t;
 
+typedef enum sysmel_SlotType_e {
+    SlotType_Data = 0,
+    SlotType_StrongRef = 1,
+    SlotType_WeakRef = 2,
+} sysmel_SlotType_t;
+
 typedef intptr_t Oop;
 
 typedef struct ObjectHeader ObjectHeader;
@@ -21,6 +27,7 @@ typedef struct GCSmallLayout GCSmallLayout;
 // Declare the classes.
 #define SysmelClassDefinitionNoSuper(className) \
     typedef struct className className; \
+    typedef struct className * className ## Ref; \
     extern struct Class className ## _Class; \
     extern struct Metaclass className ## _Metaclass;
 
@@ -32,7 +39,7 @@ typedef struct GCSmallLayout GCSmallLayout;
 // Define the structs
 struct ObjectHeader
 {
-    Type *__type__;
+    TypeRef __type__;
     size_t __byteSize__;
     uint8_t __gcColor__;
     uint32_t __identityHash__;
@@ -56,23 +63,24 @@ struct GCLayout
     uint32_t __elements__[];
 };
 
+#define GCSmallLayoutSize 2 
 struct GCSmallLayout
 {
     Object super;
     uint8_t variableDataFormat;
-    uint32_t __elements__[2];
+    uint32_t __elements__[GCSmallLayoutSize];
 };
 
 struct Type
 {
     Object super;
-    GCLayout *gcLayout;
+    GCLayoutRef gcLayout;
 };
 
 struct DerivedType
 {
     Type super;
-    Type *baseType;
+    TypeRef baseType;
 };
 
 struct PointerLikeType
@@ -98,7 +106,7 @@ struct DynamicType
 struct NominalType
 {
     Type super;
-    MethodDictionary *methodDictionary;
+    MethodDictionaryRef methodDictionary;
 };
 
 struct PrimitiveType
@@ -114,7 +122,7 @@ struct TypeUniverse
 struct Behavior
 {
     NominalType super;
-    Behavior *superclass;
+    BehaviorRef superclass;
     size_t instanceAlignment;
     size_t instanceSize;
 };
@@ -122,13 +130,13 @@ struct Behavior
 struct Class
 {
     Behavior super;
-    Symbol *name;
+    SymbolRef name;
 };
 
 struct Metaclass
 {
     Behavior super;
-    Class *thisClass;
+    ClassRef thisClass;
 };
 
 // Boolean
@@ -224,8 +232,8 @@ struct Symbol
 struct HashedCollection
 {
     Collection super;
-    Oop tally;
-    Array *array;
+    size_t tally;
+    ArrayRef array;
 };
 
 struct InternedSymbolSet
@@ -253,7 +261,6 @@ typedef struct RuntimeClasses
 typedef struct RuntimeRoots
 {
     RuntimeClasses classes;
-
 } RuntimeRoots;
 
 extern RuntimeRoots sysmel_RuntimeRoots;
