@@ -19,6 +19,8 @@ SysmelClassDefinition(Boolean, Object)
     SysmelClassDefinition(True, Boolean)
     SysmelClassDefinition(False, Boolean)
 
+SysmelClassDefinition(Void, Object)
+
 SysmelClassDefinition(Magnitude, Object)
     SysmelClassDefinition(Character, Magnitude)
     SysmelClassDefinition(Number, Magnitude)

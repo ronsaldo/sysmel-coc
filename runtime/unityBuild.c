@@ -2,4 +2,5 @@
 #include "io.c"
 #include "main.c"
 #include "memory.c"
+#include "numbers.c"
 #include "symbol.c"

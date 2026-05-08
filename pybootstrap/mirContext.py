@@ -229,6 +229,20 @@ class MirContext:
             ('Integer::>',   "__sysmel_integer_greaterThan",     lambda x, y: x < y),
             ('Integer::>=',  "__sysmel_integer_greaterOrEquals", lambda x, y: x <= y),
 
+            ('Integer::asInt8',  "__sysmel_integer_asInt8",  lambda x: x),
+            ('Integer::asInt16', "__sysmel_integer_asInt16", lambda x: x),
+            ('Integer::asInt32', "__sysmel_integer_asInt32", lambda x: x),
+            ('Integer::asInt64', "__sysmel_integer_asInt64", lambda x: x),
+
+            ('Integer::asUInt8',  "__sysmel_integer_asUInt8",  lambda x: x),
+            ('Integer::asUInt16', "__sysmel_integer_asUInt16", lambda x: x),
+            ('Integer::asUInt32', "__sysmel_integer_asUInt32", lambda x: x),
+            ('Integer::asUInt64', "__sysmel_integer_asUInt64", lambda x: x),
+
+            ('Integer::asChar8',  "__sysmel_integer_asChar8",  lambda x: x),
+            ('Integer::asChar16', "__sysmel_integer_asChar16", lambda x: x),
+            ('Integer::asChar32', "__sysmel_integer_asChar32", lambda x: x),
+
             ## Float
             ('Float::negated',    "__sysmel_float_negated",   lambda x: -x),
             ('Float::sqrt',  "__sysmel_float_sqrt", lambda x: math.sqrt(x)),

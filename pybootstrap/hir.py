@@ -3626,6 +3626,10 @@ class HIRCoreTypes:
             assert rightOperand.isIntegerConstant()
             return self.getBooleanConstant(leftOperand.value >= rightOperand.value)
 
+        def asPrimitiveInt(operand, resultType):
+            assert operand.isIntegerConstant()
+            return HIRConstantLiteralIntegerValue(operand.value, resultType, None)
+
         primitivePrefix = anIntegerType.name + "::"
 
         anIntegerType.addMethod(HIRPrimitiveFunction('negated',   primitivePrefix + 'negated', self.getOrCreateSimpleFunctionType( (anIntegerType,), anIntegerType), integerNegated, None, isPure = True, isCompileTime = True))
@@ -3648,6 +3652,16 @@ class HIRCoreTypes:
         anIntegerType.addMethod(HIRPrimitiveFunction('<=', primitivePrefix + '<=', self.getOrCreateSimpleFunctionType((anIntegerType, anIntegerType), self.boolean8Type), integerLessOrEquals, None, isPure = True, isCompileTime = True))
         anIntegerType.addMethod(HIRPrimitiveFunction('>',  primitivePrefix + '>',  self.getOrCreateSimpleFunctionType((anIntegerType, anIntegerType), self.boolean8Type), integerGreaterThan, None, isPure = True, isCompileTime = True))
         anIntegerType.addMethod(HIRPrimitiveFunction('>=', primitivePrefix + '>=', self.getOrCreateSimpleFunctionType((anIntegerType, anIntegerType), self.boolean8Type), integerGreaterOrEquals, None, isPure = True, isCompileTime = True))
+
+        anIntegerType.addMethod(HIRPrimitiveFunction('asInt8',  primitivePrefix  + 'asInt8', self.getOrCreateSimpleFunctionType((anIntegerType,),  self.int8Type), asPrimitiveInt, None, isPure = True, isCompileTime = True))
+        anIntegerType.addMethod(HIRPrimitiveFunction('asInt16', primitivePrefix + 'asInt16', self.getOrCreateSimpleFunctionType((anIntegerType,), self.int16Type), asPrimitiveInt, None, isPure = True, isCompileTime = True))
+        anIntegerType.addMethod(HIRPrimitiveFunction('asInt32', primitivePrefix + 'asInt32', self.getOrCreateSimpleFunctionType((anIntegerType,), self.int32Type), asPrimitiveInt, None, isPure = True, isCompileTime = True))
+        anIntegerType.addMethod(HIRPrimitiveFunction('asInt64', primitivePrefix + 'asInt64', self.getOrCreateSimpleFunctionType((anIntegerType,), self.int64Type), asPrimitiveInt, None, isPure = True, isCompileTime = True))
+
+        anIntegerType.addMethod(HIRPrimitiveFunction('asUInt8',  primitivePrefix + 'asUInt8', self.getOrCreateSimpleFunctionType((anIntegerType,),  self.uint8Type), asPrimitiveInt, None, isPure = True, isCompileTime = True))
+        anIntegerType.addMethod(HIRPrimitiveFunction('asUInt16', primitivePrefix + 'asUInt16', self.getOrCreateSimpleFunctionType((anIntegerType,), self.uint16Type), asPrimitiveInt, None, isPure = True, isCompileTime = True))
+        anIntegerType.addMethod(HIRPrimitiveFunction('asUInt32', primitivePrefix + 'asUInt32', self.getOrCreateSimpleFunctionType((anIntegerType,), self.uint32Type), asPrimitiveInt, None, isPure = True, isCompileTime = True))
+        anIntegerType.addMethod(HIRPrimitiveFunction('asUInt64', primitivePrefix + 'asUInt64', self.getOrCreateSimpleFunctionType((anIntegerType,), self.uint64Type), asPrimitiveInt, None, isPure = True, isCompileTime = True))
 
     def createFloatPrimitiveFunctions(self, aFloatType):
         def floatNegated(operand, resultType):

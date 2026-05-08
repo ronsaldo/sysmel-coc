@@ -1,4 +1,4 @@
-public function SysmelMain() => Integer := {
+public function SysmelMain() => Int32 := {
     printLine(42).
-    0
+    0i32
 }

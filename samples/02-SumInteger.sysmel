@@ -1,6 +1,6 @@
 function sumInteger(a: Integer. b: Integer) => Integer
     := a + b.
 
-public function SysmelMain() => Integer
-    := sumInteger(1. 2)
+public function SysmelMain() => Int32
+    := sumInteger(1. 2) asInt32
 

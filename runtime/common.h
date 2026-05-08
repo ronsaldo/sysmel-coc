@@ -3,6 +3,9 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdbool.h>
+
+#define SYSMEL_RUNTIME_EXPORT
 
 typedef enum sysmel_ImmediateObjectTagBits_e {
     ImmediateObjectTag_BitCount = 3,
@@ -21,7 +24,6 @@ typedef enum sysmel_SlotType_e {
 typedef intptr_t Oop;
 
 typedef struct ObjectHeader ObjectHeader;
-
 typedef struct GCSmallLayout GCSmallLayout;
 
 // Declare the classes.
@@ -35,6 +37,51 @@ typedef struct GCSmallLayout GCSmallLayout;
 #include "classDefinitions.inc"
 #undef SysmelClassDefinition
 #undef SysmelClassDefinitionNoSuper
+
+extern True  sysmel_trueValue;
+extern False sysmel_falseValue;
+extern Void  sysmel_voidValue;
+
+static inline bool
+sysmel_oop_isImmediate(Oop object)
+{
+    return object == 0 || (object & ImmediateObjectTag_BitMask) != 0;
+}
+
+#define sysmel_nil   ((Oop)0)
+#define sysmel_true  ((Oop)&sysmel_trueValue)
+#define sysmel_false ((Oop)&sysmel_falseValue)
+#define sysmel_void  ((Oop)&sysmel_voidValue)
+
+static inline Oop sysmel_oop_encodeSmallInteger(intptr_t value)
+{
+    return (value << ImmediateObjectTag_BitCount) | ImmediateObjectTag_SmallInteger;
+}
+
+static inline intptr_t sysmel_oop_decodeSmallInteger(Oop value)
+{
+    return value >> ImmediateObjectTag_BitCount;
+}
+
+static inline Oop sysmel_encodeCharacter(uint32_t value)
+{
+    return ((Oop)value << ImmediateObjectTag_BitCount) | ImmediateObjectTag_Character;
+}
+
+static inline uint32_t sysmel_oop_decodeCharacter(Oop value)
+{
+    return (uint32_t)(value >> ImmediateObjectTag_BitCount);
+}
+
+static inline Oop sysmel_oop_encodeInt32(int32_t value)
+{
+    return sysmel_oop_encodeSmallInteger(value);
+}
+
+static inline Oop sysmel_oop_encodeUInt32(uint32_t value)
+{
+    return sysmel_oop_encodeSmallInteger(value);
+}
 
 // Define the structs
 struct ObjectHeader
@@ -155,6 +202,12 @@ struct False
     Boolean super;
 };
 
+// Void
+struct Void
+{
+    Object super;
+};
+
 struct Magnitude
 {
     Object super;
@@ -265,10 +318,10 @@ typedef struct RuntimeRoots
 
 extern RuntimeRoots sysmel_RuntimeRoots;
 
-SymbolRef sysmel_symbol_internCString(const char *string);
-SymbolRef sysmel_symbol_internStringData(size_t stringSize, const char *string);
+SYSMEL_RUNTIME_EXPORT SymbolRef sysmel_symbol_internCString(const char *string);
+SYSMEL_RUNTIME_EXPORT SymbolRef sysmel_symbol_internStringData(size_t stringSize, const char *string);
 
-void sysmel_initializeClasses(void);
-void sysmel_initializeRuntime(void);
+SYSMEL_RUNTIME_EXPORT void sysmel_initializeClasses(void);
+SYSMEL_RUNTIME_EXPORT void sysmel_initializeRuntime(void);
 
 #endif //SYSMEL_RUNTIME_H
