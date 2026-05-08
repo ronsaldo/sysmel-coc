@@ -52,9 +52,41 @@ struct Type
     Object super;
 };
 
+struct DerivedType
+{
+    Type super;
+    Type *baseType;
+};
+
+struct PointerLikeType
+{
+    DerivedType super;
+};
+
+struct PointerType
+{
+    PointerLikeType super;
+};
+
+struct ReferenceType
+{
+    PointerLikeType super;
+};
+
+struct DynamicType
+{
+    Type super;
+};
+
 struct NominalType
 {
     Type super;
+    MethodDictionary *methodDictionary;
+};
+
+struct PrimitiveType
+{
+    NominalType super;
 };
 
 struct TypeUniverse
@@ -66,6 +98,8 @@ struct Behavior
 {
     NominalType super;
     Behavior *superclass;
+    size_t instanceAlignment;
+    size_t instanceSize;
 };
 
 struct Class
@@ -152,6 +186,12 @@ struct ArrayedCollection
     SequenceableCollection super;
 };
 
+struct Array
+{
+    SequenceableCollection ArrayedCollection;
+    Oop __elements__[];
+};
+
 struct String
 {
     SequenceableCollection ArrayedCollection;
@@ -164,7 +204,24 @@ struct Symbol
     char __elements__[];
 };
 
-Symbol *sysmel_internCString(const char *);
+struct HashedCollection
+{
+    Collection super;
+    Oop tally;
+    Array *array;
+};
+
+struct InternedSymbolSet
+{
+    HashedCollection super;
+};
+
+struct MethodDictionary
+{
+    HashedCollection super;
+};
+
+Symbol *sysmel_internCString(const char *string);
 void sysmel_initializeClasses(void);
 void sysmel_initializeRuntime(void);
 
