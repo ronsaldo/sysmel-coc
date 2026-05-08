@@ -7,6 +7,10 @@
 
 extern struct GCSmallLayout Class_GCLayout;
 
+True  sysmel_trueValue;
+False sysmel_falseValue;
+Void  sysmel_voidValue;
+
 #define SysmelClassDefinitionNoSuper(className) \
     struct GCSmallLayout className ## _GCLayout = { \
         .super.super.super = { \

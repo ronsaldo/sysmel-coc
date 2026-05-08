@@ -58,6 +58,11 @@ sysmel_oop_isImmediate(Oop object)
 #define sysmel_false ((Oop)&sysmel_falseValue)
 #define sysmel_void  ((Oop)&sysmel_voidValue)
 
+static inline Oop sysmel_oop_encodeBoolean(bool value)
+{
+    return value ? sysmel_true : sysmel_false;
+}
+
 static inline Oop sysmel_oop_encodeSmallInteger(intptr_t value)
 {
     return (value << ImmediateObjectTag_BitCount) | ImmediateObjectTag_SmallInteger;

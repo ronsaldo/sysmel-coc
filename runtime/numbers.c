@@ -103,6 +103,60 @@ __sysmel_integer_shiftRight(Oop left, Oop right)
     return __sysmel_encodeInteger(leftInteger >> rightInteger);
 }
 
+SYSMEL_RUNTIME_EXPORT Oop
+__sysmel_integer_equals(Oop left, Oop right)
+{
+    intptr_t leftInteger = __sysmel_decodeInteger(left);
+    intptr_t rightInteger = __sysmel_decodeInteger(right);
+    return sysmel_oop_encodeBoolean(leftInteger == rightInteger);
+}
+
+SYSMEL_RUNTIME_EXPORT Oop
+__sysmel_integer_notEquals(Oop left, Oop right)
+{
+    intptr_t leftInteger = __sysmel_decodeInteger(left);
+    intptr_t rightInteger = __sysmel_decodeInteger(right);
+    return sysmel_oop_encodeBoolean(leftInteger != rightInteger);
+}
+
+SYSMEL_RUNTIME_EXPORT Oop
+__sysmel_integer_hash(Oop operand)
+{
+    intptr_t integer = __sysmel_decodeInteger(operand);
+    return __sysmel_encodeInteger(integer * 1664525);
+}
+
+SYSMEL_RUNTIME_EXPORT Oop
+__sysmel_integer_lessThan(Oop left, Oop right)
+{
+    intptr_t leftInteger = __sysmel_decodeInteger(left);
+    intptr_t rightInteger = __sysmel_decodeInteger(right);
+    return sysmel_oop_encodeBoolean(leftInteger < rightInteger);
+}
+
+SYSMEL_RUNTIME_EXPORT Oop
+__sysmel_integer_lessOrEquals(Oop left, Oop right)
+{
+    intptr_t leftInteger = __sysmel_decodeInteger(left);
+    intptr_t rightInteger = __sysmel_decodeInteger(right);
+    return sysmel_oop_encodeBoolean(leftInteger <= rightInteger);
+}
+
+SYSMEL_RUNTIME_EXPORT Oop
+__sysmel_integer_greaterThan(Oop left, Oop right)
+{
+    intptr_t leftInteger = __sysmel_decodeInteger(left);
+    intptr_t rightInteger = __sysmel_decodeInteger(right);
+    return sysmel_oop_encodeBoolean(leftInteger > rightInteger);
+}
+
+SYSMEL_RUNTIME_EXPORT Oop
+__sysmel_integer_greaterOrEquals(Oop left, Oop right)
+{
+    intptr_t leftInteger = __sysmel_decodeInteger(left);
+    intptr_t rightInteger = __sysmel_decodeInteger(right);
+    return sysmel_oop_encodeBoolean(leftInteger >= rightInteger);
+}
 
 SYSMEL_RUNTIME_EXPORT int32_t
 __sysmel_integer_asInt32(Oop value)
@@ -135,6 +189,15 @@ sysmel_initializeNumberPrimitives(void)
     sysmel_type_addPrimitive(&Integer_Class.super.super.super, "^",  __sysmel_integer_xor);
     sysmel_type_addPrimitive(&Integer_Class.super.super.super, "<<",  __sysmel_integer_shiftLeft);
     sysmel_type_addPrimitive(&Integer_Class.super.super.super, ">>",  __sysmel_integer_shiftRight);
+
+    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "=",  __sysmel_integer_equals);
+    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "~=",  __sysmel_integer_notEquals);
+    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "hash",  __sysmel_integer_hash);
+
+    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "<",   __sysmel_integer_lessThan);
+    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "<=",  __sysmel_integer_lessOrEquals);
+    sysmel_type_addPrimitive(&Integer_Class.super.super.super, ">",   __sysmel_integer_greaterThan);
+    sysmel_type_addPrimitive(&Integer_Class.super.super.super, ">=",  __sysmel_integer_greaterOrEquals);
 
     sysmel_type_addPrimitive(&Integer_Class.super.super.super, "asString", __sysmel_integer_printString);
     sysmel_type_addPrimitive(&Integer_Class.super.super.super, "printString", __sysmel_integer_printString);
