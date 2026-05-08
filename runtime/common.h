@@ -55,6 +55,7 @@ struct TypeUniverse
 struct Behavior
 {
     NominalType super;
+    Behavior *superclass;
 };
 
 struct Class

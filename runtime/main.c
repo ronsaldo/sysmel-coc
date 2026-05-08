@@ -5,7 +5,7 @@ extern Oop SysmelMain(void);
 void
 sysmel_initializeRuntime(void)
 {
-    sysmel_initializeClasses()
+    sysmel_initializeClasses();
 }
 
 int main(int argc, const char *argv[])
