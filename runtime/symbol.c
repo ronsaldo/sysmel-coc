@@ -41,3 +41,24 @@ bool sysmel_symbol_equals(SymbolRef left, SymbolRef right)
     // Compare the data
     return memcmp(left->__elements__, right->__elements__, leftSize) == 0;
 }
+
+StringRef
+sysmel_symbol_asString(SymbolRef receiver)
+{
+    size_t symbolSize = sysmel_symbol_getSize(receiver);
+    return sysmel_string_fromStringData(symbolSize, receiver->__elements__);
+}
+
+StringRef
+sysmel_symbol_printString(SymbolRef receiver)
+{
+    size_t symbolSize = sysmel_symbol_getSize(receiver);
+    return sysmel_string_concat(sysmel_string_fromCString("#"), sysmel_string_fromStringData(symbolSize, receiver->__elements__));
+}
+
+void
+sysmel_initializeSymbolPrimitives(void)
+{
+    sysmel_type_addPrimitive(&Symbol_Class.super.super.super, "asString",    1, sysmel_symbol_asString);
+    sysmel_type_addPrimitive(&Symbol_Class.super.super.super, "printString", 1, sysmel_symbol_printString);
+}

@@ -232,65 +232,64 @@ class MirImportedFunction(MirPackageElement):
     def __str__(self):
         return 'importedFunction ' + self.name
 
-class MirBooleanConstant(MirPackageElement):
+class MirGlobalConstant(MirPackageElement):
     def __init__(self, value, type):
         super().__init__(None)
         self.value = value
         self.type = type
 
+    def isGlobalConstant(self):
+        return True
+
+class MirBooleanConstant(MirGlobalConstant):
     def accept(self, visitor: MirVisitor):
         return visitor.visitBooleanConstant(self)
     
     def dumpToConsole(self):
         print('booleanConstant %s' % str(self.value))
 
-class MirVoidConstant(MirPackageElement):
-    def __init__(self, value, type):
-        super().__init__(None)
-        self.value = value
-        self.type = type
+    def isBooleanConstant(self):
+        return True
 
+class MirVoidConstant(MirGlobalConstant):
     def accept(self, visitor: MirVisitor):
         return visitor.visitVoidConstant(self)
 
     def dumpToConsole(self):
         print('voidConstant')
 
-class MirNilConstant(MirPackageElement):
-    def __init__(self, value, type):
-        super().__init__(None)
-        self.value = value
-        self.type = type
+    def isVoidConstant(self):
+        return True
 
+class MirNilConstant(MirGlobalConstant):
     def accept(self, visitor: MirVisitor):
         return visitor.visitNilConstant(self)
 
     def dumpToConsole(self):
         print('nilConstant')
 
-class MirStringConstant(MirPackageElement):
-    def __init__(self, value, type):
-        super().__init__(None)
-        self.value = value
-        self.type = type
+    def isNilConstant(self):
+        return True
 
+class MirStringConstant(MirGlobalConstant):
     def accept(self, visitor: MirVisitor):
         return visitor.visitStringConstant(self)
 
     def dumpToConsole(self):
         print('string "%s"' % self.value)
 
-class MirSymbolConstant(MirPackageElement):
-    def __init__(self, value, type):
-        super().__init__(None)
-        self.value = value
-        self.type = type
+    def isStringConstant(self):
+        return True
 
+class MirSymbolConstant(MirGlobalConstant):
     def accept(self, visitor: MirVisitor):
         return visitor.visitSymbolConstant(self)
 
     def dumpToConsole(self):
         print('symbol #"%s"' % self.value)
+
+    def isSymbolConstant(self):
+        return True
 
 class MirFunction(MirPackageElement):
     def __init__(self, name = ''):
@@ -419,6 +418,9 @@ class MirTemporary:
 
     def isTemporary(self):
         return True
+
+    def isGlobalConstant(self):
+        return False
 
     def __str__(self):
         return '$' + str(self.index)

@@ -70,8 +70,11 @@ class MirPackage2LirX64(MirVisitor):
         self.lirModule: LirModule = None
         self.asm: LirAssembler = None
         self.valueMap = {}
+        self.externalGlobalSymbols = {}
         self.pendingFunctionTranslationQueue = []
         self.callingConvention = X64SysVCallingConvention()
+        self.objectDataSectionStartSymbol = None
+        self.objectDataSectionEndSymbol = None
 
     def translateMirPackage(self, mirPackage: MirPackage):
         self.lirModule = LirModule()
@@ -80,10 +83,22 @@ class MirPackage2LirX64(MirVisitor):
         self.lirModule.getOrCreateCommonSections()
 
         self.asm = LirAssembler(self.lirModule)
+
+        # Begin the object data section
+        self.asm.objectDataSection()
+        self.objectDataSectionStartSymbol = self.asm.makeGlobalObjectSymbol('__sysmel_ods_start')
+        self.objectDataSectionEndSymbol = self.asm.makeGlobalObjectSymbol('__sysmel_ods_end')
+        self.asm.setSymbolHere(self.objectDataSectionStartSymbol)
+                
         self.asm.textSection()
 
         self.translateValue(mirPackage)
         self.translatePendingFunctions()
+
+        # Finish the object data section
+        self.asm.objectDataSection()
+        self.asm.setSymbolHere(self.objectDataSectionEndSymbol)
+
         return self.lirModule
     
     def translateValue(self, value):
@@ -112,11 +127,48 @@ class MirPackage2LirX64(MirVisitor):
     def visitNilConstant(self, globalConstant):
         assert False
 
+    def getOrCreateExternalGlobalSymbol(self, symbolValue):
+        if symbolValue in self.externalGlobalSymbols:
+            return self.externalGlobalSymbols[symbolValue]
+        
+        symbol = self.asm.makeGlobalObjectSymbol(symbolValue)
+        self.externalGlobalSymbols[symbolValue] = symbolValue
+        return symbol
+        
+    def computeStringHash(self, string):
+        return 0
+    
     def visitStringConstant(self, globalConstant):
-        assert False
+        stringData = globalConstant.value.encode(encoding="utf-8")
+        byteSize = 24 + len(stringData)
+        identityHash = self.computeStringHash(stringData)
+
+        self.asm.objectDataSection()
+        self.asm.dataAlign(16)
+        stringConstantSymbol = self.asm.makePrivateSymbol('stringConstant')
+        self.asm.setSymbolHere(stringConstantSymbol)
+        self.asm.addPointer(self.getOrCreateExternalGlobalSymbol('String_Class'), 0)
+        self.asm.addQWord(byteSize) # Byte Size
+        self.asm.addDWord(0) # GC color
+        self.asm.addDWord(identityHash) # identity hash
+        self.asm.addByteList(stringData)
+        return stringConstantSymbol
 
     def visitSymbolConstant(self, globalConstant):
-        assert False
+        stringData = globalConstant.value.encode(encoding="utf-8")
+        byteSize = 24 + len(stringData)
+        identityHash = self.computeStringHash(stringData)
+
+        self.asm.objectDataSection()
+        self.asm.dataAlign(16)
+        stringConstantSymbol = self.asm.makePrivateSymbol('symbolConstant')
+        self.asm.setSymbolHere(stringConstantSymbol)
+        self.asm.addPointer(self.getOrCreateExternalGlobalSymbol('Symbol_Class'), 0)
+        self.asm.addQWord(byteSize) # Byte Size
+        self.asm.addDWord(0) # GC color
+        self.asm.addDWord(identityHash) # identity hash
+        self.asm.addByteList(stringData)
+        return stringConstantSymbol
 
     def visitFunction(self, function: MirFunction):
         functionSymbolValue = function.getSymbolName()
@@ -165,6 +217,7 @@ class MirFunction2LirX64(MirVisitor):
         self.asm.setSymbolHere(self.functionSymbol)
         self.asm.x86_endbr64()
         self.asm.x86_push(X86_RBP)
+        self.asm.x86_mov64RegReg(X86_RBP, X86_RSP)
         self.asm.x86_sub64RegImmS32(X86_RSP, self.stackFrameLayout.stackFrameSubtractionSize)
 
         self.translateBasicBlocks(function)
@@ -305,8 +358,20 @@ class MirFunction2LirX64(MirVisitor):
             return self.asm.x86_mov64RegRmo(registerLocation.value, X86_RSP, stackFrameLocation.stackPointerRelativeOffset)
         assert False
 
-    def moveFromTemporaryIntoLocation(self, temporary, location):
-        temporaryLocation = self.stackFrameLayout.temporaryLocationMap[temporary]
+    def moveSymbolAddressIntoRegister(self, symbol, destinationRegister):
+        self.asm.x86_lea64RegLsv(destinationRegister.value, symbol, 0)
+
+    def moveSymbolAddressIntoLocation(self, symbol, destinationLocation):
+        if destinationLocation.isRegisterLocation():
+            return self.moveSymbolAddressIntoRegister(symbol, destinationLocation)
+        assert False
+
+    def moveFromTemporaryIntoLocation(self, temporaryOrGlobalConstant, location):
+        if temporaryOrGlobalConstant.isGlobalConstant():
+            globalConstantSymbol = self.packageTranslator.translateValue(temporaryOrGlobalConstant)
+            return self.moveSymbolAddressIntoLocation(globalConstantSymbol, location)
+
+        temporaryLocation = self.stackFrameLayout.temporaryLocationMap[temporaryOrGlobalConstant]
         self.moveFromLocationIntoLocation(temporaryLocation, location)
 
     def translateInstructionWithOpcode(self, instruction: MirInstruction):

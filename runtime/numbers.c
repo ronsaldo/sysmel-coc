@@ -176,29 +176,29 @@ __sysmel_integer_printString(Oop value)
 void
 sysmel_initializeNumberPrimitives(void)
 {
-    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "negated", __sysmel_integer_negated);
+    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "negated", 1, __sysmel_integer_negated);
     
-    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "+",  __sysmel_integer_add);
-    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "-",  __sysmel_integer_sub);
-    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "*",  __sysmel_integer_mul);
-    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "//", __sysmel_integer_div);
-    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "%",  __sysmel_integer_mod);
+    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "+",  2, __sysmel_integer_add);
+    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "-",  2, __sysmel_integer_sub);
+    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "*",  2, __sysmel_integer_mul);
+    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "//", 2, __sysmel_integer_div);
+    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "%",  2, __sysmel_integer_mod);
 
-    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "&",  __sysmel_integer_and);
-    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "|",  __sysmel_integer_or);
-    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "^",  __sysmel_integer_xor);
-    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "<<",  __sysmel_integer_shiftLeft);
-    sysmel_type_addPrimitive(&Integer_Class.super.super.super, ">>",  __sysmel_integer_shiftRight);
+    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "&",  2, __sysmel_integer_and);
+    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "|",  2, __sysmel_integer_or);
+    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "^",  2, __sysmel_integer_xor);
+    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "<<", 2, __sysmel_integer_shiftLeft);
+    sysmel_type_addPrimitive(&Integer_Class.super.super.super, ">>", 2, __sysmel_integer_shiftRight);
 
-    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "=",  __sysmel_integer_equals);
-    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "~=",  __sysmel_integer_notEquals);
-    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "hash",  __sysmel_integer_hash);
+    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "=",  2, __sysmel_integer_equals);
+    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "~=", 2, __sysmel_integer_notEquals);
+    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "hash",  1, __sysmel_integer_hash);
 
-    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "<",   __sysmel_integer_lessThan);
-    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "<=",  __sysmel_integer_lessOrEquals);
-    sysmel_type_addPrimitive(&Integer_Class.super.super.super, ">",   __sysmel_integer_greaterThan);
-    sysmel_type_addPrimitive(&Integer_Class.super.super.super, ">=",  __sysmel_integer_greaterOrEquals);
+    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "<",  2, __sysmel_integer_lessThan);
+    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "<=", 2, __sysmel_integer_lessOrEquals);
+    sysmel_type_addPrimitive(&Integer_Class.super.super.super, ">",  2, __sysmel_integer_greaterThan);
+    sysmel_type_addPrimitive(&Integer_Class.super.super.super, ">=", 2, __sysmel_integer_greaterOrEquals);
 
-    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "asString", __sysmel_integer_printString);
-    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "printString", __sysmel_integer_printString);
+    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "asString", 1, __sysmel_integer_printString);
+    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "printString", 1, __sysmel_integer_printString);
 }

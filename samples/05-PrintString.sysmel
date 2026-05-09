@@ -1,0 +1,5 @@
+public function SysmelMain() => Int32 := {
+    printLine("Hello World").
+    printLine(#testSymbol).
+    0i32
+}

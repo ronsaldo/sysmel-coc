@@ -204,6 +204,7 @@ struct Metaclass
 struct NativeMethod
 {
     Object super;
+    uint32_t argumentCount;
     sysmel_NativeMethodFunction_t nativeFunction;
 };
 
@@ -347,7 +348,8 @@ extern RuntimeRoots sysmel_RuntimeRoots;
 SYSMEL_RUNTIME_EXPORT uint32_t sysmel_string_computeHash(size_t stringSize, const char *string);
 
 SYSMEL_RUNTIME_EXPORT StringRef sysmel_string_fromCString(const char *string);
-SYSMEL_RUNTIME_EXPORT StringRef sysmel_string_formStringData(size_t stringSize, const char *string);
+SYSMEL_RUNTIME_EXPORT StringRef sysmel_string_fromStringData(size_t stringSize, const char *string);
+SYSMEL_RUNTIME_EXPORT StringRef sysmel_string_concat(StringRef left, StringRef right);
 SYSMEL_RUNTIME_EXPORT size_t sysmel_string_getSize(StringRef string);
 
 SYSMEL_RUNTIME_EXPORT StringRef sysmel_object_asString(Oop receiver);
@@ -359,7 +361,7 @@ SYSMEL_RUNTIME_EXPORT size_t sysmel_symbol_getSize(SymbolRef string);
 
 SYSMEL_RUNTIME_EXPORT bool sysmel_symbol_equals(SymbolRef left, SymbolRef right);
 
-SYSMEL_RUNTIME_EXPORT void sysmel_type_addPrimitive(Type *type, const char *selector, void* primitiveImplementation);;
+SYSMEL_RUNTIME_EXPORT void sysmel_type_addPrimitive(Type *type, const char *selector, uint32_t argumentCount, void* primitiveImplementation);
 
 SYSMEL_RUNTIME_EXPORT void sysmel_initializeClasses(void);
 SYSMEL_RUNTIME_EXPORT void sysmel_initializeRuntime(void);

@@ -1,5 +1,6 @@
 from enum import Enum
 import struct
+from hir import alignedTo
 
 # Same values as in elf
 SmoSymbolBinding = Enum('SmoSymbolBinding', [("LOCAL", 0), ("GLOBAL", 1), ("WEAK", 2)])
@@ -239,11 +240,15 @@ class LirModule:
     def getOrCreateDataSection(self):
         return self.getOrCreateSectionNamed('.data', LirSectionHeaderTypeProgbits, LirSectionFlagAlloc | LirSectionFlagWrite)
 
+    def getOrCreateObjectDataSection(self):
+        return self.getOrCreateSectionNamed('.data.object', LirSectionHeaderTypeProgbits, LirSectionFlagAlloc | LirSectionFlagWrite)
+
     def getOrCreateCommonSections(self):
         self.getOrCreateNullSection()
         self.getOrCreateTextSection()
         self.getOrCreateRoDataSection()
         self.getOrCreateDataSection()
+        self.getOrCreateObjectDataSection()
 
     def makeSingleSegmentRelocatedToAddress(self, baseAddress):
         sectionOffset = baseAddress
@@ -500,11 +505,43 @@ class LirAssembler:
     def rodataSection(self):
         self.currentSection = self.module.getOrCreateRoDataSection()
 
-    def dataSection(self):
-        self.currentSection = self.module.getOrCreateDataSection()
+    def objectDataSection(self):
+        self.currentSection = self.module.getOrCreateObjectDataSection()
+
+    def dataAlign(self, alignment):
+        self.currentSection.alignment = max(self.currentSection.alignment, alignment)
+        sectionSize = len(self.currentSection.data)
+        alignedSectionSize = alignedTo(sectionSize, alignment)
+        paddingSize = alignedSectionSize - sectionSize
+        for i in range(paddingSize):
+            self.addByte(0)
 
     def addByte(self, byte):
         self.currentSection.data.append(byte)
+
+    def addWord(self, value):
+        self.addByte(value & 0xff)
+        self.addByte((value >> 8) & 0xff)
+
+    def addDWord(self, value):
+        self.addByte(value & 0xff)
+        self.addByte((value >> 8) & 0xff)
+        self.addByte((value >> 16) & 0xff)
+        self.addByte((value >> 24) & 0xff)
+
+    def addQWord(self, value):
+        self.addByte(value & 0xff)
+        self.addByte((value >> 8) & 0xff)
+        self.addByte((value >> 16) & 0xff)
+        self.addByte((value >> 24) & 0xff)
+        self.addByte((value >> 32) & 0xff)
+        self.addByte((value >> 40) & 0xff)
+        self.addByte((value >> 48) & 0xff)
+        self.addByte((value >> 56) & 0xff)
+
+    def addPointer(self, symbol, offset):
+        self.addInstructionRelocation(LirRelocation.Absolute64, symbol, offset)
+        self.addQWord(0)
 
     def addByteList(self, byteList):
         for byte in byteList:
@@ -525,12 +562,19 @@ class LirAssembler:
             if symbol.isDefined:
                 relocation.addend += symbol.value
                 relocation.symbolIndex = symbol.sectionIndex
-                assert False
             else:
                 symbol.addPendingRelocation(relocation)
         else:
             relocation.symbolIndex = symbol.index
         self.currentSection.relocations.append(relocation)
+
+    def makeGlobalObjectSymbol(self, name) -> LirSymbol:
+        symbol = LirSymbol()
+        symbol.name = name
+        symbol.binding = SmoSymbolBinding.GLOBAL.value
+        symbol.type = SmoSymbolType.OBJECT.value
+        self.module.addSymbol(symbol)
+        return symbol
 
     def makeGlobalFunctionSymbol(self, name) -> LirSymbol:
         symbol = LirSymbol()
@@ -578,6 +622,9 @@ class LirAssembler:
     def x86_rexRm(self, W, rm):
         self.x86_rex(W, False, False, rm > X86_REG_HALF_MASK)
 
+    def x86_rexReg(self, W, reg):
+        self.x86_rex(W, reg > X86_REG_HALF_MASK, False, False)
+
     def x86_opcode(self, opcode):
         self.addByte(opcode)
 
@@ -623,6 +670,12 @@ class LirAssembler:
 
             self.x86_imm32(offset)
 
+    def x86_modLsvReg(self, symbol, reg, addend, relativeOffset):
+        self.addByte(self.x86_modRmByte(5, reg, 0))
+        self.addInstructionRelocation(LirRelocation.Relative32, symbol, -4)
+        self.addEmptyFourBytes()
+
+
     def x86_endbr64(self):
         self.addByteList([0xF3, 0x0F, 0x1E, 0xFA])
 
@@ -636,6 +689,10 @@ class LirAssembler:
         self.addInstructionRelocation(LirRelocation.Relative32, symbol, -4)
         self.addEmptyFourBytes()
 
+    def x86_lea64RegLsv(self, destination, sourceSymbol, offset):
+        self.x86_rexReg(True, destination)
+        self.addByte(0x8D)
+        self.x86_modLsvReg(sourceSymbol, destination, offset, 0)
 
     def x86_mov64RegReg_nopt(self, destination, source):
         self.x86_rexRmReg(True, source, destination)

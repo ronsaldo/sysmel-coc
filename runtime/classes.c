@@ -208,10 +208,11 @@ SysmelBeginClassLayout(Collection, Object);
 }
 
 void
-sysmel_type_addPrimitive(Type *type, const char *selector, void* primitiveImplementation)
+sysmel_type_addPrimitive(Type *type, const char *selector, uint32_t argumentCount, void* primitiveImplementation)
 {
     SymbolRef selectorSymbol = sysmel_symbol_internCString(selector);
     NativeMethodRef nativeMethod = SysmelClassAllocate(NativeMethod);
+    nativeMethod->argumentCount = argumentCount;
     nativeMethod->nativeFunction = primitiveImplementation;
     sysmel_MethodDictionary_atPut(type->methodDictionary, selectorSymbol, (Oop)nativeMethod);
 }
