@@ -433,12 +433,20 @@ class MirFunction2LirX64(MirVisitor):
                 instruction.firstArgumentLocation = MirRegisterLocation(firstIntegerRegister, instruction.firstArgument.type.valueSize)
                 instruction.secondArgumentLocation = MirRegisterLocation(secondIntegerRegister, instruction.secondArgument.type.valueSize)
                 instruction.resultLocation = MirRegisterLocation(firstIntegerRegister, instruction.result.type.valueSize)
+            
+            case MirOpcode.PointerAddConstantOffset:
+                assert False
 
             case MirOpcode.ReturnInt32 | MirOpcode.ReturnInt64 | MirOpcode.ReturnPointer | MirOpcode.ReturnGCPointer:
                 instruction.firstArgumentLocation = MirRegisterLocation(X86_RAX, instruction.firstArgument.type.valueSize)
 
             case MirOpcode.ReturnVoid:
                 pass
+
+            case MirOpcode.GCAllocate:
+                argumentRegister = self.callingConvention.integerPassingRegister[0]
+                instruction.firstArgumentLocation = MirRegisterLocation(argumentRegister, instruction.firstArgument.type.valueSize)
+                instruction.resultLocation = MirRegisterLocation(self.callingConvention.firstIntegerResultRegister, instruction.result.type.valueSize)
 
             case _:
                 raise RuntimeError("Unimplemented instruction constraints " + instruction.opcode.name)

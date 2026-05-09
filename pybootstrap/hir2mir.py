@@ -109,7 +109,6 @@ class HirPackage2Mir(HIRVisitor):
         mirType.type = metaclass
         metaclass.thisClass = mirType
 
-        mirType.buildMemoryDescriptor(self)
         self.makeNominalTypeWithMethods(classType)
         return mirType
     
@@ -118,7 +117,6 @@ class HirPackage2Mir(HIRVisitor):
         self.valueMap[metaclassType] = mirType
         mirType.thisClass = self.translateValue(metaclassType.thisClass)
 
-        mirType.buildMemoryDescriptor(self)
         self.makeNominalTypeWithMethods(metaclassType)
         return mirType
 
@@ -126,7 +124,6 @@ class HirPackage2Mir(HIRVisitor):
         mirType = MirStructType(self, structType)
         self.valueMap[type] = mirType
 
-        mirType.buildMemoryDescriptor(self)
         self.makeNominalTypeWithMethods(structType)
         return mirType
 
@@ -356,8 +353,7 @@ class HirFunction2Mir(HIRVisitor):
 
     def visitAllocaInstruction(self, instruction: HIRAllocaInstruction):
         valueType = self.packageTranslator.translateValue(instruction.valueType)
-        memoryDescriptor = valueType.getMemoryDescriptor()
-        return self.builder.gcAllocateAt(memoryDescriptor, instruction.sourcePosition)
+        return self.builder.gcAllocateAt(valueType, instruction.sourcePosition)
 
     def visitAssertInstruction(self, instruction):
         assert False
@@ -448,13 +444,11 @@ class HirFunction2Mir(HIRVisitor):
 
     def visitMakeObjectInstruction(self, instruction):
         objectType = self.packageTranslator.translateValue(instruction.getType())
-        memoryDescriptor = objectType.getMemoryDescriptor()
-        return self.builder.gcAllocateAt(memoryDescriptor, instruction.sourcePosition)
+        return self.builder.gcAllocateAt(objectType, instruction.sourcePosition)
 
     def visitMakeStructInstruction(self, instruction):
         objectType = self.packageTranslator.translateValue(instruction.getType())
-        memoryDescriptor = objectType.getMemoryDescriptor()
-        return self.builder.gcAllocateAt(memoryDescriptor, instruction.sourcePosition)
+        return self.builder.gcAllocateAt(objectType, instruction.sourcePosition)
 
     def visitPhiInstruction(self, instruction):
         raise RuntimeError("Phi should be translated during the basic block creation pass")

@@ -1,14 +1,5 @@
 import math
 
-class MemoryDescriptor:
-    def __init__(self, size, alignment, gcLayout = None):
-        self.size = size
-        self.alignment = alignment
-        self.gcLayout = gcLayout
-
-    def __str__(self):
-        return 'memory(size: %d, alignment: %d, gc: %s)' % (self.size, self.alignment, str(self.gcLayout))
-
 class MirContext:
     def __init__(self, pointerSize = 8):
         self.pointerSize = pointerSize
@@ -283,9 +274,8 @@ class MirContext:
     def getRuntimePrimitiveImplementationOrNone(self, runtimeName):
         return self.runtimePrimitiveImplementations.get(runtimeName, None)
     
-    def createTypeForStruct(self, behaviorType):
-        mirType = MirStructType(self, behaviorType)
-        mirType.buildMemoryDescriptor()
+    def createTypeForStruct(self, structType):
+        mirType = MirStructType(self, structType)
         return mirType
 
 class MirType:
@@ -303,14 +293,6 @@ class MirType:
 
     def isGlobalConstant(self):
         return True    
-
-    def buildMemoryDescriptor(self):
-        self.memoryDescriptor = MemoryDescriptor(self.valueSize, self.valueAlignment)
-
-    def getMemoryDescriptor(self):
-        if self.memoryDescriptor is None:
-            self.buildMemoryDescriptor()
-        return self.memoryDescriptor
 
     def emitArgumentWithBuilder(self, builder, sourcePosition):
         assert False
@@ -749,12 +731,15 @@ class MirBehaviorType(MirType):
     def isBehaviorType(self) -> bool:
         return True
 
-    def buildMemoryDescriptor(self, packageTranslator):
-        self.memoryDescriptor = MemoryDescriptor(self.behavior.getInstanceSize(), self.behavior.getInstanceAlignment())
-        for field in self.behavior.allFields:
-            fieldMirType = packageTranslator.translateValue(field.type)
-            if fieldMirType.isGCPointerType():
-                assert False
+    def buildGCLayout(self):
+        pass
+
+    ##def buildMemoryDescriptor(self, packageTranslator):
+    ##    self.memoryDescriptor = MemoryDescriptor(self.behavior.getInstanceSize(), self.behavior.getInstanceAlignment())
+    ##    for field in self.behavior.allFields:
+    ##        fieldMirType = packageTranslator.translateValue(field.type)
+    ##        if fieldMirType.isGCPointerType():
+    ##            assert False
 
     def emitArgumentWithBuilder(self, builder, sourcePosition):
         return builder.argumentGCPointerAt(sourcePosition)
