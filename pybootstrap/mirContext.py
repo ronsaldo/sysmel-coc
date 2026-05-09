@@ -673,6 +673,12 @@ class MirGCPointerType(MirType):
     def isGCPointerType(self) -> bool:
         return True
 
+    def emitLoadWithBuilder(self, builder, pointer, sourcePosition):
+        assert False
+
+    def emitStoreWithBuilder(self, builder, pointer, value, sourcePosition):
+        return builder.storeGCPointerAt(pointer, value, sourcePosition)
+        
     def emitArgumentWithBuilder(self, builder, sourcePosition):
         return builder.argumentGCPointerAt(sourcePosition)
 
