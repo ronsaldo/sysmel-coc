@@ -28,6 +28,13 @@ sysmel_string_fromStringData(size_t stringSize, const char *string)
 }
 
 StringRef
+sysmel_string_fromSymbol(SymbolRef symbol)
+{
+    size_t size = sysmel_symbol_getSize(symbol);
+    return sysmel_string_fromStringData(size, symbol->__elements__);
+}
+
+StringRef
 sysmel_string_concat(StringRef left, StringRef right)
 {
     size_t leftSize = sysmel_string_getSize(left);
@@ -77,4 +84,7 @@ sysmel_initializeStringPrimitives(void)
 
     sysmel_type_addPrimitive(&String_Class.super.super.super, "asString", 1, sysmel_string_asString);
     sysmel_type_addPrimitive(&String_Class.super.super.super, "printString", 1, sysmel_string_printString);
+
+    sysmel_type_addPrimitive(&Symbol_Class.super.super.super, "asString", 1, sysmel_string_fromSymbol);
+    
 }

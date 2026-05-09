@@ -11,6 +11,7 @@ void
 sysmel_initializePrimitives(void)
 {
     sysmel_initializeNumberPrimitives();
+    sysmel_initializeObjectPrimitives();
     sysmel_initializeStringPrimitives();
     sysmel_initializeSymbolPrimitives();
 }
@@ -26,10 +27,11 @@ int main(int argc, const char *argv[])
 {
     (void)argc;
     (void)argv;
-    printf("Class_Class size %zu\n", sizeof(Class));
-    printf("Metaclass_Class size %zu\n", sizeof(Metaclass));
-    printf("MethodDictionary size %zu\n", sizeof(MethodDictionary));
-    printf("Array size %zu\n", sizeof(Array));
+    
+    //printf("Class_Class size %zu\n", sizeof(Class));
+    //printf("Metaclass_Class size %zu\n", sizeof(Metaclass));
+    //printf("MethodDictionary size %zu\n", sizeof(MethodDictionary));
+    //printf("Array size %zu\n", sizeof(Array));
 
     sysmel_initializeRuntime();
     return SysmelMain();

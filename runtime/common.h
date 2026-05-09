@@ -349,6 +349,7 @@ SYSMEL_RUNTIME_EXPORT uint32_t sysmel_string_computeHash(size_t stringSize, cons
 
 SYSMEL_RUNTIME_EXPORT StringRef sysmel_string_fromCString(const char *string);
 SYSMEL_RUNTIME_EXPORT StringRef sysmel_string_fromStringData(size_t stringSize, const char *string);
+SYSMEL_RUNTIME_EXPORT StringRef sysmel_string_fromSymbol(SymbolRef symbol);
 SYSMEL_RUNTIME_EXPORT StringRef sysmel_string_concat(StringRef left, StringRef right);
 SYSMEL_RUNTIME_EXPORT size_t sysmel_string_getSize(StringRef string);
 

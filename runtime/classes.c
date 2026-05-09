@@ -221,7 +221,16 @@ sysmel_type_addPrimitive(Type *type, const char *selector, uint32_t argumentCoun
     sysmel_MethodDictionary_atPut(type->methodDictionary, selectorSymbol, (Oop)nativeMethod);
 }
 
+StringRef
+sysmel_class_printString(ClassRef clazz)
+{
+    if(clazz->name)
+        return sysmel_string_fromSymbol(clazz->name);
+    return sysmel_string_fromCString("an Anonymous class");
+}
+
 void
 sysmel_initializeObjectPrimitives(void)
 {
+    sysmel_type_addPrimitive(&Class_Class.super.super.super, "printString", 1, sysmel_class_printString);
 }
