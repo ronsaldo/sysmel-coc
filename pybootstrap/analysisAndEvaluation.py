@@ -341,7 +341,7 @@ class AnalysisAndEvaluationPass(ParseTreeVisitor):
             if name is None:
                 owner.addAnonymousElement(clazz)
             else:
-                owner.addPublicNamedElement(name, clazz)
+                owner.addPublicNamedElement(name, clazz, node.sourcePosition)
         clazz.addPendingDefinitionBody(self.evaluationContext, node.definitionBody)
         return clazz
 

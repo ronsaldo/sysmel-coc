@@ -295,7 +295,12 @@ class MirType:
         self.valueSize = valueSize
         self.valueAlignment = valueAlignment
         self.memoryDescriptor = None
+        self.module = None
+        self.owner = None
 
+    def addToPackage(self, package):
+        return package.addElement(self)
+    
     def buildMemoryDescriptor(self):
         self.memoryDescriptor = MemoryDescriptor(self.valueSize, self.valueAlignment)
 

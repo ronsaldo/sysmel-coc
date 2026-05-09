@@ -1087,6 +1087,12 @@ class HIRClass(HIRBehavior):
             objectValue.performWithArguments('initialize', [], node.sourcePosition)
         return objectValue
     
+    def dumpToConsole(self):
+        print('class %s {' % self.name)
+        for child in self.children:
+            child.dumpToConsole()
+        print('}')
+
     def __str__(self):
         if self.name is None:
             return 'an anonymous class'

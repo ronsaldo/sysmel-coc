@@ -179,6 +179,9 @@ class MirPackageElement:
     def accept(self, visitor: MirVisitor):
         return visitor.visitPackageElement(self)
     
+    def addToPackage(self, package: MirPackage):
+        package.addElement(self)
+    
     def getSymbolName(self):
         if self.name is None:
             self.anonSymbolName = self.module.generateAnonymousSymbol()
@@ -303,6 +306,9 @@ class MirFunction(MirPackageElement):
 
     def accept(self, visitor: MirVisitor):
         return visitor.visitFunction(self)
+
+    def addToPackage(self, package: MirPackage):
+        package.addMirFunction(self)
 
     def newTemporary(self, type, sourcePosition, name):
         temporary = MirTemporary(type, len(self.temporaries), sourcePosition, name)
