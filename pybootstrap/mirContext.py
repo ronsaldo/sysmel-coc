@@ -739,8 +739,8 @@ class MirPointerType(MirType):
         return builder.phiSourcePointerAt(targetTemp, sourceTemp, sourcePosition)
 
 class MirBehaviorType(MirType):
-    def __init__(self, context, behavior):
-        super().__init__(context, behavior.name, behavior.getValueSize(), behavior.getValueAlignment())
+    def __init__(self, context, behavior, name):
+        super().__init__(context, name, behavior.getValueSize(), behavior.getValueAlignment())
         self.behavior = behavior
 
     def isBehaviorType(self) -> bool:
@@ -783,6 +783,15 @@ class MirBehaviorType(MirType):
     def emitPhiSourceWithBuilder(self, builder, targetTemp, sourceTemp, sourcePosition):
         return builder.phiSourceGCPointerAt(targetTemp, sourceTemp, sourcePosition)
     
+class MirClassType(MirBehaviorType):
+    def __init__(self, context, behavior, name):
+        super().__init__(context, behavior, name)
+
+class MirMetaclassType(MirBehaviorType):
+    def __init__(self, context, behavior):
+        super().__init__(context, behavior, None)
+        self.thisClass = None
+
 class MirStructType(MirType):
     def __init__(self, context, structType):
         super().__init__(context, structType.name, structType.getValueSize(), structType.getValueAlignment())

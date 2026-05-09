@@ -219,7 +219,7 @@ class MirTypeWithMethodDictionary(MirPackageElement):
             print(child)
 
     def __str__(self):
-        return 'typeWithMethodDict ' + self.name
+        return 'typeWithMethodDict ' + str(self.name)
 
 class MirImportedFunction(MirPackageElement):
     def __init__(self, name):

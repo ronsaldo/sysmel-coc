@@ -103,16 +103,21 @@ class HirPackage2Mir(HIRVisitor):
         assert False
 
     def visitClass(self, classType: HIRClass):
-        mirType = MirBehaviorType(self, classType)
-        self.valueMap[type] = classType
+        mirType = MirClassType(self, classType, classType.name)
+        self.valueMap[classType] = mirType
 
         mirType.buildMemoryDescriptor(self)
         self.makeNominalTypeWithMethods(classType)
         return mirType
     
-    def visitMetaclass(self, type: HIRMetaclass):
-        assert False
-        return self.context.gcPointerType
+    def visitMetaclass(self, metaclassType: HIRMetaclass):
+        mirType = MirMetaclassType(self, metaclassType)
+        self.valueMap[metaclassType] = mirType
+        mirType.thisClass = self.translateValue(metaclassType.thisClass)
+
+        mirType.buildMemoryDescriptor(self)
+        self.makeNominalTypeWithMethods(metaclassType)
+        return mirType
 
     def visitStructType(self, structType: HIRStructType):
         mirType = MirStructType(self, structType)
@@ -296,6 +301,15 @@ class HirFunction2Mir(HIRVisitor):
     
     def visitValue(self, value):
         assert False
+
+    def visitBehavior(self, type: HIRBehavior):
+        assert False
+
+    def visitClass(self, classType: HIRClass):
+        return self.packageTranslator.translateValue(classType)
+    
+    def visitMetaclass(self, metaclassType: HIRMetaclass):
+        return self.packageTranslator.translateValue(metaclassType)
 
     def visitConstantLiteralCharacterValue(self, constantLiteral: HIRConstantLiteralCharacterValue):
         constantType = self.packageTranslator.translateValue(constantLiteral.getType())
