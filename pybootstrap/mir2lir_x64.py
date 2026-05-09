@@ -147,7 +147,24 @@ class MirPackage2LirX64(MirVisitor):
             hash = ((hash + char)*1664525) & 0xFFFFFFFF
         return hash;
     
+    def makeArrayWithSize(self, size):
+        self.odsAsm.objectDataSection()
+        self.odsAsm.dataAlign(16)
+        arraySymbol = self.odsAsm.makePrivateSymbol('array')
+
+        self.odsAsm.setSymbolHere(arraySymbol)
+        self.odsAsm.addPointer(self.getOrCreateExternalGlobalSymbol('MethodDictionary_Class'), 0)
+        self.odsAsm.addQWord(24 + size*8) # Byte Size
+        self.odsAsm.addDWord(0) # GC color
+        self.odsAsm.addDWord(self.getNextIdentityHash()) # identity hash
+
+        for i in range(size):
+            self.odsAsm.addQWord(0)
+        return arraySymbol
+
     def makeMethodDictionary(self, behaviorType):
+        arraySymbol = self.makeArrayWithSize(16)
+
         self.odsAsm.objectDataSection()
         self.odsAsm.dataAlign(16)
         methodDictionarySymbol = self.odsAsm.makePrivateSymbol('methodDict')
@@ -159,7 +176,7 @@ class MirPackage2LirX64(MirVisitor):
         self.odsAsm.addDWord(self.getNextIdentityHash()) # identity hash
 
         self.odsAsm.addQWord(0) # tally
-        self.odsAsm.addQWord(0) # array
+        self.odsAsm.addPointer(arraySymbol, 0) # array
 
         return methodDictionarySymbol
 

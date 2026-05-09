@@ -113,6 +113,7 @@ sysmel_initializeClasses(void)
     className ## _Class.super.super.super.methodDictionary = sysmel_MethodDictionary_new(); \
     className ## _Class.name = sysmel_symbol_internCString(#className); \
     className ## _Class.super.super.super.supertype = &superclassName##_Class.super.super.super; \
+    className ## _Metaclass.super.super.super.methodDictionary = sysmel_MethodDictionary_new(); \
     className ## _Metaclass.super.super.super.supertype = &superclassName##_Metaclass.super.super.super;
 
 #include "classDefinitions.inc"
@@ -120,7 +121,10 @@ sysmel_initializeClasses(void)
 #undef SysmelClassDefinitionNoSuper
 #undef SysmelClassDefinition
 
-    // Short circuit
+    // Proto object
+    ProtoObject_Class.super.super.super.methodDictionary = sysmel_MethodDictionary_new();
+    ProtoObject_Metaclass.super.super.super.methodDictionary = sysmel_MethodDictionary_new();
+
     ProtoObject_Metaclass.super.super.super.supertype = &Class_Class.super.super.super;
 
     // Class layouts
