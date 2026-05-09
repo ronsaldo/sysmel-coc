@@ -105,6 +105,9 @@ class HirPackage2Mir(HIRVisitor):
     def visitClass(self, classType: HIRClass):
         mirType = MirClassType(self, classType, classType.name)
         self.valueMap[classType] = mirType
+        metaclass = self.translateValue(classType.type)
+        mirType.type = metaclass
+        metaclass.thisClass = mirType
 
         mirType.buildMemoryDescriptor(self)
         self.makeNominalTypeWithMethods(classType)

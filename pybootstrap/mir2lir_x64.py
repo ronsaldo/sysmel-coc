@@ -75,6 +75,11 @@ class MirPackage2LirX64(MirVisitor):
         self.callingConvention = X64SysVCallingConvention()
         self.objectDataSectionStartSymbol = None
         self.objectDataSectionEndSymbol = None
+        self.identityHashSeed = 7
+
+    def getNextIdentityHash(self):
+        self.identityHashSeed = (self.identityHashSeed * 1664525) & 0xFFFFFFFF
+        return self.identityHashSeed
 
     def translateMirPackage(self, mirPackage: MirPackage):
         self.lirModule = LirModule()
@@ -83,12 +88,13 @@ class MirPackage2LirX64(MirVisitor):
         self.lirModule.getOrCreateCommonSections()
 
         self.asm = LirAssembler(self.lirModule)
+        self.odsAsm = LirAssembler(self.lirModule)
 
         # Begin the object data section
-        self.asm.objectDataSection()
-        self.objectDataSectionStartSymbol = self.asm.makeGlobalObjectSymbol('__sysmel_ods_start')
-        self.objectDataSectionEndSymbol = self.asm.makeGlobalObjectSymbol('__sysmel_ods_end')
-        self.asm.setSymbolHere(self.objectDataSectionStartSymbol)
+        self.odsAsm.objectDataSection()
+        self.objectDataSectionStartSymbol = self.odsAsm.makeGlobalObjectSymbol('__sysmel_ods_start')
+        self.objectDataSectionEndSymbol = self.odsAsm.makeGlobalObjectSymbol('__sysmel_ods_end')
+        self.odsAsm.setSymbolHere(self.objectDataSectionStartSymbol)
                 
         self.asm.textSection()
 
@@ -96,8 +102,8 @@ class MirPackage2LirX64(MirVisitor):
         self.translatePendingFunctions()
 
         # Finish the object data section
-        self.asm.objectDataSection()
-        self.asm.setSymbolHere(self.objectDataSectionEndSymbol)
+        self.odsAsm.objectDataSection()
+        self.odsAsm.setSymbolHere(self.objectDataSectionEndSymbol)
 
         return self.lirModule
     
@@ -136,22 +142,92 @@ class MirPackage2LirX64(MirVisitor):
         return symbol
         
     def computeStringHash(self, string):
-        return 0
+        hash = (len(string)*1664525) & 0xFFFFFFFF
+        for char in string:
+            hash = ((hash + char)*1664525) & 0xFFFFFFFF
+        return hash;
+
+    def visitClassType(self, classType: MirClassType):
+        classSymbolName = classType.name + '_Class'
+        classSymbol = self.getOrCreateExternalGlobalSymbol(classSymbolName)
+        self.valueMap[classType] = classSymbol
+
+        metaclass = self.translateValue(classType.type)
+
+        self.odsAsm.objectDataSection()
+        self.odsAsm.dataAlign(16)
+        self.odsAsm.setSymbolHere(classSymbol)
+
+        self.odsAsm.addPointer(metaclass, 0)
+        self.odsAsm.addQWord(72) # Byte Size
+        self.odsAsm.addDWord(0) # GC color
+        self.odsAsm.addDWord(self.getNextIdentityHash()) # identity hash
+
+        # Type
+        self.odsAsm.addQWord(0) #GCLayoutRef gcLayout;
+        self.odsAsm.addQWord(0) #MethodDictionaryRef methodDictionary;
+        if classType.behavior.superclass is not None:
+            superclassSymbol = self.getOrCreateExternalGlobalSymbol(classType.behavior.superclass.name + '_Class')
+            self.odsAsm.addPointer(superclassSymbol, 0) #Object super;
+        else:
+            self.odsAsm.addQWord(0) #TypeRef supertype;
+
+        self.odsAsm.addQWord(0) #size_t instanceAlignment;
+        self.odsAsm.addQWord(0) #size_t instanceSize;
+
+        #Class
+        self.odsAsm.addQWord(0) #SymbolRef name
+        
+        return classSymbol
+
+    def visitMetaclassType(self, metaclassType: MirMetaclassType):
+        metaclassClassSymbol = self.getOrCreateExternalGlobalSymbol('Metaclass_Class')
+        metaclassSymbolName = metaclassType.thisClass.name + '_Metaclass'
+        metaclassSymbol = self.getOrCreateExternalGlobalSymbol(metaclassSymbolName)
+        self.valueMap[metaclassType] = metaclassSymbol
+
+        thisClass = self.translateValue(metaclassType.thisClass)
+
+        self.odsAsm.objectDataSection()
+        self.odsAsm.dataAlign(16)
+        self.odsAsm.setSymbolHere(metaclassSymbol)
+
+        self.odsAsm.addPointer(metaclassClassSymbol, 0)
+        self.odsAsm.addQWord(72) # Byte Size
+        self.odsAsm.addDWord(0) # GC color
+        self.odsAsm.addDWord(self.getNextIdentityHash()) # identity hash
+    
+        # Type
+        self.odsAsm.addQWord(0) #GCLayoutRef gcLayout;
+        self.odsAsm.addQWord(0) #MethodDictionaryRef methodDictionary;
+        if metaclassType.behavior.superclass is not None:
+            superClassName = metaclassType.behavior.superclass.thisClass.name
+            superMetaclassSymbol = self.getOrCreateExternalGlobalSymbol(superClassName + '_Metaclass')
+            self.odsAsm.addPointer(superMetaclassSymbol, 0)
+        else:
+            self.odsAsm.addQWord(0) #TypeRef supertype;
+        self.odsAsm.addQWord(0) #size_t instanceAlignment;
+        self.odsAsm.addQWord(0) #size_t instanceSize;
+
+        #Metaclass
+        self.odsAsm.addPointer(thisClass, 0) #thisClass
+
+        return metaclassSymbol
     
     def visitStringConstant(self, globalConstant):
         stringData = globalConstant.value.encode(encoding="utf-8")
         byteSize = 24 + len(stringData)
         identityHash = self.computeStringHash(stringData)
 
-        self.asm.objectDataSection()
-        self.asm.dataAlign(16)
-        stringConstantSymbol = self.asm.makePrivateSymbol('stringConstant')
-        self.asm.setSymbolHere(stringConstantSymbol)
-        self.asm.addPointer(self.getOrCreateExternalGlobalSymbol('String_Class'), 0)
-        self.asm.addQWord(byteSize) # Byte Size
-        self.asm.addDWord(0) # GC color
-        self.asm.addDWord(identityHash) # identity hash
-        self.asm.addByteList(stringData)
+        self.odsAsm.objectDataSection()
+        self.odsAsm.dataAlign(16)
+        stringConstantSymbol = self.odsAsm.makePrivateSymbol('stringConstant')
+        self.odsAsm.setSymbolHere(stringConstantSymbol)
+        self.odsAsm.addPointer(self.getOrCreateExternalGlobalSymbol('String_Class'), 0)
+        self.odsAsm.addQWord(byteSize) # Byte Size
+        self.odsAsm.addDWord(0) # GC color
+        self.odsAsm.addDWord(identityHash) # identity hash
+        self.odsAsm.addByteList(stringData)
         return stringConstantSymbol
 
     def visitSymbolConstant(self, globalConstant):
@@ -159,15 +235,15 @@ class MirPackage2LirX64(MirVisitor):
         byteSize = 24 + len(stringData)
         identityHash = self.computeStringHash(stringData)
 
-        self.asm.objectDataSection()
-        self.asm.dataAlign(16)
-        stringConstantSymbol = self.asm.makePrivateSymbol('symbolConstant')
-        self.asm.setSymbolHere(stringConstantSymbol)
-        self.asm.addPointer(self.getOrCreateExternalGlobalSymbol('Symbol_Class'), 0)
-        self.asm.addQWord(byteSize) # Byte Size
-        self.asm.addDWord(0) # GC color
-        self.asm.addDWord(identityHash) # identity hash
-        self.asm.addByteList(stringData)
+        self.odsAsm.objectDataSection()
+        self.odsAsm.dataAlign(16)
+        stringConstantSymbol = self.odsAsm.makePrivateSymbol('symbolConstant')
+        self.odsAsm.setSymbolHere(stringConstantSymbol)
+        self.odsAsm.addPointer(self.getOrCreateExternalGlobalSymbol('Symbol_Class'), 0)
+        self.odsAsm.addQWord(byteSize) # Byte Size
+        self.odsAsm.addDWord(0) # GC color
+        self.odsAsm.addDWord(identityHash) # identity hash
+        self.odsAsm.addByteList(stringData)
         return stringConstantSymbol
 
     def visitFunction(self, function: MirFunction):

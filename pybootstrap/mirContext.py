@@ -300,7 +300,10 @@ class MirType:
 
     def addToPackage(self, package):
         return package.addElement(self)
-    
+
+    def isGlobalConstant(self):
+        return True    
+
     def buildMemoryDescriptor(self):
         self.memoryDescriptor = MemoryDescriptor(self.valueSize, self.valueAlignment)
 
@@ -786,11 +789,18 @@ class MirBehaviorType(MirType):
 class MirClassType(MirBehaviorType):
     def __init__(self, context, behavior, name):
         super().__init__(context, behavior, name)
+        self.type = None
+
+    def accept(self, visitor):
+        return visitor.visitClassType(self)
 
 class MirMetaclassType(MirBehaviorType):
     def __init__(self, context, behavior):
         super().__init__(context, behavior, None)
         self.thisClass = None
+
+    def accept(self, visitor):
+        return visitor.visitMetaclassType(self)
 
 class MirStructType(MirType):
     def __init__(self, context, structType):

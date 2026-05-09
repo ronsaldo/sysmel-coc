@@ -94,6 +94,15 @@ class MirVisitor:
     def visitTypeWithMethodDictionary(self, typeWithMethodDictionary):
         pass
 
+    def visitType(self, type):
+        pass
+
+    def visitClassType(self, type):
+        pass
+
+    def visitMetaclassType(self, type):
+        pass
+
     def visitImportedFunction(self, importedFunction):
         pass
     
