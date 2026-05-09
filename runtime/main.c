@@ -26,8 +26,10 @@ int main(int argc, const char *argv[])
 {
     (void)argc;
     (void)argv;
-    printf("Class_Class size %zu\n", sizeof(Class_Class));
-    printf("Metaclass_Class size %zu\n", sizeof(Metaclass_Class));
+    printf("Class_Class size %zu\n", sizeof(Class));
+    printf("Metaclass_Class size %zu\n", sizeof(Metaclass));
+    printf("MethodDictionary size %zu\n", sizeof(MethodDictionary));
+    printf("Array size %zu\n", sizeof(Array));
 
     sysmel_initializeRuntime();
     return SysmelMain();

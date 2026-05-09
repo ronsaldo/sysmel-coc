@@ -138,7 +138,7 @@ class MirPackage2LirX64(MirVisitor):
             return self.externalGlobalSymbols[symbolValue]
         
         symbol = self.asm.makeGlobalObjectSymbol(symbolValue)
-        self.externalGlobalSymbols[symbolValue] = symbolValue
+        self.externalGlobalSymbols[symbolValue] = symbol
         return symbol
         
     def computeStringHash(self, string):
@@ -146,6 +146,22 @@ class MirPackage2LirX64(MirVisitor):
         for char in string:
             hash = ((hash + char)*1664525) & 0xFFFFFFFF
         return hash;
+    
+    def makeMethodDictionary(self, behaviorType):
+        self.odsAsm.objectDataSection()
+        self.odsAsm.dataAlign(16)
+        methodDictionarySymbol = self.odsAsm.makePrivateSymbol('methodDict')
+
+        self.odsAsm.setSymbolHere(methodDictionarySymbol)
+        self.odsAsm.addPointer(self.getOrCreateExternalGlobalSymbol('MethodDictionary_Class'), 0)
+        self.odsAsm.addQWord(40) # Byte Size
+        self.odsAsm.addDWord(0) # GC color
+        self.odsAsm.addDWord(self.getNextIdentityHash()) # identity hash
+
+        self.odsAsm.addQWord(0) # tally
+        self.odsAsm.addQWord(0) # array
+
+        return methodDictionarySymbol
 
     def visitClassType(self, classType: MirClassType):
         classSymbolName = classType.name + '_Class'
@@ -153,6 +169,7 @@ class MirPackage2LirX64(MirVisitor):
         self.valueMap[classType] = classSymbol
 
         metaclass = self.translateValue(classType.type)
+        methodDictionary = self.makeMethodDictionary(classType)
 
         self.odsAsm.objectDataSection()
         self.odsAsm.dataAlign(16)
@@ -165,15 +182,15 @@ class MirPackage2LirX64(MirVisitor):
 
         # Type
         self.odsAsm.addQWord(0) #GCLayoutRef gcLayout;
-        self.odsAsm.addQWord(0) #MethodDictionaryRef methodDictionary;
+        self.odsAsm.addPointer(methodDictionary, 0) #MethodDictionaryRef methodDictionary;
         if classType.behavior.superclass is not None:
             superclassSymbol = self.getOrCreateExternalGlobalSymbol(classType.behavior.superclass.name + '_Class')
             self.odsAsm.addPointer(superclassSymbol, 0) #Object super;
         else:
             self.odsAsm.addQWord(0) #TypeRef supertype;
 
-        self.odsAsm.addQWord(0) #size_t instanceAlignment;
-        self.odsAsm.addQWord(0) #size_t instanceSize;
+        self.odsAsm.addQWord(16) #size_t instanceAlignment;
+        self.odsAsm.addQWord(72) #size_t instanceSize; # Class instance size
 
         #Class
         self.odsAsm.addQWord(0) #SymbolRef name
@@ -187,6 +204,7 @@ class MirPackage2LirX64(MirVisitor):
         self.valueMap[metaclassType] = metaclassSymbol
 
         thisClass = self.translateValue(metaclassType.thisClass)
+        methodDictionary = self.makeMethodDictionary(metaclassType)
 
         self.odsAsm.objectDataSection()
         self.odsAsm.dataAlign(16)
@@ -199,7 +217,7 @@ class MirPackage2LirX64(MirVisitor):
     
         # Type
         self.odsAsm.addQWord(0) #GCLayoutRef gcLayout;
-        self.odsAsm.addQWord(0) #MethodDictionaryRef methodDictionary;
+        self.odsAsm.addPointer(methodDictionary, 0) #MethodDictionaryRef methodDictionary;
         if metaclassType.behavior.superclass is not None:
             superClassName = metaclassType.behavior.superclass.thisClass.name
             superMetaclassSymbol = self.getOrCreateExternalGlobalSymbol(superClassName + '_Metaclass')
