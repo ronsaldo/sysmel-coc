@@ -146,7 +146,7 @@ class MirPackage2LirX64(MirVisitor):
         for char in string:
             hash = ((hash + char)*1664525) & 0xFFFFFFFF
         return hash;
-    
+
     def makeArrayWithSize(self, size):
         self.odsAsm.objectDataSection()
         self.odsAsm.dataAlign(16)
@@ -187,6 +187,7 @@ class MirPackage2LirX64(MirVisitor):
 
         metaclass = self.translateValue(classType.type)
         methodDictionary = self.makeMethodDictionary(classType)
+        nameSymbol = self.getOrCreateLiteralSymbolWithValue(classType.name)
 
         self.odsAsm.objectDataSection()
         self.odsAsm.dataAlign(16)
@@ -210,7 +211,7 @@ class MirPackage2LirX64(MirVisitor):
         self.odsAsm.addQWord(72) #size_t instanceSize; # Class instance size
 
         #Class
-        self.odsAsm.addQWord(0) #SymbolRef name
+        self.odsAsm.addPointer(nameSymbol, 0) #SymbolRef name
         
         return classSymbol
 
@@ -264,6 +265,10 @@ class MirPackage2LirX64(MirVisitor):
         self.odsAsm.addDWord(identityHash) # identity hash
         self.odsAsm.addByteList(stringData)
         return stringConstantSymbol
+
+    def getOrCreateLiteralSymbolWithValue(self, symbolValue: str):
+        mirSymbol = MirSymbolConstant(symbolValue, self.context.gcPointerType)
+        return self.translateValue(mirSymbol)
 
     def visitSymbolConstant(self, globalConstant):
         stringData = globalConstant.value.encode(encoding="utf-8")

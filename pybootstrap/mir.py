@@ -253,6 +253,15 @@ class MirGlobalConstant(MirPackageElement):
     def isGlobalConstant(self):
         return True
 
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            return False
+
+        return self.value == other.value and self.type == other.type
+    
+    def __hash__(self):
+        return hash(self.value) ^ hash(self.type)
+    
 class MirBooleanConstant(MirGlobalConstant):
     def accept(self, visitor: MirVisitor):
         return visitor.visitBooleanConstant(self)
