@@ -683,6 +683,19 @@ class TestAnalysisAndEvaluation(unittest.TestCase):
         self.assertTrue(value.isIntegerConstant())
         self.assertEqual(47, value.value)
 
+    def testClassCallMethod(self):
+        value = self.evaluateTopLevelSourceString("""
+        class TestPair definition: {
+            public field first type: Integer.
+            public field second type: Integer.
+
+            method sumExplicit => Integer := self first + self second.
+        }.
+        {:: Integer | TestPair(1. 2) sumExplicit }()
+        """)
+        self.assertTrue(value.isIntegerConstant())
+        self.assertEqual(3, value.value)
+
     def testMakeStruct(self):
         value = self.evaluateTopLevelSourceString("""
         struct TestPair definition: {
