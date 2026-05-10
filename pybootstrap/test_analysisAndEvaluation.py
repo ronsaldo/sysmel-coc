@@ -622,8 +622,8 @@ class TestAnalysisAndEvaluation(unittest.TestCase):
     def testEmptyClass(self):
         result = self.evaluateTopLevelSourceString('class MyClass definition: {}')
         self.assertTrue(result.isClassType())
-        self.assertEqual(0, result.getInstanceSize())
-        self.assertEqual(1, result.getInstanceAlignment())
+        self.assertEqual(24, result.getInstanceSize())
+        self.assertEqual(16, result.getInstanceAlignment())
     
     def testInstantiateEmptyClass(self):
         result = self.evaluateTopLevelSourceString('class MyClass definition: {}. MyClass()')
@@ -633,8 +633,8 @@ class TestAnalysisAndEvaluation(unittest.TestCase):
     def testClassWithField(self):
         result = self.evaluateTopLevelSourceString('class MyClass definition: {public field f => Integer}')
         self.assertTrue(result.isClassType())
-        self.assertEqual(8, result.getInstanceSize())
-        self.assertEqual(8, result.getInstanceAlignment())
+        self.assertEqual(32, result.getInstanceSize())
+        self.assertEqual(16, result.getInstanceAlignment())
 
     def testInstantiateClassWithField(self):
         result = self.evaluateTopLevelSourceString('class MyClass definition: {public field f => Integer}. MyClass(42)')
@@ -646,8 +646,8 @@ class TestAnalysisAndEvaluation(unittest.TestCase):
     def testClassWithSuperclassField(self):
         result = self.evaluateTopLevelSourceString('class MyClass superclass: Object definition: {public field f => Integer}')
         self.assertTrue(result.isClassType())
-        self.assertEqual(8, result.getInstanceSize())
-        self.assertEqual(8, result.getInstanceAlignment())
+        self.assertEqual(32, result.getInstanceSize())
+        self.assertEqual(16, result.getInstanceAlignment())
 
         self.assertEqual('Object', result.superclass.name)
 
