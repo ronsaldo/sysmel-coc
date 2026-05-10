@@ -1134,24 +1134,25 @@ class MirBuilder:
         return temp
 
     def callInt64ResultAt(self, function, sourcePosition, name = ''):
-        temp = self.function.newTemporary(self.function.module.context.int32Type, sourcePosition, name)
+        temp = self.function.newTemporary(self.function.module.context.int64Type, sourcePosition, name)
         instruction = MirInstruction(temp, MirOpcode.CallInt64Result, function, None, sourcePosition, name)
         self.addInstruction(instruction)
         return temp
 
     def callPointerResultAt(self, function, sourcePosition, name = ''):
-        temp = self.function.newTemporary(self.function.module.context.int32Type, sourcePosition, name)
+        temp = self.function.newTemporary(self.function.module.context.pointerType, sourcePosition, name)
         instruction = MirInstruction(temp, MirOpcode.CallPointerResult, function, None, sourcePosition, name)
         self.addInstruction(instruction)
+        return temp
 
     def callGCPointerResultAt(self, function, sourcePosition, name = ''):
-        temp = self.function.newTemporary(self.function.module.context.int32Type, sourcePosition, name)
+        temp = self.function.newTemporary(self.function.module.context.gcPointerType, sourcePosition, name)
         instruction = MirInstruction(temp, MirOpcode.CallGCPointerResult, function, None, sourcePosition, name)
         self.addInstruction(instruction)
         return temp
 
     def callVoidResultAt(self, function, sourcePosition, name = ''):
-        temp = self.function.newTemporary(self.function.module.context.int32Type, sourcePosition, name)
+        temp = self.function.newTemporary(self.function.module.context.voidType, sourcePosition, name)
         instruction = MirInstruction(temp, MirOpcode.CallVoidResult, function, None, sourcePosition, name)
         self.addInstruction(instruction)
         return temp
@@ -1161,7 +1162,13 @@ class MirBuilder:
         instruction = MirInstruction(temp, MirOpcode.CallFloat32Result, function, None, sourcePosition, name)
         self.addInstruction(instruction)
         return temp
-    
+
+    def callFloat64ResultAt(self, function, sourcePosition, name = ''):
+        temp = self.function.newTemporary(self.function.module.context.float32Type, sourcePosition, name)
+        instruction = MirInstruction(temp, MirOpcode.CallFloat64Result, function, None, sourcePosition, name)
+        self.addInstruction(instruction)
+        return temp
+
     def phiInt32At(self, sourcePosition, name = ''):
         temp = self.function.newTemporary(self.function.module.context.int32Type, sourcePosition, name)
         instruction = MirInstruction(temp, MirOpcode.PhiInt32, None, None, sourcePosition, name)

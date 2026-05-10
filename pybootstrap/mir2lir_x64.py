@@ -423,6 +423,8 @@ class MirFunction2LirX64(MirVisitor):
                 self.calloutIntegerArgumentCount += 1
 
             case MirOpcode.CallInt32Result | MirOpcode.CallInt64Result | MirOpcode.CallPointerResult | MirOpcode.CallGCPointerResult:
+                if instruction.firstArgument.isTemporary():
+                    instruction.firstArgumentLocation = MirRegisterLocation(self.callingConvention.firstIntegerResultRegister, instruction.firstArgument.type.valueSize)
                 instruction.resultLocation = MirRegisterLocation(self.callingConvention.firstIntegerResultRegister, instruction.result.type.valueSize)
 
 
@@ -527,8 +529,11 @@ class MirFunction2LirX64(MirVisitor):
                 pass
 
             case MirOpcode.CallInt32Result | MirOpcode.CallInt64Result | MirOpcode.CallPointerResult | MirOpcode.CallGCPointerResult | MirOpcode.CallVoidResult:
-                calledFunction = self.packageTranslator.translateValue(instruction.firstArgument)
-                self.asm.x86_callGsv(calledFunction)
+                if instruction.firstArgumentLocation is not None:
+                    self.asm.x86_callReg(instruction.firstArgumentLocation.value)
+                else:
+                    calledFunction = self.packageTranslator.translateValue(instruction.firstArgument)
+                    self.asm.x86_callGsv(calledFunction)
 
             case MirOpcode.ConstInt32:
                 self.asm.x86_mov32RegImm32(instruction.resultLocation.value, instruction.firstArgument)

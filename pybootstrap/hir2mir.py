@@ -407,8 +407,34 @@ class HirFunction2Mir(HIRVisitor):
         callType = self.packageTranslator.translateValue(instruction.getType())
         return callType.emitCallWithBuilder(self.builder, primitive, instruction.sourcePosition)
 
-    def visitSendInstruction(self, instruction):
-        assert False
+    def getOrCreateLiteralSymbolWithValue(self, symbolValue: str):
+        symbolLiteral = HIRConstantLiteralSymbolValue(symbolValue, self.packageTranslator.hirCoreTypes.symbolType, None)
+        return self.translateValue(symbolLiteral)
+
+    def visitSendInstruction(self, instruction: HIRSendInstruction):
+        assert instruction.receiver.type.isBehaviorType() or instruction.receiver.type.isDynamicType()
+
+        lookupSelectorSymbol = self.packageTranslator.currentMirPackage.getOrCreateRuntimePrimitiveNamed('sysmel_oop_lookupSelector')
+        selectorValue = self.getOrCreateLiteralSymbolWithValue(instruction.selector)
+        receiverValue = self.translateValue(instruction.receiver)
+
+        self.builder.beginCallAt(instruction.sourcePosition)
+        self.builder.callArgumentGCPointerAt(selectorValue, instruction.sourcePosition)
+        self.builder.callArgumentGCPointerAt(receiverValue, instruction.sourcePosition)
+
+        foundMethod = self.builder.callPointerResultAt(lookupSelectorSymbol, instruction.sourcePosition)
+
+        self.builder.beginCallAt(instruction.sourcePosition)
+        self.builder.callArgumentGCPointerAt(receiverValue, instruction.sourcePosition)
+        
+        for argument in instruction.arguments:
+            argumentValue = self.translateValue(argument)
+            argumentType = self.packageTranslator.translateValue(argument.getType())
+            argumentType.emitCallArgumentWithBuilder(self.builder, argumentValue, argument.sourcePosition)
+
+        callType = self.packageTranslator.translateValue(instruction.getType())
+        return callType.emitCallWithBuilder(self.builder, foundMethod, instruction.sourcePosition)
+
 
     def visitEnumBoxValueInstruction(self, instruction: HIREnumBoxValueInstruction):
         return self.translateValue(instruction.value)

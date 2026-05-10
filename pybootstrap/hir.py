@@ -2151,7 +2151,11 @@ class HIRFunction(HIRConstant):
     def analyzeAndBuildMessageSendNode(self, buildPass, node: ParseTreeMessageSendNode, receiver):
         receiverNode = ParseTreeLiteralValueNode(node.sourcePosition, receiver)
         typecheckedArguments, resultType = self.simplifiedType.analyzeBuildAndTypecheckArguments(buildPass, [receiverNode] + node.arguments, node.sourcePosition)
-        return buildPass.builder.call(self, typecheckedArguments, resultType, node.sourcePosition)
+        if receiver.getType().isBehaviorType():
+            selector = buildPass.evaluateSymbolNode(node.selector)
+            return buildPass.builder.send(typecheckedArguments[0], selector, typecheckedArguments[1:], resultType, node.sourcePosition)
+        else:
+            return buildPass.builder.call(self, typecheckedArguments, resultType, node.sourcePosition)
 
     def __repr__(self):
         return 'HIRFunction(%s)' % self.name

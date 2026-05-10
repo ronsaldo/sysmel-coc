@@ -684,6 +684,11 @@ class LirAssembler:
         self.addInstructionRelocation(LirRelocation.Relative32AtPlt, symbol, -4)
         self.addEmptyFourBytes()
 
+    def x86_callReg(self, reg):
+        self.x86_rexRm(False, reg);
+        self.x86_opcode(0xFF);
+        self.x86_modRmOp(reg, 2);
+
     def x86_jmpLsv(self, symbol):
         self.addByte(0xE9)
         self.addInstructionRelocation(LirRelocation.Relative32, symbol, -4)
