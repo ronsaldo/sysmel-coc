@@ -140,7 +140,15 @@ class MirPackage2LirX64(MirVisitor):
         symbol = self.asm.makeGlobalObjectSymbol(symbolValue)
         self.externalGlobalSymbols[symbolValue] = symbol
         return symbol
+
+    def getOrCreateExternalGlobalFunctionSymbol(self, symbolValue):
+        if symbolValue in self.externalGlobalSymbols:
+            return self.externalGlobalSymbols[symbolValue]
         
+        symbol = self.asm.makeGlobalFunctionSymbol(symbolValue)
+        self.externalGlobalSymbols[symbolValue] = symbol
+        return symbol
+            
     def computeStringHash(self, string):
         hash = (len(string)*1664525) & 0xFFFFFFFF
         for char in string:
@@ -376,9 +384,9 @@ class MirFunction2LirX64(MirVisitor):
             instruction = instruction.next
     def translateInstruction(self, instruction: MirInstruction):
         # Load the arguments
-        if instruction.firstArgumentLocation is not None:
+        if instruction.firstArgumentLocation is not None and instruction.firstArgument is not None:
             self.moveFromTemporaryIntoLocation(instruction.firstArgument, instruction.firstArgumentLocation)
-        if instruction.secondArgumentLocation is not None:
+        if instruction.secondArgumentLocation is not None and instruction.secondArgument is not None:
             self.moveFromTemporaryIntoLocation(instruction.secondArgument, instruction.secondArgumentLocation)
 
         # Generate the code
@@ -435,13 +443,18 @@ class MirFunction2LirX64(MirVisitor):
                 instruction.resultLocation = MirRegisterLocation(firstIntegerRegister, instruction.result.type.valueSize)
             
             case MirOpcode.PointerAddConstantOffset:
-                assert False
+                instruction.firstArgumentLocation = MirRegisterLocation(firstIntegerRegister, instruction.firstArgument.type.valueSize)
+                instruction.resultLocation = MirRegisterLocation(firstIntegerRegister, instruction.result.type.valueSize)
 
             case MirOpcode.ReturnInt32 | MirOpcode.ReturnInt64 | MirOpcode.ReturnPointer | MirOpcode.ReturnGCPointer:
                 instruction.firstArgumentLocation = MirRegisterLocation(X86_RAX, instruction.firstArgument.type.valueSize)
 
             case MirOpcode.ReturnVoid:
                 pass
+
+            case MirOpcode.StoreInt8 | MirOpcode.StoreInt16 | MirOpcode.StoreInt32 | MirOpcode.StoreInt64 | MirOpcode.StorePointer | MirOpcode.StoreGCPointer:
+                instruction.firstArgumentLocation = MirRegisterLocation(firstIntegerRegister, instruction.firstArgument.type.valueSize)
+                instruction.secondArgumentLocation = MirRegisterLocation(secondIntegerRegister, instruction.secondArgument.type.valueSize)
 
             case MirOpcode.GCAllocate:
                 argumentRegister = self.callingConvention.integerPassingRegister[0]
@@ -538,6 +551,21 @@ class MirFunction2LirX64(MirVisitor):
 
             case MirOpcode.ReturnInt32 | MirOpcode.ReturnInt64 | MirOpcode.ReturnPointer | MirOpcode.ReturnFloat32 | MirOpcode.ReturnFloat64 | MirOpcode.ReturnGCPointer | MirOpcode.ReturnVoid:
                 self.emitFrameReturn()
+
+            case MirOpcode.PointerAddConstantOffset:
+                self.asm.x86_mov64RegReg(instruction.resultLocation.value, instruction.firstArgumentLocation.value)
+                self.asm.x86_add64RegImmS32(instruction.resultLocation.value, instruction.secondArgument)
+
+            case MirOpcode.StoreInt64 | MirOpcode.StorePointer | MirOpcode.StoreGCPointer:
+                self.asm.x86_mov64RmoReg(instruction.firstArgumentLocation.value, 0, instruction.secondArgumentLocation.value)
+
+            case MirOpcode.GCAllocate:
+                secondArgumentRegister = self.callingConvention.integerPassingRegister[1]
+                # Fixme: Use a 64 bit integer here
+                self.asm.x86_mov32RegImm32(secondArgumentRegister, instruction.secondArgument)
+
+                allocateFunction = self.packageTranslator.getOrCreateExternalGlobalFunctionSymbol('sysmel_type_allocateWithByteVariableSizedData')
+                self.asm.x86_callGsv(allocateFunction)
 
             case _:
                 raise RuntimeError("Unimplemented instruction " + instruction.opcode.name)

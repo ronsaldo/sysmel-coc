@@ -28,6 +28,7 @@ int main(int argc, const char *argv[])
     (void)argc;
     (void)argv;
     
+    //printf("Object header size %zu\n", sizeof(ObjectHeader));
     //printf("Class_Class size %zu\n", sizeof(Class));
     //printf("Metaclass_Class size %zu\n", sizeof(Metaclass));
     //printf("MethodDictionary size %zu\n", sizeof(MethodDictionary));

@@ -1,0 +1,9 @@
+class TestPair superclass: Object definition: {
+    public field first type: Integer.
+    public field second type: Integer.
+}.
+
+public function SysmelMain() => Int32 := {
+    printLine(TestPair(1. 2)).
+    0i32
+}.

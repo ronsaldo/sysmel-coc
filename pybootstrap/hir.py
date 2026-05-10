@@ -1009,8 +1009,8 @@ class HIRBehavior(HIRNominalType):
         if self.instanceSize is not None:
             return
         
-        self.instanceSize = 0
-        self.instanceAlignment = 1
+        self.instanceSize = 24 # Header size
+        self.instanceAlignment = 16
         self.totalFieldCount = 0
         self.allFields = self.fields
 

@@ -953,9 +953,9 @@ class MirBuilder:
         self.jumpIfFalse(condition, falseDestination, sourcePosition, name)
         self.jump(trueDestination, sourcePosition, name)
 
-    def gcAllocateAt(self, memoryDescriptor, sourcePosition, name = ''):
+    def gcAllocateAt(self, type, variableDataSize, sourcePosition, name = ''):
         temp = self.function.newTemporary(self.function.module.context.gcPointerType, sourcePosition, name)
-        instruction = MirInstruction(temp, MirOpcode.GCAllocate, memoryDescriptor, None, sourcePosition, name)
+        instruction = MirInstruction(temp, MirOpcode.GCAllocate, type, variableDataSize, sourcePosition, name)
         self.addInstruction(instruction)
         return temp
 

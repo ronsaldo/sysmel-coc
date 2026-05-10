@@ -444,11 +444,11 @@ class HirFunction2Mir(HIRVisitor):
 
     def visitMakeObjectInstruction(self, instruction):
         objectType = self.packageTranslator.translateValue(instruction.getType())
-        return self.builder.gcAllocateAt(objectType, instruction.sourcePosition)
+        return self.builder.gcAllocateAt(objectType, 0, instruction.sourcePosition)
 
     def visitMakeStructInstruction(self, instruction):
         objectType = self.packageTranslator.translateValue(instruction.getType())
-        return self.builder.gcAllocateAt(objectType, instruction.sourcePosition)
+        return self.builder.gcAllocateAt(objectType, 0, instruction.sourcePosition)
 
     def visitPhiInstruction(self, instruction):
         raise RuntimeError("Phi should be translated during the basic block creation pass")

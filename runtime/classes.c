@@ -222,6 +222,14 @@ sysmel_type_addPrimitive(Type *type, const char *selector, uint32_t argumentCoun
 }
 
 StringRef
+sysmel_object_printString_primitive(Oop object)
+{
+    TypeRef objectClass = sysmel_oop_getType(object);
+    StringRef className = sysmel_object_printString((Oop)objectClass);
+    return sysmel_string_concat(sysmel_string_fromCString("A "), className);
+}
+
+StringRef
 sysmel_class_printString(ClassRef clazz)
 {
     if(clazz->name)
@@ -232,5 +240,6 @@ sysmel_class_printString(ClassRef clazz)
 void
 sysmel_initializeObjectPrimitives(void)
 {
+    sysmel_type_addPrimitive(&Object_Class.super.super.super, "printString", 1, sysmel_object_printString_primitive);
     sysmel_type_addPrimitive(&Class_Class.super.super.super, "printString", 1, sysmel_class_printString);
 }
