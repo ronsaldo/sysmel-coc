@@ -1,4 +1,4 @@
-class TestPair superclass: Object definition: {
+public class TestPair superclass: Object definition: {
     public field first type: Integer.
     public field second type: Integer.
 

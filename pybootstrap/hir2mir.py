@@ -109,7 +109,7 @@ class HirPackage2Mir(HIRVisitor):
         mirType.type = metaclass
         metaclass.thisClass = mirType
 
-        self.makeNominalTypeWithMethods(classType)
+        mirType.typeWithMethodDictionary = self.makeNominalTypeWithMethods(classType)
         return mirType
     
     def visitMetaclass(self, metaclassType: HIRMetaclass):
@@ -117,7 +117,7 @@ class HirPackage2Mir(HIRVisitor):
         self.valueMap[metaclassType] = mirType
         mirType.thisClass = self.translateValue(metaclassType.thisClass)
 
-        self.makeNominalTypeWithMethods(metaclassType)
+        mirType.typeWithMethodDictionary = self.makeNominalTypeWithMethods(metaclassType)
         return mirType
 
     def visitStructType(self, structType: HIRStructType):

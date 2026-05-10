@@ -200,8 +200,91 @@ class MirPackageElement:
             return self.name
         return self.owner.getSymbolName() + "::" + self.name
     
+    def isMirFunction(self):
+        return False
+
     def isTemporary(self):
         return False
+
+class MirMethodDictionarySymbol:
+    def __init__(self, value: str):
+        self.value = value.encode('utf-8')
+        self.hash = self.computeStringHash(self.value)
+
+    def computeStringHash(self, string):
+        hash = (len(string)*1664525) & 0xFFFFFFFF
+        for char in string:
+            hash = ((hash + char)*1664525) & 0xFFFFFFFF
+        return hash;
+
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            return False
+
+        return self.value == other.value
+    def __hash__(self):
+        return self.hash
+
+class MirMethodDictionary:
+    def __init__(self):
+        self.tally = 0
+        self.array = [None]*32
+
+    def scanFor(self, symbol):
+        capacity = len(self.array) // 2
+        identityHash = hash(symbol)
+        naturalIndex = identityHash % capacity
+
+        for i in range(naturalIndex, capacity):
+            key = self.array[i*2]
+            if key is None or key == symbol:
+                return i
+
+        for i in range(0, naturalIndex):
+            key = self.array[i*2]
+            if key is None or key == symbol:
+                return i
+
+        return -1
+
+    def increaseCapacity(self):
+        oldCapacity = len(self.array) // 2
+        newCapacity = oldCapacity * 2
+        if newCapacity < 16:
+            newCapacity = 16
+
+        oldStorage = self.array
+        newStorage = [None]*(newCapacity*2)
+        self.array = newStorage
+        self.tally = 0
+
+        for i in range(oldCapacity):
+            oldKey = oldStorage[i*2]
+            if oldKey is not None:
+                oldValue = oldStorage[i*2 + 1]
+                self.atPut(oldKey, oldValue)
+
+    def checkCapacity(self):
+        capacity = len(self.array) // 2
+        targetCapacity = capacity * 80 // 100
+        if self.tally <= targetCapacity:
+            return
+        self.increaseCapacity()
+
+    def atPut(self, symbol, value):
+        index = self.scanFor(symbol)
+        if index < 0:
+            self.increaseCapacity()
+            index = self.scanFor(symbol)
+
+        assert index >= 0
+        if self.array[index*2] is None:
+            self.array[index*2] = symbol
+            self.array[index*2 + 1] = value
+            self.tally += 1
+            self.checkCapacity()
+        else:
+            self.array[index*2 + 1] = value
 
 class MirTypeWithMethodDictionary(MirPackageElement):
     def __init__(self, name, sourceType):
@@ -209,14 +292,15 @@ class MirTypeWithMethodDictionary(MirPackageElement):
         self.sourceType = sourceType
         self.metaType = None
         self.children = []
-        self.methodDictionary = {}
+        self.methodDictionary = MirMethodDictionary()
 
     def accept(self, visitor: MirVisitor):
         return visitor.visitTypeWithMethodDictionary(self)
 
     def withSelectorAddMethod(self, selector, method):
+        selectorValue = MirMethodDictionarySymbol(selector)
         self.children.append(method)
-        self.methodDictionary[selector] = method
+        self.methodDictionary.atPut(selectorValue, method)
         method.owner = self
 
     def dumpToConsole(self):
@@ -321,9 +405,15 @@ class MirFunction(MirPackageElement):
 
     def accept(self, visitor: MirVisitor):
         return visitor.visitFunction(self)
+    
+    def isMirFunction(self):
+        return True
 
     def addToPackage(self, package: MirPackage):
         package.addMirFunction(self)
+
+    def getArgumentCount(self):
+        return self.sourceFunction.getArgumentCount()
 
     def newTemporary(self, type, sourcePosition, name):
         temporary = MirTemporary(type, len(self.temporaries), sourcePosition, name)

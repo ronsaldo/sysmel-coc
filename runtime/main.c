@@ -33,6 +33,7 @@ int main(int argc, const char *argv[])
     //printf("Metaclass_Class size %zu\n", sizeof(Metaclass));
     //printf("MethodDictionary size %zu\n", sizeof(MethodDictionary));
     //printf("Array size %zu\n", sizeof(Array));
+    //printf("NativeMethod size %zu\n", sizeof(NativeMethod));
 
     sysmel_initializeRuntime();
     return SysmelMain();

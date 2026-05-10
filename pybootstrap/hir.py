@@ -2015,6 +2015,9 @@ class HIRFunction(HIRConstant):
         assert self.owner is None
         self.owner = owner
 
+    def getArgumentCount(self):
+        return len(self.dependentFunctionType.arguments)
+
     def getType(self):
         return self.simplifiedType
 

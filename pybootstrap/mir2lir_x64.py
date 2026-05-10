@@ -153,25 +153,57 @@ class MirPackage2LirX64(MirVisitor):
         hash = (len(string)*1664525) & 0xFFFFFFFF
         for char in string:
             hash = ((hash + char)*1664525) & 0xFFFFFFFF
-        return hash;
+        return hash
 
-    def makeArrayWithSize(self, size):
+    def makeNativeMethod(self, argumentCount, functionSymbol):
+        self.odsAsm.objectDataSection()
+        self.odsAsm.dataAlign(16)
+        nativeMethodSymbol = self.odsAsm.makePrivateSymbol('nativeMethod')
+
+        self.odsAsm.setSymbolHere(nativeMethodSymbol)
+        self.odsAsm.addPointer(self.getOrCreateExternalGlobalSymbol('NativeMethod_Class'), 0)
+        self.odsAsm.addQWord(40) # Byte Size
+        self.odsAsm.addDWord(0) # GC color
+        self.odsAsm.addDWord(self.getNextIdentityHash()) # identity hash
+
+        self.odsAsm.addQWord(0) # argumentCount
+        self.odsAsm.addPointer(functionSymbol, 0) # nativeFunction
+
+        return nativeMethodSymbol
+    
+    def makeMethodDictElementPointer(self, element):
+        if element is None:
+            return None
+        if isinstance(element, MirMethodDictionarySymbol):
+            return self.getOrCreateLiteralSymbolWithByteString(element.value)
+        if element.isMirFunction():
+            return self.makeNativeMethod(element.getArgumentCount(), self.translateValue(element))
+        assert False
+
+    def makeArrayWithMethodDictElements(self, elements):
+        elementPointers = list(map(self.makeMethodDictElementPointer, elements))
+
+        size = len(elementPointers)
         self.odsAsm.objectDataSection()
         self.odsAsm.dataAlign(16)
         arraySymbol = self.odsAsm.makePrivateSymbol('array')
 
         self.odsAsm.setSymbolHere(arraySymbol)
-        self.odsAsm.addPointer(self.getOrCreateExternalGlobalSymbol('MethodDictionary_Class'), 0)
+        self.odsAsm.addPointer(self.getOrCreateExternalGlobalSymbol('Array_Class'), 0)
         self.odsAsm.addQWord(24 + size*8) # Byte Size
         self.odsAsm.addDWord(0) # GC color
         self.odsAsm.addDWord(self.getNextIdentityHash()) # identity hash
 
-        for i in range(size):
-            self.odsAsm.addQWord(0)
+        for element in elementPointers:
+            if element is None:
+                self.odsAsm.addQWord(0)
+            else:
+                self.odsAsm.addPointer(element, 0)
         return arraySymbol
 
     def makeMethodDictionary(self, behaviorType):
-        arraySymbol = self.makeArrayWithSize(16)
+        methodDictionary = behaviorType.typeWithMethodDictionary.methodDictionary
+        arraySymbol = self.makeArrayWithMethodDictElements(methodDictionary.array)
 
         self.odsAsm.objectDataSection()
         self.odsAsm.dataAlign(16)
@@ -183,7 +215,7 @@ class MirPackage2LirX64(MirVisitor):
         self.odsAsm.addDWord(0) # GC color
         self.odsAsm.addDWord(self.getNextIdentityHash()) # identity hash
 
-        self.odsAsm.addQWord(0) # tally
+        self.odsAsm.addQWord(methodDictionary.tally) # tally
         self.odsAsm.addPointer(arraySymbol, 0) # array
 
         return methodDictionarySymbol
@@ -277,6 +309,9 @@ class MirPackage2LirX64(MirVisitor):
     def getOrCreateLiteralSymbolWithValue(self, symbolValue: str):
         mirSymbol = MirSymbolConstant(symbolValue, self.context.gcPointerType)
         return self.translateValue(mirSymbol)
+    
+    def getOrCreateLiteralSymbolWithByteString(self, symbolValue: bytes):
+        return self.getOrCreateLiteralSymbolWithValue(symbolValue.decode('utf-8'))
 
     def visitSymbolConstant(self, globalConstant):
         stringData = globalConstant.value.encode(encoding="utf-8")
