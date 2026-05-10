@@ -740,12 +740,11 @@ class MirBehaviorType(MirType):
     def buildGCLayout(self):
         pass
 
-    ##def buildMemoryDescriptor(self, packageTranslator):
-    ##    self.memoryDescriptor = MemoryDescriptor(self.behavior.getInstanceSize(), self.behavior.getInstanceAlignment())
-    ##    for field in self.behavior.allFields:
-    ##        fieldMirType = packageTranslator.translateValue(field.type)
-    ##        if fieldMirType.isGCPointerType():
-    ##            assert False
+    def emitLoadWithBuilder(self, builder, pointer, sourcePosition):
+        return builder.loadGCPointer(pointer, sourcePosition)
+
+    def emitStoreWithBuilder(self, builder, pointer, value, sourcePosition):
+        assert False
 
     def emitArgumentWithBuilder(self, builder, sourcePosition):
         return builder.argumentGCPointerAt(sourcePosition)
