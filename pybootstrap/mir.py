@@ -215,12 +215,9 @@ class MirTypeWithMethodDictionary(MirPackageElement):
         return visitor.visitTypeWithMethodDictionary(self)
 
     def withSelectorAddMethod(self, selector, method):
-        assert selector not in self.methodDictionary
-        assert method.module is None
         self.children.append(method)
         self.methodDictionary[selector] = method
         method.owner = self
-        method.module = self.module
 
     def dumpToConsole(self):
         print(str(self))

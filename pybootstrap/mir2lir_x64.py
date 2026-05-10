@@ -452,6 +452,10 @@ class MirFunction2LirX64(MirVisitor):
             case MirOpcode.ReturnVoid:
                 pass
 
+            case MirOpcode.LoadPointer | MirOpcode.LoadGCPointer:
+                instruction.firstArgumentLocation = MirRegisterLocation(firstIntegerRegister, instruction.firstArgument.type.valueSize)
+                instruction.resultLocation = MirRegisterLocation(firstIntegerRegister, instruction.result.type.valueSize)
+
             case MirOpcode.StoreInt8 | MirOpcode.StoreInt16 | MirOpcode.StoreInt32 | MirOpcode.StoreInt64 | MirOpcode.StorePointer | MirOpcode.StoreGCPointer:
                 instruction.firstArgumentLocation = MirRegisterLocation(firstIntegerRegister, instruction.firstArgument.type.valueSize)
                 instruction.secondArgumentLocation = MirRegisterLocation(secondIntegerRegister, instruction.secondArgument.type.valueSize)
@@ -555,6 +559,9 @@ class MirFunction2LirX64(MirVisitor):
             case MirOpcode.PointerAddConstantOffset:
                 self.asm.x86_mov64RegReg(instruction.resultLocation.value, instruction.firstArgumentLocation.value)
                 self.asm.x86_add64RegImmS32(instruction.resultLocation.value, instruction.secondArgument)
+
+            case MirOpcode.LoadInt64 | MirOpcode.LoadPointer | MirOpcode.LoadGCPointer:
+                self.asm.x86_mov64RegRmo(instruction.resultLocation.value, instruction.firstArgumentLocation.value, 0)
 
             case MirOpcode.StoreInt64 | MirOpcode.StorePointer | MirOpcode.StoreGCPointer:
                 self.asm.x86_mov64RmoReg(instruction.firstArgumentLocation.value, 0, instruction.secondArgumentLocation.value)

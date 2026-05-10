@@ -1995,6 +1995,7 @@ class HIRFunction(HIRConstant):
     def __init__(self, name: str, dependentFunctionType: HIRDependentFunctionType, sourcePosition):
         super().__init__(sourcePosition)
         self.name = name
+        self.selector = name
         self.dependentFunctionType = dependentFunctionType
         self.simplifiedType = dependentFunctionType.asSimplifiedType()
         self.captures = []
