@@ -781,8 +781,7 @@ class MirInstruction(MirFunctionLocal):
                 context.setTempValue(self.result, result)
 
             case MirOpcode.GCAllocate:
-                memoryDescriptor = self.firstArgument
-                memory = MirMemorySimulation(memoryDescriptor.size)
+                memory = MirMemorySimulation(self.firstArgument.getInstanceSize())
                 pointer = MirMemorySimulationPointer(memory, 0)
                 context.setTempValue(self.result, pointer)
 

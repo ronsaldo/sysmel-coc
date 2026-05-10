@@ -353,7 +353,7 @@ class HirFunction2Mir(HIRVisitor):
 
     def visitAllocaInstruction(self, instruction: HIRAllocaInstruction):
         valueType = self.packageTranslator.translateValue(instruction.valueType)
-        return self.builder.gcAllocateAt(valueType, instruction.sourcePosition)
+        return self.builder.gcAllocateAt(valueType, 0, instruction.sourcePosition)
 
     def visitAssertInstruction(self, instruction):
         assert False

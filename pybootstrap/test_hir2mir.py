@@ -314,8 +314,8 @@ class HIR2MIRTest(unittest.TestCase):
 
         result = mirFunction.evaluateWithArguments([])
         self.assertTrue(result.isMirMemorySimulationPointer())
-        self.assertEqual(1, result.loadInt32())
-        self.assertEqual(2, (result + 4).loadInt32())
+        self.assertEqual(1, (result + 24).loadInt32())
+        self.assertEqual(2, (result + 28).loadInt32())
 
     def testClassExplicitFieldAccess(self):
         mirFunction = self.compileFunctionToMir("""
@@ -326,9 +326,9 @@ class HIR2MIRTest(unittest.TestCase):
         public function getSecond(pair: TestPair) => Int32 := pair second.
 """)
 
-        structPointer = MirMemorySimulationPointer(MirMemorySimulation(8), 0)
-        structPointer.storeInt32(1)
-        (structPointer + 4).storeInt32(2)
+        structPointer = MirMemorySimulationPointer(MirMemorySimulation(24 + 8), 0)
+        (structPointer + 24).storeInt32(1)
+        (structPointer + 28).storeInt32(2)
 
         result = mirFunction.evaluateWithArguments([structPointer])
         self.assertEqual(result, 2)

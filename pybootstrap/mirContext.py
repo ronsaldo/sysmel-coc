@@ -290,6 +290,9 @@ class MirType:
 
     def addToPackage(self, package):
         return package.addElement(self)
+    
+    def getInstanceSize(self):
+        return self.valueSize
 
     def isGlobalConstant(self):
         return True    
@@ -728,6 +731,9 @@ class MirBehaviorType(MirType):
         super().__init__(context, name, behavior.getValueSize(), behavior.getValueAlignment())
         self.behavior = behavior
 
+    def getInstanceSize(self):
+        return self.behavior.getInstanceSize()
+
     def isBehaviorType(self) -> bool:
         return True
 
@@ -791,6 +797,9 @@ class MirStructType(MirType):
     def __init__(self, context, structType):
         super().__init__(context, structType.name, structType.getValueSize(), structType.getValueAlignment())
         self.structType = structType
+
+    def getInstanceSize(self):
+        return self.structType.getValueSize()
 
     def isStructType(self) -> bool:
         return True
