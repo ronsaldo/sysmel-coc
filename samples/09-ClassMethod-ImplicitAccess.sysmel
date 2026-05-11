@@ -1,0 +1,13 @@
+public class TestPair superclass: Object definition: {
+    public field first type: Integer.
+    public field second type: Integer.
+
+    method sumExplicit => Integer := first + second.
+}.
+
+public function SysmelMain() => Int32 := {
+    ##printLine(TestPair).
+    ##printLine(TestPair(1. 2)).
+    printLine(TestPair(1. 2) sumExplicit).
+    0i32
+}.
