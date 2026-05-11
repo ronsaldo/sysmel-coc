@@ -326,6 +326,14 @@ struct MethodDictionary
     HashedCollection super;
 };
 
+struct StringBuilder
+{
+    Object super;
+    StringRef string;
+    size_t capacity;
+    size_t size;
+};
+
 typedef struct RuntimeClasses
 {
 #define SysmelClassDefinitionNoSuper(className) \
@@ -345,6 +353,12 @@ typedef struct RuntimeRoots
 
 extern RuntimeRoots sysmel_RuntimeRoots;
 
+SYSMEL_RUNTIME_EXPORT StringBuilderRef sysmel_stringBuilder_new();
+SYSMEL_RUNTIME_EXPORT void sysmel_stringBuilder_addCString(StringBuilderRef builder, const char *cstring);
+SYSMEL_RUNTIME_EXPORT void sysmel_stringBuilder_addStringObject(StringBuilderRef builder, StringRef stringObject);
+SYSMEL_RUNTIME_EXPORT void sysmel_stringBuilder_addSymbolObject(StringBuilderRef builder, SymbolRef symbol);
+SYSMEL_RUNTIME_EXPORT StringRef sysmel_stringBuilder_asString(StringBuilderRef builder);
+
 SYSMEL_RUNTIME_EXPORT uint32_t sysmel_string_computeHash(size_t stringSize, const char *string);
 
 SYSMEL_RUNTIME_EXPORT StringRef sysmel_string_fromCString(const char *string);
@@ -355,6 +369,7 @@ SYSMEL_RUNTIME_EXPORT size_t sysmel_string_getSize(StringRef string);
 
 SYSMEL_RUNTIME_EXPORT StringRef sysmel_object_asString(Oop receiver);
 SYSMEL_RUNTIME_EXPORT StringRef sysmel_object_printString(Oop receiver);
+SYSMEL_RUNTIME_EXPORT void sysmel_object_printOn(Oop receiver, StringBuilderRef builder);
 
 SYSMEL_RUNTIME_EXPORT SymbolRef sysmel_symbol_internCString(const char *string);
 SYSMEL_RUNTIME_EXPORT SymbolRef sysmel_symbol_internStringData(size_t stringSize, const char *string);

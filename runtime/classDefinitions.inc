@@ -42,3 +42,5 @@ SysmelClassDefinition(Collection, Object)
     SysmelClassDefinition(HashedCollection, Collection)
         SysmelClassDefinition(InternedSymbolSet, HashedCollection)
         SysmelClassDefinition(MethodDictionary, HashedCollection)
+
+SysmelClassDefinition(StringBuilder, Object)

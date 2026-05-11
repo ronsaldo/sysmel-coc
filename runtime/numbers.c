@@ -164,13 +164,16 @@ __sysmel_integer_asInt32(Oop value)
     return (int32_t)__sysmel_decodeInteger(value);
 }
 
-SYSMEL_RUNTIME_EXPORT StringRef
-__sysmel_integer_printString(Oop value)
+SYSMEL_RUNTIME_EXPORT Oop
+__sysmel_integer_printOn(Oop self, StringBuilderRef builder)
 {
     char buffer[64];
-    intptr_t decoded = __sysmel_decodeInteger(value);
+    intptr_t decoded = __sysmel_decodeInteger(self);
     snprintf(buffer, sizeof(buffer), "%lld", (long long)decoded);
-    return sysmel_string_fromCString(buffer);
+
+    sysmel_stringBuilder_addCString(builder, buffer);
+    
+    return sysmel_void;
 }
 
 void
@@ -199,6 +202,5 @@ sysmel_initializeNumberPrimitives(void)
     sysmel_type_addPrimitive(&Integer_Class.super.super.super, ">",  2, __sysmel_integer_greaterThan);
     sysmel_type_addPrimitive(&Integer_Class.super.super.super, ">=", 2, __sysmel_integer_greaterOrEquals);
 
-    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "asString", 1, __sysmel_integer_printString);
-    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "printString", 1, __sysmel_integer_printString);
+    sysmel_type_addPrimitive(&Integer_Class.super.super.super, "printOn:", 1, __sysmel_integer_printOn);
 }

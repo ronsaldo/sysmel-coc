@@ -49,16 +49,17 @@ sysmel_symbol_asString(SymbolRef receiver)
     return sysmel_string_fromStringData(symbolSize, receiver->__elements__);
 }
 
-StringRef
-sysmel_symbol_printString(SymbolRef receiver)
+Oop
+sysmel_symbol_printOn(SymbolRef self, StringBuilderRef builder)
 {
-    size_t symbolSize = sysmel_symbol_getSize(receiver);
-    return sysmel_string_concat(sysmel_string_fromCString("#"), sysmel_string_fromStringData(symbolSize, receiver->__elements__));
+    sysmel_stringBuilder_addCString(builder, "#");
+    sysmel_stringBuilder_addSymbolObject(builder, self);
+    return sysmel_void;
 }
 
 void
 sysmel_initializeSymbolPrimitives(void)
 {
     sysmel_type_addPrimitive(&Symbol_Class.super.super.super, "asString",    1, sysmel_symbol_asString);
-    sysmel_type_addPrimitive(&Symbol_Class.super.super.super, "printString", 1, sysmel_symbol_printString);
+    sysmel_type_addPrimitive(&Symbol_Class.super.super.super, "printOn:", 1, sysmel_symbol_printOn);
 }

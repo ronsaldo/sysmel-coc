@@ -146,7 +146,7 @@ sysmel_initializeClasses(void)
     SysmelBeginClassLayout(Type, Object);
         GCLayoutAddField(Type, gcLayout, SlotType_StrongRef);
         GCLayoutAddField(Type, methodDictionary, SlotType_StrongRef);
-            GCLayoutAddField(Type, supertype, SlotType_StrongRef);
+        GCLayoutAddField(Type, supertype, SlotType_StrongRef);
         
         SysmelBeginClassLayout(TypeUniverse, Type);
 
@@ -207,6 +207,9 @@ SysmelBeginClassLayout(Collection, Object);
         SysmelBeginClassLayout(InternedSymbolSet, HashedCollection);
         SysmelBeginClassLayout(MethodDictionary, HashedCollection);
 
+    SysmelBeginClassLayout(StringBuilder, Object);
+        GCLayoutAddField(StringBuilder, string, SlotType_StrongRef);
+
 #undef SysmelBeginClassLayout
 #undef GCLayoutAddField
 }
@@ -221,25 +224,48 @@ sysmel_type_addPrimitive(Type *type, const char *selector, uint32_t argumentCoun
     sysmel_MethodDictionary_atPut(type->methodDictionary, selectorSymbol, (Oop)nativeMethod);
 }
 
-StringRef
-sysmel_object_printString_primitive(Oop object)
+
+Oop
+sysmel_object_printOn_primitive(ObjectRef object, StringBuilderRef builder)
 {
-    TypeRef objectClass = sysmel_oop_getType(object);
-    StringRef className = sysmel_object_printString((Oop)objectClass);
-    return sysmel_string_concat(sysmel_string_fromCString("A "), className);
+    sysmel_stringBuilder_addCString(builder, "A ");
+
+    TypeRef objectClass = sysmel_oop_getType((Oop)object);
+    sysmel_object_printOn((Oop)objectClass, builder);
+
+    return sysmel_void;
+}
+
+Oop
+sysmel_class_printOn_primitive(ClassRef clazz, StringBuilderRef builder)
+{
+    if(clazz->name)
+        sysmel_stringBuilder_addSymbolObject(builder, clazz->name);
+    else
+        sysmel_stringBuilder_addCString(builder, "An anonymous class");
+
+    return sysmel_void;
 }
 
 StringRef
-sysmel_class_printString(ClassRef clazz)
+sysmel_object_asString_primitive(Oop self)
 {
-    if(clazz->name)
-        return sysmel_string_fromSymbol(clazz->name);
-    return sysmel_string_fromCString("an Anonymous class");
+    return sysmel_object_printString(self);
+}
+
+StringRef
+sysmel_object_printString_primitive(Oop object)
+{
+    StringBuilderRef builder = sysmel_stringBuilder_new();
+    sysmel_object_printOn(object, builder);
+    return sysmel_stringBuilder_asString(builder);
 }
 
 void
 sysmel_initializeObjectPrimitives(void)
 {
+    sysmel_type_addPrimitive(&Object_Class.super.super.super, "asString", 1, sysmel_object_asString_primitive);
     sysmel_type_addPrimitive(&Object_Class.super.super.super, "printString", 1, sysmel_object_printString_primitive);
-    sysmel_type_addPrimitive(&Class_Class.super.super.super, "printString", 1, sysmel_class_printString);
+    sysmel_type_addPrimitive(&Object_Class.super.super.super, "printOn:", 2, sysmel_object_printOn_primitive);
+    sysmel_type_addPrimitive(&Class_Class.super.super.super, "printOn:", 2, sysmel_class_printOn_primitive);
 }
