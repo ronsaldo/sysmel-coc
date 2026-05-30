@@ -2142,6 +2142,9 @@ class HIRFunction(HIRConstant):
     def evaluateWithArgumentsAndResultType(self, arguments, resultType):
         return self.evaluateWithArguments(arguments)
     
+    def evaluateWithArgumentsAt(self, arguments, sourcePosition):
+        return self.evaluateWithArguments(arguments)
+    
     def analyzeAndEvaluateApplicationNode(self, evaluationPass, node: ParseTreeApplicationNode, functional):
         typecheckedArguments, resultType = self.simplifiedType.evaluateAndTypecheckArguments(evaluationPass, node.arguments, node.sourcePosition)
         return self.evaluateWithArguments(typecheckedArguments)
